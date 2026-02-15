@@ -1,0 +1,165 @@
+---
+import Base from '../layouts/Base.astro';
+import FAQ from '../components/FAQ.astro';
+---
+
+<Base
+  title="Support -- KeyJawn"
+  description="FAQ, bug reporting, known limitations, and how to get help with KeyJawn."
+>
+  <section class="section">
+    <div class="container">
+      <h1 class="page-title"><span class="prompt">keyjawn --help</span></h1>
+      <p class="page-intro">Common questions, bug reporting, and known limitations.</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq">
+    <div class="container">
+      <h2 class="section-heading prompt">cat faq.txt</h2>
+      <div class="faq-wrapper">
+        <FAQ items={[
+          {
+            question: "How do I install KeyJawn?",
+            answer: "Download the APK from <a href='https://github.com/jamditis/keyjawn/releases'>GitHub releases</a>, install it via ADB or by opening it on your phone, then enable it in <strong>Settings > System > Languages & input > On-screen keyboard</strong>. Full walkthrough in the <a href='/manual#getting-started'>manual</a>."
+          },
+          {
+            question: "Why don't keys work in my browser terminal?",
+            answer: "Some web-based terminals (like Cockpit's shell or browser SSH clients) use JavaScript to capture keyboard events. Android's <code>commitText</code> method doesn't trigger the same key events as physical keypresses. This is a known Android limitation -- KeyJawn sends proper key events where possible, but some WebView-based terminals only respond to <code>commitText</code>. Terminal emulator apps like Termux and JuiceSSH handle key events correctly."
+          },
+          {
+            question: "How do I set up SCP upload?",
+            answer: "Open KeyJawn settings, add a host with hostname, port, username, password, and remote upload directory. Then tap the upload button in the extra row, pick a photo, and KeyJawn handles the rest. Details in the <a href='/manual#scp-upload'>SCP upload section</a> of the manual."
+          },
+          {
+            question: "Can I use this with Termux?",
+            answer: "Yes. KeyJawn works with any app that accepts keyboard input. Termux, JuiceSSH, ConnectBot, and any other terminal emulator will work. The terminal key row (Esc, Tab, Ctrl, arrows) is designed for exactly this."
+          },
+          {
+            question: "Is my SSH password stored securely?",
+            answer: "Yes. SSH credentials are encrypted using AndroidX <code>EncryptedSharedPreferences</code> with AES-256 encryption. The keys are stored in the Android Keystore, which is hardware-backed on most modern devices."
+          },
+          {
+            question: "Why is autocorrect off by default?",
+            answer: "Autocorrect uses <code>setComposingText</code>, which breaks web-based terminals and many SSH clients. In a shell, autocorrect turning <code>git</code> into <code>got</code> is worse than having no autocorrect at all. Long-press the spacebar to enable it per app -- turn it on for Slack, keep it off for Termux."
+          },
+          {
+            question: "Will there be an iOS version?",
+            answer: "Not planned. iOS doesn't allow third-party keyboards to send key events (like Escape or Ctrl sequences) the way Android does. The level of system integration KeyJawn needs isn't possible on iOS."
+          },
+          {
+            question: "Is this open source?",
+            answer: "Yes. MIT license. Full source at <a href='https://github.com/jamditis/keyjawn'>github.com/jamditis/keyjawn</a>. Both the lite and full versions are built from the same codebase."
+          }
+        ]} />
+      </div>
+    </div>
+  </section>
+
+  <!-- Report a bug -->
+  <section class="section" id="bugs">
+    <div class="container">
+      <h2 class="section-heading prompt">report --bug</h2>
+      <div class="bug-report">
+        <p>Found a problem? File an issue on GitHub with the following info:</p>
+        <ul>
+          <li>Your device model and Android version</li>
+          <li>The app you were typing in (Termux, Chrome, Slack, etc.)</li>
+          <li>What happened vs. what you expected</li>
+          <li>Steps to reproduce, if possible</li>
+        </ul>
+        <a href="https://github.com/jamditis/keyjawn/issues/new" class="btn btn-primary" target="_blank" rel="noopener">
+          Open an issue on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Known limitations -->
+  <section class="section" id="limitations">
+    <div class="container">
+      <h2 class="section-heading prompt">cat known-issues.txt</h2>
+      <div class="limitations">
+        <div class="limitation-item card">
+          <h3>No swipe-to-type</h3>
+          <p>Gesture typing (sliding your finger across keys to spell words) requires Google's proprietary gesture decoder library. KeyJawn doesn't include it because it's closed-source and would add significant APK size. Swipe gestures in KeyJawn are for actions (delete word, space, layer switch), not word input.</p>
+        </div>
+        <div class="limitation-item card">
+          <h3>Basic autocorrect only</h3>
+          <p>KeyJawn's autocorrect handles simple corrections but doesn't include word prediction, next-word suggestions, or a suggestions bar. This is intentional -- the keyboard is built for terminal use where autocorrect is usually harmful.</p>
+        </div>
+        <div class="limitation-item card">
+          <h3>SCP upload is full version only</h3>
+          <p>SCP upload requires the JSch library and network permissions. To keep the lite version permission-free, SCP is exclusive to the full version.</p>
+        </div>
+        <div class="limitation-item card">
+          <h3>WebView terminal compatibility</h3>
+          <p>Some browser-based terminals don't respond to Android key events the way native terminal apps do. If keys like Esc or Tab don't work in a web terminal, the issue is usually on the web app's side, not KeyJawn's. Native terminal apps (Termux, JuiceSSH) work reliably.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="section" id="contact">
+    <div class="container">
+      <h2 class="section-heading prompt">contact</h2>
+      <p>
+        <a href="https://github.com/jamditis/keyjawn/issues">GitHub Issues</a> is the best way to report bugs or request features. All issues are tracked publicly.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-title {
+    margin-bottom: var(--space-sm);
+  }
+
+  .page-intro {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    max-width: 600px;
+  }
+
+  .section-heading {
+    margin-bottom: var(--space-md);
+  }
+
+  .faq-wrapper {
+    max-width: 720px;
+  }
+
+  .bug-report {
+    max-width: 600px;
+  }
+
+  .bug-report ul {
+    margin-bottom: var(--space-md);
+  }
+
+  .limitations {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+  }
+
+  .limitation-item h3 {
+    font-size: 1rem;
+    margin-bottom: var(--space-xs);
+  }
+
+  .limitation-item p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 768px) {
+    .limitations {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

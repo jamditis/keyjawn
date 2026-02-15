@@ -1,0 +1,102 @@
+---
+interface Props {
+  title: string;
+  price: string;
+  features: string[];
+  highlighted?: boolean;
+  ctaText: string;
+  ctaLink: string;
+  badge?: string;
+}
+
+const { title, price, features, highlighted = false, ctaText, ctaLink, badge } = Astro.props;
+---
+
+<div class:list={['pricing-card', 'card', { highlighted }]}>
+  {badge && <div class="pricing-badge">{badge}</div>}
+  <h3 class="pricing-title">{title}</h3>
+  <div class="pricing-price">{price}</div>
+  <ul class="pricing-features">
+    {features.map(f => (
+      <li>
+        <span class="check-mark">{highlighted ? '+' : '-'}</span>
+        {f}
+      </li>
+    ))}
+  </ul>
+  <a href={ctaLink} class:list={['btn', highlighted ? 'btn-primary' : 'btn-secondary', 'pricing-cta']}>
+    {ctaText}
+  </a>
+</div>
+
+<style>
+  .pricing-card {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-lg) var(--space-md);
+    position: relative;
+  }
+
+  .pricing-card.highlighted {
+    border-color: var(--accent);
+    box-shadow: 0 0 30px rgba(108, 242, 168, 0.08);
+  }
+
+  .pricing-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 0.3em 1em;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .pricing-title {
+    font-size: 1.2rem;
+    margin-bottom: var(--space-xs);
+  }
+
+  .pricing-price {
+    font-family: var(--font-mono);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #e8e8f0;
+    margin-bottom: var(--space-md);
+    line-height: 1.1;
+  }
+
+  .pricing-features {
+    list-style: none;
+    padding: 0;
+    margin-bottom: var(--space-md);
+    flex: 1;
+  }
+
+  .pricing-features li {
+    font-size: 0.9rem;
+    color: var(--text);
+    padding: 0.4em 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6em;
+  }
+
+  .check-mark {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .pricing-cta {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+</style>

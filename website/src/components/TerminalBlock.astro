@@ -1,0 +1,119 @@
+---
+interface Props {
+  command: string;
+  output?: string;
+}
+
+const { command, output } = Astro.props;
+---
+
+<div class="terminal-block">
+  <div class="terminal-chrome">
+    <span class="terminal-dot dot-red"></span>
+    <span class="terminal-dot dot-yellow"></span>
+    <span class="terminal-dot dot-green"></span>
+  </div>
+  <div class="terminal-body">
+    <div class="terminal-line">
+      <span class="terminal-prompt">$</span>
+      <code class="terminal-cmd">{command}</code>
+      <button class="terminal-copy" aria-label="Copy command" data-cmd={command}>
+        copy
+      </button>
+    </div>
+    {output && <div class="terminal-output">{output}</div>}
+    <slot />
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.terminal-copy').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cmd = (btn as HTMLElement).dataset.cmd;
+      if (cmd) {
+        navigator.clipboard.writeText(cmd).then(() => {
+          const el = btn as HTMLElement;
+          el.textContent = 'copied';
+          setTimeout(() => { el.textContent = 'copy'; }, 1500);
+        });
+      }
+    });
+  });
+</script>
+
+<style>
+  .terminal-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+  }
+
+  .terminal-chrome {
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .terminal-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .dot-red { background: #ff5f57; }
+  .dot-yellow { background: #febc2e; }
+  .dot-green { background: #28c840; }
+
+  .terminal-body {
+    padding: var(--space-md);
+  }
+
+  .terminal-line {
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+  }
+
+  .terminal-prompt {
+    color: var(--text-muted);
+    user-select: none;
+  }
+
+  .terminal-cmd {
+    color: var(--accent);
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    flex: 1;
+  }
+
+  .terminal-copy {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.2em 0.6em;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+
+  .terminal-copy:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .terminal-output {
+    margin-top: 0.75em;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+  }
+</style>

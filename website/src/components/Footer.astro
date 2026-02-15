@@ -1,0 +1,103 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <h4 class="footer-heading">Navigation</h4>
+        <ul class="footer-list">
+          <li><a href="/">Home</a></li>
+          <li><a href="/features">Features</a></li>
+          <li><a href="/manual">Manual</a></li>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/support">Support</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4 class="footer-heading">Resources</h4>
+        <ul class="footer-list">
+          <li><a href="https://github.com/jamditis/keyjawn" target="_blank" rel="noopener">GitHub repo</a></li>
+          <li><a href="https://github.com/jamditis/keyjawn/issues" target="_blank" rel="noopener">Issues</a></li>
+          <li><a href="https://github.com/jamditis/keyjawn/releases" target="_blank" rel="noopener">Download APK</a></li>
+          <li><a href="/blog/why-i-built-keyjawn">Blog</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4 class="footer-heading">Legal</h4>
+        <ul class="footer-list">
+          <li><a href="https://github.com/jamditis/keyjawn/blob/main/LICENSE" target="_blank" rel="noopener">MIT license</a></li>
+          <li class="text-muted">No tracking. No ads.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span class="footer-copy">&copy; {year} KeyJawn. Built with caffeine and frustration.</span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: var(--space-xl) 0 var(--space-lg);
+    margin-top: var(--space-xl);
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-lg);
+  }
+
+  .footer-heading {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: var(--space-sm);
+  }
+
+  .footer-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .footer-list li {
+    margin-bottom: 0.5rem;
+  }
+
+  .footer-list a {
+    font-size: 0.9rem;
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-list a:hover {
+    color: var(--accent);
+    opacity: 1;
+  }
+
+  .footer-bottom {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-copy {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 768px) {
+    .footer-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+    }
+  }
+</style>

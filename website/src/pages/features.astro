@@ -1,0 +1,594 @@
+---
+import Base from '../layouts/Base.astro';
+import KeyCap from '../components/KeyCap.astro';
+---
+
+<Base
+  title="Features -- KeyJawn"
+  description="Every feature in KeyJawn: terminal keys, voice input, SCP upload, slash commands, swipe gestures, and more."
+>
+  <section class="section">
+    <div class="container">
+      <h1 class="page-title"><span class="prompt">man keyjawn</span></h1>
+      <p class="page-intro">Everything the keyboard does, section by section. The lite version includes the core keyboard features. The full version adds voice, clipboard, SCP, slash commands, and swipe gestures.</p>
+    </div>
+  </section>
+
+  <!-- Terminal keys -->
+  <section class="section feature-section" id="terminal-keys">
+    <div class="container feature-row">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --terminal-keys</h2>
+        <p>A dedicated row above the QWERTY layout with the keys terminals need: <KeyCap label="Esc" />, <KeyCap label="Tab" />, <KeyCap label="Ctrl" />, and arrow keys <KeyCap label="<" /> <KeyCap label=">" />.</p>
+        <p>Always visible. No toggling layers or long-pressing to find them. <KeyCap label="Ctrl" /> uses a three-state toggle: tap once to arm it for one keypress, long-press to lock it on, tap again to turn it off. Hold arrow keys to repeat.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="key-row-demo">
+          <KeyCap label="Esc" />
+          <KeyCap label="Tab" />
+          <KeyCap label="Ctrl" />
+          <KeyCap label="<" />
+          <KeyCap label=">" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Number row -->
+  <section class="section feature-section" id="number-row">
+    <div class="container feature-row reverse">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --number-row</h2>
+        <p>A dedicated 0-9 row above the QWERTY keys. Long-press any number for its shifted symbol. Small hint labels on each key show you what you'll get.</p>
+        <p>No switching layers to type a number. No memorizing which symbol lives where. Every key shows both values up front.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="key-row-demo">
+          <KeyCap label="1" />
+          <KeyCap label="2" />
+          <KeyCap label="3" />
+          <KeyCap label="4" />
+          <KeyCap label="5" />
+          <KeyCap label="6" />
+          <KeyCap label="7" />
+          <KeyCap label="8" />
+          <KeyCap label="9" />
+          <KeyCap label="0" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Alt keys -->
+  <section class="section feature-section" id="alt-keys">
+    <div class="container feature-row">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --alt-keys</h2>
+        <p>Long-press any letter for accented characters and symbol variants. Keys with a single alt character fire immediately. Keys with multiple options show a popup where you slide to pick.</p>
+        <p>Examples: long-press <KeyCap label="a" /> for accented variants, <KeyCap label="n" /> for the tilde variant, <KeyCap label="e" /> for accented forms.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="alt-demo">
+          <div class="alt-popup-demo">
+            <span class="alt-base">a</span>
+            <div class="alt-options">
+              <span>a</span><span>a</span><span>a</span><span>a</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Voice input -->
+  <section class="section feature-section" id="voice">
+    <div class="container feature-row reverse">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --voice</h2>
+        <p>Tap the mic in the extra row. A waveform animation shows audio level while you speak. Text appears at your cursor as the speech recognizer processes it -- streaming partial results, not waiting for you to finish.</p>
+        <p>When 90% of what you type into an AI agent is natural language, speaking is faster than typing on a phone keyboard. Tap stop or the mic again to finish.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only. Requires microphone permission.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="voice-demo">
+          <div class="waveform">
+            <span class="wave-bar" style="--delay: 0s; --height: 60%"></span>
+            <span class="wave-bar" style="--delay: 0.1s; --height: 90%"></span>
+            <span class="wave-bar" style="--delay: 0.2s; --height: 40%"></span>
+            <span class="wave-bar" style="--delay: 0.3s; --height: 75%"></span>
+            <span class="wave-bar" style="--delay: 0.4s; --height: 55%"></span>
+            <span class="wave-bar" style="--delay: 0.5s; --height: 85%"></span>
+            <span class="wave-bar" style="--delay: 0.6s; --height: 45%"></span>
+            <span class="wave-bar" style="--delay: 0.7s; --height: 70%"></span>
+          </div>
+          <code class="voice-text">fix the auth bug in login.ts</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Clipboard -->
+  <section class="section feature-section" id="clipboard">
+    <div class="container feature-row">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --clipboard</h2>
+        <p>Tap the clipboard button in the extra row to see your recent clipboard history. Tap any entry to paste it at your cursor. No more switching apps to re-copy something you already copied.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="clipboard-demo">
+          <div class="clip-item">git commit -m "fix auth"</div>
+          <div class="clip-item">ssh pi@192.168.1.50</div>
+          <div class="clip-item">export API_KEY=sk-...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCP upload -->
+  <section class="section feature-section" id="scp-upload">
+    <div class="container feature-row reverse">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --scp-upload</h2>
+        <p>Configure your SSH hosts in settings. Tap the upload button in the extra row. Pick a photo from your gallery. KeyJawn SCPs it to your server and types the remote file path at your cursor.</p>
+        <p>Useful for sharing screenshots with Claude Code without leaving the terminal. One tap to upload, path auto-inserted.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only. Credentials stored with AndroidX EncryptedSharedPreferences.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="scp-demo card">
+          <code class="scp-flow">
+            <span class="text-muted"># you tap upload, pick a photo</span><br/>
+            <span class="text-accent">scp</span> photo_001.jpg pi@server:~/uploads/<br/>
+            <span class="text-muted"># path typed at cursor:</span><br/>
+            ~/uploads/photo_001.jpg<span class="cursor">_</span>
+          </code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slash commands -->
+  <section class="section feature-section" id="slash-commands">
+    <div class="container feature-row">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --slash-commands</h2>
+        <p>On the symbols layer, the <code>/</code> key opens a command picker instead of typing a literal slash. Select a command to insert it. Dismiss without selecting to type <code>/</code> normally.</p>
+        <p>Built for the slash command patterns every LLM CLI uses: <code>/help</code>, <code>/clear</code>, <code>/compact</code>, and others.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="slash-demo card">
+          <div class="slash-item">/help</div>
+          <div class="slash-item">/clear</div>
+          <div class="slash-item">/compact</div>
+          <div class="slash-item">/review</div>
+          <div class="slash-item">/init</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Swipe gestures -->
+  <section class="section feature-section" id="swipe">
+    <div class="container feature-row reverse">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --swipe</h2>
+        <p>Swipe across the keyboard area for quick actions:</p>
+        <ul>
+          <li><strong>Swipe left</strong> -- delete word</li>
+          <li><strong>Swipe right</strong> -- space</li>
+          <li><strong>Swipe up</strong> -- switch to symbols layer</li>
+          <li><strong>Swipe down</strong> -- switch to letters layer</li>
+        </ul>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="swipe-demo">
+          <div class="swipe-arrow swipe-left">
+            <span class="swipe-dir">&larr;</span>
+            <span class="swipe-label">delete word</span>
+          </div>
+          <div class="swipe-arrow swipe-right">
+            <span class="swipe-dir">&rarr;</span>
+            <span class="swipe-label">space</span>
+          </div>
+          <div class="swipe-arrow swipe-up">
+            <span class="swipe-dir">&uarr;</span>
+            <span class="swipe-label">symbols</span>
+          </div>
+          <div class="swipe-arrow swipe-down">
+            <span class="swipe-dir">&darr;</span>
+            <span class="swipe-label">letters</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Autocorrect -->
+  <section class="section feature-section" id="autocorrect">
+    <div class="container feature-row">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --autocorrect</h2>
+        <p>Off by default -- because autocorrect in a terminal is a disaster. Long-press the spacebar to toggle autocorrect per app. When enabled, the spacebar label changes to show you it's active.</p>
+        <p>Turn it on for Slack, leave it off for Termux. KeyJawn remembers the setting for each app.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="autocorrect-demo card">
+          <div class="ac-row">
+            <span class="ac-app">Termux</span>
+            <span class="ac-status ac-off">off</span>
+          </div>
+          <div class="ac-row">
+            <span class="ac-app">Slack</span>
+            <span class="ac-status ac-on">on</span>
+          </div>
+          <div class="ac-row">
+            <span class="ac-app">Cockpit</span>
+            <span class="ac-status ac-off">off</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Shift -->
+  <section class="section feature-section" id="shift">
+    <div class="container feature-row reverse">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --shift</h2>
+        <p>Single-tap <KeyCap label="Shift" /> for one uppercase letter -- it auto-returns to lowercase after. Double-tap for caps lock. The shift key changes appearance to show you which state you're in.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="shift-demo">
+          <div class="shift-state">
+            <KeyCap label="Shift" />
+            <span class="shift-label">tap once = one capital</span>
+          </div>
+          <div class="shift-state">
+            <KeyCap label="SHIFT" />
+            <span class="shift-label">double-tap = caps lock</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-title {
+    margin-bottom: var(--space-sm);
+  }
+
+  .page-intro {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    max-width: 680px;
+  }
+
+  .feature-section {
+    padding: var(--space-xl) 0;
+  }
+
+  .feature-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+    align-items: center;
+  }
+
+  .feature-row.reverse .feature-content {
+    order: 2;
+  }
+
+  .feature-row.reverse .feature-visual {
+    order: 1;
+  }
+
+  .feature-content h2 {
+    margin-bottom: var(--space-sm);
+  }
+
+  .feature-content p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+
+  .feature-content ul {
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .feature-visual {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Key row demo */
+  .key-row-demo {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: var(--space-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .key-row-demo :global(kbd) {
+    font-size: 1rem;
+    padding: 0.4em 0.8em;
+  }
+
+  /* Alt demo */
+  .alt-demo {
+    padding: var(--space-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .alt-popup-demo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .alt-base {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    color: #e0e0e8;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #2a2a38 0%, #1a1a26 100%);
+    border: 1px solid #3a3a4a;
+    border-bottom-width: 3px;
+    border-radius: 5px;
+  }
+
+  .alt-options {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.25rem;
+  }
+
+  .alt-options span {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--text);
+    padding: 0.3em 0.5em;
+    border-radius: 3px;
+  }
+
+  .alt-options span:first-child {
+    background: rgba(108, 242, 168, 0.15);
+    color: var(--accent);
+  }
+
+  /* Voice demo */
+  .voice-demo {
+    padding: var(--space-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    text-align: center;
+  }
+
+  .waveform {
+    display: flex;
+    align-items: end;
+    justify-content: center;
+    gap: 4px;
+    height: 60px;
+    margin-bottom: var(--space-sm);
+  }
+
+  .wave-bar {
+    width: 6px;
+    background: var(--accent);
+    border-radius: 3px;
+    animation: wave 0.8s ease-in-out infinite alternate;
+    animation-delay: var(--delay);
+    height: var(--height);
+    opacity: 0.7;
+  }
+
+  @keyframes wave {
+    from { transform: scaleY(0.4); }
+    to { transform: scaleY(1); }
+  }
+
+  .voice-text {
+    font-size: 0.85rem;
+    color: var(--text);
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    padding: 0.4em 0.8em;
+    border-radius: var(--radius);
+  }
+
+  /* Clipboard demo */
+  .clipboard-demo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: var(--space-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    min-width: 240px;
+  }
+
+  .clip-item {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text);
+    padding: 0.6em 0.8em;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .clip-item:first-child {
+    border-color: rgba(108, 242, 168, 0.3);
+  }
+
+  .clip-item:hover {
+    border-color: var(--accent);
+  }
+
+  /* SCP demo */
+  .scp-demo {
+    padding: var(--space-md);
+  }
+
+  .scp-flow {
+    font-size: 0.85rem;
+    line-height: 1.8;
+    background: none;
+    border: none;
+    padding: 0;
+    display: block;
+  }
+
+  /* Slash demo */
+  .slash-demo {
+    padding: var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 180px;
+  }
+
+  .slash-item {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text);
+    padding: 0.5em 0.75em;
+    border-radius: var(--radius);
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .slash-item:first-child {
+    background: rgba(108, 242, 168, 0.1);
+    color: var(--accent);
+  }
+
+  /* Swipe demo */
+  .swipe-demo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .swipe-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.75em;
+  }
+
+  .swipe-dir {
+    font-size: 1.5rem;
+    color: var(--accent);
+    font-family: var(--font-mono);
+  }
+
+  .swipe-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* Autocorrect demo */
+  .autocorrect-demo {
+    min-width: 220px;
+  }
+
+  .ac-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6em 0;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  .ac-row:last-child {
+    border-bottom: none;
+  }
+
+  .ac-app {
+    color: var(--text);
+  }
+
+  .ac-status {
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: 0.2em 0.6em;
+    border-radius: 3px;
+  }
+
+  .ac-off {
+    color: var(--text-muted);
+    background: rgba(90, 90, 110, 0.15);
+  }
+
+  .ac-on {
+    color: var(--accent);
+    background: rgba(108, 242, 168, 0.1);
+  }
+
+  /* Shift demo */
+  .shift-demo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .shift-state {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .shift-label {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .feature-row {
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+    }
+
+    .feature-row.reverse .feature-content,
+    .feature-row.reverse .feature-visual {
+      order: unset;
+    }
+  }
+</style>

@@ -1,0 +1,134 @@
+---
+import Base from './Base.astro';
+import '../styles/global.css';
+
+const { frontmatter } = Astro.props;
+const { title, description, date, author } = frontmatter;
+
+const formattedDate = new Date(date).toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<Base title={`${title} -- KeyJawn`} description={description}>
+  <article class="blog-article">
+    <div class="container">
+      <header class="blog-header">
+        <h1 class="blog-title">{title}</h1>
+        <div class="blog-meta">
+          <span class="blog-author">{author}</span>
+          <span class="blog-sep">//</span>
+          <time datetime={date}>{formattedDate}</time>
+        </div>
+      </header>
+      <div class="blog-body">
+        <slot />
+      </div>
+      <footer class="blog-footer">
+        <a href="/" class="btn btn-secondary">&larr; Back to home</a>
+      </footer>
+    </div>
+  </article>
+</Base>
+
+<style>
+  .blog-article {
+    padding: var(--space-xl) 0;
+  }
+
+  .blog-header {
+    max-width: 720px;
+    margin-bottom: var(--space-xl);
+  }
+
+  .blog-title {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    line-height: 1.15;
+    margin-bottom: var(--space-sm);
+  }
+
+  .blog-meta {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .blog-sep {
+    color: var(--border);
+  }
+
+  .blog-body {
+    max-width: 720px;
+    font-size: 1.05rem;
+    line-height: 1.85;
+  }
+
+  .blog-body :global(h2) {
+    margin-top: var(--space-xl);
+    margin-bottom: var(--space-sm);
+    font-size: 1.5rem;
+  }
+
+  .blog-body :global(h3) {
+    margin-top: var(--space-lg);
+    margin-bottom: var(--space-xs);
+    font-size: 1.2rem;
+  }
+
+  .blog-body :global(p) {
+    margin-bottom: 1.2em;
+  }
+
+  .blog-body :global(blockquote) {
+    border-left: 3px solid var(--accent);
+    margin: 1.5em 0;
+    padding: 0.5em 1.2em;
+    color: var(--text-muted);
+    font-style: italic;
+    background: rgba(108, 242, 168, 0.03);
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+
+  .blog-body :global(ul),
+  .blog-body :global(ol) {
+    margin-bottom: 1.2em;
+  }
+
+  .blog-body :global(li) {
+    margin-bottom: 0.5em;
+  }
+
+  .blog-body :global(a) {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(108, 242, 168, 0.4);
+  }
+
+  .blog-body :global(a:hover) {
+    text-decoration-color: var(--accent);
+  }
+
+  .blog-body :global(img) {
+    max-width: 100%;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    margin: 1.5em 0;
+  }
+
+  .blog-body :global(hr) {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: var(--space-lg) 0;
+  }
+
+  .blog-footer {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border);
+  }
+</style>

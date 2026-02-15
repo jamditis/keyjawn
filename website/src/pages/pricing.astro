@@ -1,0 +1,115 @@
+---
+import Base from '../layouts/Base.astro';
+import PricingCard from '../components/PricingCard.astro';
+---
+
+<Base
+  title="Pricing -- KeyJawn"
+  description="KeyJawn Lite is free. KeyJawn Full is $4, lifetime, no subscriptions, no ads, no tracking."
+>
+  <section class="section">
+    <div class="container">
+      <h1 class="page-title"><span class="prompt">cat pricing.yml</span></h1>
+      <p class="page-intro">Two versions. One-time payment. No subscriptions, no ads, no tracking.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="pricing-grid">
+        <PricingCard
+          title="Lite"
+          price="Free"
+          features={[
+            'QWERTY keyboard (3 layers)',
+            'Terminal key row (Esc, Tab, Ctrl, arrows)',
+            'Number row with alt hints',
+            'Alt character popups on long-press',
+            'Shift / caps lock',
+            'No permissions required',
+            'Open source (MIT)',
+          ]}
+          ctaText="Download Lite"
+          ctaLink="https://github.com/jamditis/keyjawn/releases"
+        />
+        <PricingCard
+          title="Full"
+          price="$4"
+          highlighted={true}
+          badge="lifetime -- no subscriptions"
+          features={[
+            'Everything in Lite, plus:',
+            'Voice input with streaming transcription',
+            'Clipboard history manager',
+            'SCP image upload to remote servers',
+            'Multi-host SSH management',
+            'Encrypted credential storage (AES-256)',
+            'Slash command shortcuts',
+            'Swipe gestures',
+            'Per-app autocorrect toggle',
+            'No ads. No tracking.',
+          ]}
+          ctaText="Get full version"
+          ctaLink="https://github.com/jamditis/keyjawn/releases"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- Why $4 -->
+  <section class="section" id="why-4">
+    <div class="container">
+      <div class="why-section">
+        <h2 class="prompt">cat why-4-dollars.txt</h2>
+        <div class="why-content">
+          <p>This is a one-person project. $4 covers development costs and keeps updates coming. There are no recurring payments, no data collection, no advertising, and no investor pressure to add features that make the product worse.</p>
+          <p>The code is open source either way. The lite version is a full keyboard that works. The full version adds the features that power users want for terminal work.</p>
+          <p>The price goes up when an iOS version ships (it won't -- iOS doesn't support this level of keyboard customization).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-title {
+    margin-bottom: var(--space-sm);
+  }
+
+  .page-intro {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .why-section {
+    max-width: 640px;
+  }
+
+  .why-section h2 {
+    margin-bottom: var(--space-md);
+  }
+
+  .why-content {
+    color: var(--text-muted);
+    line-height: 1.8;
+  }
+
+  .why-content p {
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 768px) {
+    .pricing-grid {
+      grid-template-columns: 1fr;
+      max-width: 400px;
+    }
+  }
+</style>

@@ -1,0 +1,87 @@
+---
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+interface Props {
+  items: FAQItem[];
+}
+
+const { items } = Astro.props;
+---
+
+<div class="faq">
+  {items.map((item) => (
+    <details class="faq-item">
+      <summary class="faq-question">{item.question}</summary>
+      <div class="faq-answer" set:html={item.answer} />
+    </details>
+  ))}
+</div>
+
+<style>
+  .faq {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .faq-item {
+    border-bottom: 1px solid var(--border);
+    padding: var(--space-md) 0;
+  }
+
+  .faq-item:first-child {
+    border-top: 1px solid var(--border);
+  }
+
+  .faq-question {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 500;
+    color: #e0e0e8;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .faq-question::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-question::after {
+    content: '+';
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+
+  details[open] .faq-question::after {
+    content: '-';
+    color: var(--accent);
+  }
+
+  .faq-question:hover {
+    color: var(--accent);
+  }
+
+  .faq-answer {
+    margin-top: var(--space-sm);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+
+  .faq-answer :global(a) {
+    color: var(--accent);
+  }
+
+  .faq-answer :global(code) {
+    font-size: 0.85em;
+  }
+</style>

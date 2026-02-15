@@ -1,0 +1,358 @@
+---
+import Base from '../layouts/Base.astro';
+import KeyCap from '../components/KeyCap.astro';
+import TerminalBlock from '../components/TerminalBlock.astro';
+---
+
+<Base
+  title="User manual -- KeyJawn"
+  description="Full documentation for KeyJawn: installation, typing, terminal keys, voice input, SCP upload, and every feature explained."
+>
+  <section class="section">
+    <div class="container manual-layout">
+      <!-- Sidebar / TOC -->
+      <aside class="manual-sidebar">
+        <nav class="manual-toc">
+          <h3 class="toc-heading">Contents</h3>
+          <ul class="toc-list">
+            <li><a href="#getting-started">Getting started</a></li>
+            <li><a href="#basic-typing">Basic typing</a></li>
+            <li><a href="#shift-caps">Shift and caps lock</a></li>
+            <li><a href="#terminal-keys">Terminal keys</a></li>
+            <li><a href="#number-row">Number row</a></li>
+            <li><a href="#alt-characters">Alt characters</a></li>
+            <li><a href="#voice-input">Voice input</a></li>
+            <li><a href="#clipboard-history">Clipboard history</a></li>
+            <li><a href="#scp-upload">SCP upload</a></li>
+            <li><a href="#slash-commands">Slash commands</a></li>
+            <li><a href="#swipe-gestures">Swipe gestures</a></li>
+            <li><a href="#autocorrect">Autocorrect</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Main content -->
+      <div class="manual-content">
+
+        <h1 class="page-title"><span class="prompt">keyjawn --help</span></h1>
+
+        <!-- Getting started -->
+        <section class="manual-section" id="getting-started">
+          <h2>Getting started</h2>
+          <ol>
+            <li>Download the APK from <a href="https://github.com/jamditis/keyjawn/releases">GitHub releases</a>.</li>
+            <li>Install via ADB or by opening the APK on your phone:</li>
+          </ol>
+
+          <TerminalBlock command="adb install keyjawn-full.apk" output="Success" />
+
+          <ol start="3">
+            <li>Go to <strong>Settings &gt; System &gt; Languages &amp; input &gt; On-screen keyboard</strong>.</li>
+            <li>Enable <strong>KeyJawn</strong>.</li>
+            <li>Set KeyJawn as your default keyboard.</li>
+          </ol>
+
+          <p>On some devices, you can switch keyboards by long-pressing the spacebar in any text field, or by tapping the keyboard icon in the navigation bar.</p>
+        </section>
+
+        <!-- Basic typing -->
+        <section class="manual-section" id="basic-typing">
+          <h2>Basic typing</h2>
+          <p>KeyJawn has three layers you can switch between:</p>
+          <ul>
+            <li><strong>Lowercase</strong> -- the default layer when you open the keyboard.</li>
+            <li><strong>Uppercase</strong> -- tap <KeyCap label="Shift" /> for one capital letter, or double-tap for caps lock.</li>
+            <li><strong>Symbols</strong> -- tap <KeyCap label="?123" /> or swipe up on the keyboard area.</li>
+          </ul>
+          <p>To return from symbols to letters, tap <code>abc</code> or swipe down.</p>
+        </section>
+
+        <!-- Shift and caps lock -->
+        <section class="manual-section" id="shift-caps">
+          <h2>Shift and caps lock</h2>
+          <ul>
+            <li><strong>Single tap</strong> <KeyCap label="Shift" /> -- types one uppercase letter, then auto-returns to lowercase.</li>
+            <li><strong>Double-tap</strong> <KeyCap label="Shift" /> -- caps lock. All letters are uppercase until you tap Shift again.</li>
+          </ul>
+          <p>Visual indicator: the Shift key changes background color to show which state you're in. Lowercase = default color. Armed (one-shot) = slightly highlighted. Caps lock = fully highlighted.</p>
+        </section>
+
+        <!-- Terminal keys -->
+        <section class="manual-section" id="terminal-keys">
+          <h2>Terminal keys</h2>
+          <p>The extra row above the QWERTY layout contains:</p>
+          <ul>
+            <li><KeyCap label="Esc" /> -- sends <code>KEYCODE_ESCAPE</code>. Use it to exit vim insert mode, cancel Claude Code operations, dismiss prompts.</li>
+            <li><KeyCap label="Tab" /> -- sends <code>KEYCODE_TAB</code>. Tab completion in shells, indentation in editors.</li>
+            <li><KeyCap label="Ctrl" /> -- toggle modifier with three states:
+              <ul>
+                <li><strong>Off</strong> -- default, no modifier.</li>
+                <li><strong>Armed</strong> -- tap once. The next keypress includes Ctrl, then it resets to Off. Use this for <KeyCap label="Ctrl" />+<KeyCap label="C" />, <KeyCap label="Ctrl" />+<KeyCap label="Z" />, etc.</li>
+                <li><strong>Locked</strong> -- long-press. Ctrl stays active until you tap it again. Useful for multiple Ctrl combos in a row.</li>
+              </ul>
+            </li>
+            <li><KeyCap label="<" /> <KeyCap label=">" /> -- left/right arrow keys. Hold to repeat. For navigating command lines, moving cursors in editors.</li>
+          </ul>
+        </section>
+
+        <!-- Number row -->
+        <section class="manual-section" id="number-row">
+          <h2>Number row</h2>
+          <p>The number row sits above the QWERTY keys and is always visible. Each key shows:</p>
+          <ul>
+            <li>The digit (tap to type).</li>
+            <li>A small hint label showing the shifted symbol (long-press to type).</li>
+          </ul>
+          <p>For example, long-press <KeyCap label="1" /> for <code>!</code>, long-press <KeyCap label="2" /> for <code>@</code>, and so on. The hints are visible on the key so you never need to guess.</p>
+        </section>
+
+        <!-- Alt characters -->
+        <section class="manual-section" id="alt-characters">
+          <h2>Alt characters</h2>
+          <p>Long-press letter keys for accented variants and alternate characters.</p>
+          <ul>
+            <li><strong>Single-alt keys</strong> -- keys with only one alternate character fire it immediately on long-press. No popup.</li>
+            <li><strong>Multi-alt keys</strong> -- keys with multiple alternates show a popup. Slide your finger to the character you want, then release.</li>
+          </ul>
+          <p>Examples:</p>
+          <ul>
+            <li>Long-press <KeyCap label="a" /> -- popup with accented a variants.</li>
+            <li>Long-press <KeyCap label="n" /> -- fires the tilde-n variant immediately.</li>
+            <li>Long-press <KeyCap label="e" /> -- popup with accented e variants.</li>
+          </ul>
+        </section>
+
+        <!-- Voice input -->
+        <section class="manual-section" id="voice-input">
+          <h2>Voice input</h2>
+          <p>Tap the mic button in the extra row to start speaking.</p>
+          <ol>
+            <li>A waveform animation shows your audio level while recording.</li>
+            <li>Text appears at your cursor as the speech recognizer processes your words -- streaming partial results, not waiting for silence.</li>
+            <li>Tap the stop button (or the mic button again) to finish.</li>
+          </ol>
+          <p>Voice input is useful when you're talking to an AI agent -- most of what you type is natural language anyway.</p>
+          <p class="text-muted">Full version only. Requires the <code>RECORD_AUDIO</code> permission.</p>
+        </section>
+
+        <!-- Clipboard history -->
+        <section class="manual-section" id="clipboard-history">
+          <h2>Clipboard history</h2>
+          <p>Tap the clipboard button in the extra row to open the clipboard history panel. It shows your recent copied text entries. Tap any entry to paste it at your cursor position.</p>
+          <p class="text-muted">Full version only.</p>
+        </section>
+
+        <!-- SCP upload -->
+        <section class="manual-section" id="scp-upload">
+          <h2>SCP upload</h2>
+          <p>SCP upload lets you send photos from your phone to a remote server and automatically type the remote path at your cursor.</p>
+          <h3>Setup</h3>
+          <ol>
+            <li>Open KeyJawn settings (gear icon, or find it in your app drawer).</li>
+            <li>Add a host: enter the hostname, port, username, password, and remote upload directory.</li>
+            <li>Credentials are stored using AndroidX <code>EncryptedSharedPreferences</code> (AES-256).</li>
+          </ol>
+          <h3>Usage</h3>
+          <ol>
+            <li>Tap the upload button in the extra row.</li>
+            <li>Pick a photo from your gallery.</li>
+            <li>KeyJawn SCPs it to the configured server.</li>
+            <li>The remote file path is typed at your cursor.</li>
+          </ol>
+          <p>This is useful for sharing screenshots with Claude Code, Aider, or other AI tools that accept file paths.</p>
+          <p class="text-muted">Full version only. Requires <code>INTERNET</code> and <code>READ_MEDIA_IMAGES</code> permissions.</p>
+        </section>
+
+        <!-- Slash commands -->
+        <section class="manual-section" id="slash-commands">
+          <h2>Slash commands</h2>
+          <p>On the symbols layer, tapping the <code>/</code> key opens a command picker popup instead of typing a literal slash.</p>
+          <ul>
+            <li>Select a command from the list to insert it at your cursor.</li>
+            <li>Dismiss the popup (tap outside or press back) to type a literal <code>/</code> instead.</li>
+          </ul>
+          <p>The command list includes common LLM CLI patterns like <code>/help</code>, <code>/clear</code>, <code>/compact</code>, and others.</p>
+          <p class="text-muted">Full version only.</p>
+        </section>
+
+        <!-- Swipe gestures -->
+        <section class="manual-section" id="swipe-gestures">
+          <h2>Swipe gestures</h2>
+          <p>Swipe across the keyboard area for quick actions:</p>
+          <ul>
+            <li><strong>Swipe left</strong> -- deletes the previous word.</li>
+            <li><strong>Swipe right</strong> -- inserts a space.</li>
+            <li><strong>Swipe up</strong> -- switches to the symbols layer.</li>
+            <li><strong>Swipe down</strong> -- switches to the letters layer.</li>
+          </ul>
+          <p class="text-muted">Full version only.</p>
+        </section>
+
+        <!-- Autocorrect -->
+        <section class="manual-section" id="autocorrect">
+          <h2>Autocorrect</h2>
+          <p>Autocorrect is <strong>off by default</strong>. In terminal contexts, autocorrect does more harm than good -- it uses <code>setComposingText</code> which breaks web-based terminals and SSH clients.</p>
+          <p>To toggle autocorrect:</p>
+          <ol>
+            <li>Long-press the spacebar.</li>
+            <li>Autocorrect toggles on or off for the current app.</li>
+            <li>When enabled, the spacebar label changes to indicate autocorrect is active.</li>
+          </ol>
+          <p>KeyJawn remembers the autocorrect setting per app. So you can enable it for Slack but keep it off for Termux.</p>
+          <p class="text-muted">Full version only.</p>
+        </section>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-title {
+    margin-bottom: var(--space-lg);
+  }
+
+  .manual-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: var(--space-xl);
+    align-items: start;
+  }
+
+  /* Sidebar */
+  .manual-sidebar {
+    position: sticky;
+    top: 80px;
+  }
+
+  .toc-heading {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-sm);
+  }
+
+  .toc-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .toc-list li {
+    margin-bottom: 0.15rem;
+  }
+
+  .toc-list a {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: block;
+    padding: 0.3em 0.6em;
+    border-left: 2px solid transparent;
+    border-radius: 0 3px 3px 0;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    text-decoration: none;
+  }
+
+  .toc-list a:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.02);
+    opacity: 1;
+  }
+
+  .toc-list a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(108, 242, 168, 0.05);
+  }
+
+  /* Manual content */
+  .manual-content {
+    max-width: 720px;
+  }
+
+  .manual-section {
+    padding-bottom: var(--space-xl);
+    margin-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .manual-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  .manual-section h2 {
+    margin-bottom: var(--space-sm);
+  }
+
+  .manual-section h3 {
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-xs);
+  }
+
+  .manual-section ol,
+  .manual-section ul {
+    margin-bottom: var(--space-sm);
+  }
+
+  .manual-section ol li,
+  .manual-section ul li {
+    margin-bottom: 0.5em;
+    line-height: 1.7;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .manual-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .manual-sidebar {
+      position: static;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: var(--space-md);
+      margin-bottom: var(--space-md);
+    }
+
+    .toc-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+
+    .toc-list a {
+      border-left: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 3px 3px 0 0;
+      font-size: 0.75rem;
+    }
+
+    .toc-list a.active {
+      border-left: none;
+      border-bottom-color: var(--accent);
+    }
+  }
+</style>
+
+<script>
+  // Highlight active TOC link on scroll
+  const sections = document.querySelectorAll('.manual-section');
+  const tocLinks = document.querySelectorAll('.toc-list a');
+
+  if (sections.length && tocLinks.length) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          tocLinks.forEach(link => {
+            link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+          });
+        }
+      });
+    }, { rootMargin: '-80px 0px -60% 0px' });
+
+    sections.forEach(section => observer.observe(section));
+  }
+</script>

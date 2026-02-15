@@ -1,0 +1,291 @@
+---
+import Base from '../layouts/Base.astro';
+import FeatureCard from '../components/FeatureCard.astro';
+import TerminalBlock from '../components/TerminalBlock.astro';
+import PhoneMockup from '../components/PhoneMockup.astro';
+import KeyCap from '../components/KeyCap.astro';
+---
+
+<Base
+  title="KeyJawn -- the keyboard for the CLI renaissance"
+  description="Terminal keys, voice input, and SCP upload on an Android keyboard built for AI-era CLI users."
+>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="container hero-inner">
+      <div class="hero-text">
+        <h1 class="hero-headline">
+          <span class="hero-prompt">&gt;</span> the keyboard for the CLI renaissance<span class="cursor">_</span>
+        </h1>
+        <p class="hero-sub">
+          Terminal keys, voice input, and SCP upload on a keyboard built for AI-era CLI users.
+        </p>
+        <div class="hero-actions">
+          <a href="https://github.com/jamditis/keyjawn/releases" class="btn btn-primary">Download APK</a>
+          <a href="https://github.com/jamditis/keyjawn" class="btn btn-secondary" target="_blank" rel="noopener">View source</a>
+        </div>
+        <div class="hero-keys">
+          <KeyCap label="Esc" />
+          <KeyCap label="Tab" />
+          <KeyCap label="Ctrl" />
+          <span class="hero-keys-sep">/</span>
+          <KeyCap label="<" />
+          <KeyCap label=">" />
+          <span class="hero-keys-sep">/</span>
+          <KeyCap label="Mic" />
+          <KeyCap label="SCP" />
+        </div>
+      </div>
+      <div class="hero-visual">
+        <PhoneMockup />
+      </div>
+    </div>
+  </section>
+
+  <!-- Features grid -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-heading prompt">ls features/</h2>
+      <div class="feature-grid">
+        <FeatureCard
+          title="terminal-keys"
+          icon=">"
+          description="Esc, Tab, Ctrl, and arrow keys always visible in a dedicated row above the keyboard. No more hunting for terminal characters."
+        />
+        <FeatureCard
+          title="voice-input"
+          icon="~"
+          description="Tap the mic and speak naturally. Streaming transcription puts your words on screen as you say them. Built for talking to AI agents."
+        />
+        <FeatureCard
+          title="scp-upload"
+          icon="^"
+          description="Pick a photo, SCP it to your server, and the remote path gets typed at your cursor. Share screenshots with Claude Code in one tap."
+        />
+        <FeatureCard
+          title="slash-commands"
+          icon="/"
+          description="Quick-insert for the slash command patterns that every LLM CLI uses. Hit slash, pick a command, keep moving."
+        />
+        <FeatureCard
+          title="swipe-gestures"
+          icon="="
+          description="Swipe left to delete a word, right for space, up for symbols, down for letters. Fast layer switching without button hunting."
+        />
+        <FeatureCard
+          title="number-row"
+          icon="#"
+          description="Dedicated number row with long-press shifted symbols. Alt character hints visible on every key so you never guess."
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- Built for -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-heading prompt">cat compatible.txt</h2>
+      <div class="built-for">
+        <span class="built-for-item">Claude Code</span>
+        <span class="built-for-sep">//</span>
+        <span class="built-for-item">Cockpit</span>
+        <span class="built-for-sep">//</span>
+        <span class="built-for-item">Termux</span>
+        <span class="built-for-sep">//</span>
+        <span class="built-for-item">Aider</span>
+        <span class="built-for-sep">//</span>
+        <span class="built-for-item">JuiceSSH</span>
+        <span class="built-for-sep">//</span>
+        <span class="built-for-item">ConnectBot</span>
+      </div>
+      <p class="built-for-note">
+        Works with any app that accepts keyboard input. Designed for terminal sessions, SSH clients, and AI CLI tools.
+      </p>
+    </div>
+  </section>
+
+  <!-- Install -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-heading prompt">install keyjawn</h2>
+      <div class="install-grid">
+        <div class="install-terminal">
+          <TerminalBlock command="adb install keyjawn-full.apk" output="Success" />
+        </div>
+        <div class="install-info">
+          <p>Grab the APK from GitHub releases and sideload via ADB, or download directly to your phone.</p>
+          <div class="install-actions">
+            <a href="https://github.com/jamditis/keyjawn/releases" class="btn btn-primary">Full version -- $4</a>
+            <a href="https://github.com/jamditis/keyjawn/releases" class="btn btn-secondary">Lite -- free</a>
+          </div>
+          <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.75rem;">
+            No subscriptions. No ads. No tracking. <a href="/pricing">See what's included</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* Hero */
+  .hero {
+    position: relative;
+    padding: var(--space-2xl) 0 var(--space-xl);
+    overflow: hidden;
+  }
+
+  .hero-glow {
+    position: absolute;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 700px;
+    background: radial-gradient(ellipse at center, rgba(108, 242, 168, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: var(--space-xl);
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-headline {
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    line-height: 1.15;
+    margin-bottom: var(--space-md);
+  }
+
+  .hero-prompt {
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    color: var(--text-muted);
+    max-width: 520px;
+    margin-bottom: var(--space-md);
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-md);
+  }
+
+  .hero-keys {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .hero-keys-sep {
+    color: var(--border);
+    font-family: var(--font-mono);
+  }
+
+  .hero-visual {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Feature grid */
+  .section-heading {
+    margin-bottom: var(--space-lg);
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+  }
+
+  /* Built for */
+  .built-for {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-sm);
+  }
+
+  .built-for-item {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #e0e0e8;
+  }
+
+  .built-for-sep {
+    color: var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+  }
+
+  .built-for-note {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+
+  /* Install */
+  .install-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    align-items: start;
+  }
+
+  .install-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    margin-top: var(--space-sm);
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .hero-inner {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+
+    .hero-sub {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-actions {
+      justify-content: center;
+    }
+
+    .hero-keys {
+      justify-content: center;
+    }
+
+    .feature-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .install-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .feature-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .built-for {
+      justify-content: center;
+    }
+  }
+</style>
