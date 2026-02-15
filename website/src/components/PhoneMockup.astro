@@ -200,9 +200,10 @@
   const LINE_START_Y = 126;
   const LINE_HEIGHT = 14;
 
-  let buffer = '';
+  const INITIAL_TEXT = 'chode --dangerously-skip-permissions';
+  let buffer = INITIAL_TEXT;
   let shifted = false;
-  let cursorPos = 0;
+  let cursorPos = INITIAL_TEXT.length;
 
   const svg = document.getElementById('phone-svg');
   const dynamicGroup = document.getElementById('terminal-dynamic');
