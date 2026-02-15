@@ -7,8 +7,8 @@
   --bg: #0a0a0f;
   --surface: #14141c;
   --border: #1e1e2a;
-  --text: #c8c8d0;
-  --text-muted: #5a5a6e;
+  --text: #d8d8e0;
+  --text-muted: #8888a0;
   --accent: #6cf2a8;
   --accent-warm: #f26c8a;
   --code-bg: #0d0d14;
@@ -46,8 +46,8 @@ html {
 body {
   font-family: var(--font-body);
   font-weight: 400;
-  font-size: 1rem;
-  line-height: 1.7;
+  font-size: 1.05rem;
+  line-height: 1.75;
   color: var(--text);
   background-color: var(--bg);
   -webkit-font-smoothing: antialiased;

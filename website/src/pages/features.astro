@@ -205,6 +205,48 @@ import KeyCap from '../components/KeyCap.astro';
     </div>
   </section>
 
+  <!-- Quick key -->
+  <section class="section feature-section" id="quick-key">
+    <div class="container feature-row">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --quick-key</h2>
+        <p>The bottom-right key (next to the spacebar) is configurable. Long-press it to pick from <code>/</code>, <code>.</code>, <code>,</code>, <code>?</code>, <code>!</code>, and more. It remembers your choice.</p>
+        <p>Set it to whatever character you type most often. Default is <code>/</code> for terminal users.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="key-row-demo">
+          <KeyCap label="/" />
+          <KeyCap label="." />
+          <KeyCap label="," />
+          <KeyCap label="?" />
+          <KeyCap label="!" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Color-coded extra row -->
+  <section class="section feature-section" id="color-coded-keys">
+    <div class="container feature-row reverse">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --colors</h2>
+        <p>Each function key in the extra row has a distinct background color. At a glance, you can tell Esc from Tab from Ctrl from the arrow cluster. No reading labels in the heat of a terminal session.</p>
+        <p>Arrow keys share one color. Clipboard, upload, and mic each get their own. Ctrl stays neutral until armed or locked, then shifts to active/locked colors.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="color-demo">
+          <span class="color-key" style="background: #1A1A1A; border: 1px solid #333;">ESC</span>
+          <span class="color-key" style="background: #2A4A35; border: 1px solid #3a6a4a;">Tab</span>
+          <span class="color-key" style="background: #4A3D20; border: 1px solid #6a5d40;">Clip</span>
+          <span class="color-key" style="background: #2a2a2f; border: 1px solid #3a3a4a;">Ctrl</span>
+          <span class="color-key" style="background: #3A3A3F; border: 1px solid #4a4a5a;">Arrows</span>
+          <span class="color-key" style="background: #253050; border: 1px solid #354a70;">Upload</span>
+          <span class="color-key" style="background: #4A2525; border: 1px solid #6a3535;">Mic</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Autocorrect -->
   <section class="section feature-section" id="autocorrect">
     <div class="container feature-row">
@@ -291,13 +333,13 @@ import KeyCap from '../components/KeyCap.astro';
   }
 
   .feature-content p {
-    font-size: 0.95rem;
-    line-height: 1.7;
+    font-size: 1rem;
+    line-height: 1.75;
   }
 
   .feature-content ul {
     margin-top: 0.5rem;
-    font-size: 0.95rem;
+    font-size: 1rem;
   }
 
   .feature-visual {
@@ -577,6 +619,27 @@ import KeyCap from '../components/KeyCap.astro';
     font-family: var(--font-mono);
     font-size: 0.8rem;
     color: var(--text-muted);
+  }
+
+  /* Color-coded key demo */
+  .color-demo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: var(--space-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    justify-content: center;
+  }
+
+  .color-key {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: #e0e0e8;
+    padding: 0.5em 0.8em;
+    border-radius: 5px;
+    white-space: nowrap;
   }
 
   /* Responsive */

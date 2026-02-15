@@ -1,0 +1,168 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Privacy policy -- KeyJawn"
+  description="KeyJawn privacy policy: no data collection, no analytics, no ads, no tracking."
+>
+  <section class="section">
+    <div class="container privacy-layout">
+      <h1 class="page-title"><span class="prompt">cat privacy.txt</span></h1>
+      <p class="effective-date">Effective date: February 15, 2026</p>
+
+      <div class="privacy-content">
+        <section class="privacy-section">
+          <h2>Summary</h2>
+          <p>KeyJawn does not collect, store, or transmit any personal data. There are no analytics, no ads, and no tracking. The app works entirely on your device.</p>
+        </section>
+
+        <section class="privacy-section">
+          <h2>Data we do not collect</h2>
+          <ul>
+            <li>Keystrokes or text input</li>
+            <li>Usage analytics or telemetry</li>
+            <li>Device identifiers</li>
+            <li>Location data</li>
+            <li>Contact or account information</li>
+          </ul>
+        </section>
+
+        <section class="privacy-section">
+          <h2>Voice input</h2>
+          <p>Voice input uses Android's built-in <code>SpeechRecognizer</code> API. Audio is processed by Google's speech recognition service on your device or Google's servers, depending on your device settings. KeyJawn does not record, store, or transmit audio data itself.</p>
+        </section>
+
+        <section class="privacy-section">
+          <h2>Clipboard history</h2>
+          <p>Clipboard history is stored in memory only. It is not written to disk, not persisted between sessions, and never transmitted anywhere.</p>
+        </section>
+
+        <section class="privacy-section">
+          <h2>SCP upload</h2>
+          <p>SCP upload sends files directly from your device to your own SSH server using the JSch library. No third-party servers are involved. KeyJawn does not see, store, or process the file contents beyond transmitting them over SSH.</p>
+        </section>
+
+        <section class="privacy-section">
+          <h2>SSH credentials</h2>
+          <p>SSH host credentials (hostname, username, port, key path) are encrypted using AES-256 via AndroidX <code>EncryptedSharedPreferences</code> and stored locally on your device. They never leave the device.</p>
+        </section>
+
+        <section class="privacy-section">
+          <h2>Purchases</h2>
+          <p>In-app purchases are handled by Google Play. KeyJawn only stores a boolean flag indicating whether the full version has been purchased. No payment information is accessed or stored by the app.</p>
+        </section>
+
+        <section class="privacy-section">
+          <h2>Permissions</h2>
+          <table class="permissions-table">
+            <thead>
+              <tr>
+                <th>Permission</th>
+                <th>Purpose</th>
+                <th>When used</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>RECORD_AUDIO</code></td>
+                <td>Voice-to-text input</td>
+                <td>Only when you tap the mic button</td>
+              </tr>
+              <tr>
+                <td><code>INTERNET</code></td>
+                <td>SCP file upload, billing</td>
+                <td>Only during upload or purchase flow</td>
+              </tr>
+              <tr>
+                <td><code>READ_MEDIA_IMAGES</code></td>
+                <td>Select photos for SCP upload</td>
+                <td>Only when you tap the upload button</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="privacy-section">
+          <h2>Children</h2>
+          <p>KeyJawn is not directed at children under 13. We do not knowingly collect data from children.</p>
+        </section>
+
+        <section class="privacy-section">
+          <h2>Changes</h2>
+          <p>If this policy changes, the updated version will be posted here with a new effective date.</p>
+        </section>
+
+        <section class="privacy-section">
+          <h2>Contact</h2>
+          <p>Questions about this policy: <a href="mailto:jamditis@gmail.com">jamditis@gmail.com</a></p>
+        </section>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-title {
+    margin-bottom: var(--space-xs);
+  }
+
+  .effective-date {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: var(--space-lg);
+  }
+
+  .privacy-layout {
+    max-width: 720px;
+  }
+
+  .privacy-section {
+    margin-bottom: var(--space-lg);
+  }
+
+  .privacy-section h2 {
+    font-size: 1.2rem;
+    margin-bottom: var(--space-sm);
+  }
+
+  .privacy-section p {
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .privacy-section ul {
+    font-size: 1rem;
+  }
+
+  .privacy-section li {
+    line-height: 1.75;
+  }
+
+  .permissions-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin-top: var(--space-sm);
+  }
+
+  .permissions-table th,
+  .permissions-table td {
+    text-align: left;
+    padding: 0.6em 0.8em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .permissions-table th {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .permissions-table td {
+    color: var(--text);
+  }
+</style>

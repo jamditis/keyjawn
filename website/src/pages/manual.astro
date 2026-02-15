@@ -21,6 +21,7 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li><a href="#terminal-keys">Terminal keys</a></li>
             <li><a href="#number-row">Number row</a></li>
             <li><a href="#alt-characters">Alt characters</a></li>
+            <li><a href="#quick-key">Quick key</a></li>
             <li><a href="#voice-input">Voice input</a></li>
             <li><a href="#clipboard-history">Clipboard history</a></li>
             <li><a href="#scp-upload">SCP upload</a></li>
@@ -91,8 +92,12 @@ import TerminalBlock from '../components/TerminalBlock.astro';
                 <li><strong>Locked</strong> -- long-press. Ctrl stays active until you tap it again. Useful for multiple Ctrl combos in a row.</li>
               </ul>
             </li>
-            <li><KeyCap label="<" /> <KeyCap label=">" /> -- left/right arrow keys. Hold to repeat. For navigating command lines, moving cursors in editors.</li>
+            <li><KeyCap label="<" /> <KeyCap label="v" /> <KeyCap label="^" /> <KeyCap label=">" /> -- arrow keys. Hold to repeat. For navigating command lines, moving cursors in editors.</li>
+            <li><strong>Clipboard</strong> -- tap to open clipboard history. Long-press to paste most recent item.</li>
+            <li><strong>Upload</strong> -- tap to pick and SCP a photo to your configured host.</li>
+            <li><strong>Mic</strong> -- tap to start/stop voice input.</li>
           </ul>
+          <p>Each button has a distinct background color so you can find it at a glance without reading labels.</p>
         </section>
 
         <!-- Number row -->
@@ -120,6 +125,17 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li>Long-press <KeyCap label="n" /> -- fires the tilde-n variant immediately.</li>
             <li>Long-press <KeyCap label="e" /> -- popup with accented e variants.</li>
           </ul>
+        </section>
+
+        <!-- Quick key -->
+        <section class="manual-section" id="quick-key">
+          <h2>Quick key</h2>
+          <p>The bottom-right key on the letter layers (next to the spacebar) is a configurable quick key. It defaults to <code>/</code>.</p>
+          <ul>
+            <li><strong>Tap</strong> -- types the configured character.</li>
+            <li><strong>Long-press</strong> -- opens a picker to choose a different character: <code>/</code>, <code>.</code>, <code>,</code>, <code>?</code>, <code>!</code>, <code>--</code>, <code>'</code>, <code>"</code>, <code>:</code>, <code>;</code>.</li>
+          </ul>
+          <p>Your choice is saved and persists across sessions. Set it to whatever you type most.</p>
         </section>
 
         <!-- Voice input -->

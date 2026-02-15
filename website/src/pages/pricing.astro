@@ -10,7 +10,7 @@ import PricingCard from '../components/PricingCard.astro';
   <section class="section">
     <div class="container">
       <h1 class="page-title"><span class="prompt">cat pricing.yml</span></h1>
-      <p class="page-intro">Two versions. One-time payment. No subscriptions, no ads, no tracking.</p>
+      <p class="page-intro">Free download. One-time $4 upgrade. No subscriptions, no ads, no tracking.</p>
     </div>
   </section>
 
@@ -18,27 +18,28 @@ import PricingCard from '../components/PricingCard.astro';
     <div class="container">
       <div class="pricing-grid">
         <PricingCard
-          title="Lite"
-          price="Free"
+          title="Free"
+          price="$0"
           features={[
             'QWERTY keyboard (3 layers)',
             'Terminal key row (Esc, Tab, Ctrl, arrows)',
-            'Number row with alt hints',
+            'Number row with shift hints',
             'Alt character popups on long-press',
+            'Configurable quick key',
+            'Color-coded extra row',
             'Shift / caps lock',
-            'No permissions required',
             'Open source (MIT)',
           ]}
-          ctaText="Download Lite"
-          ctaLink="https://github.com/jamditis/keyjawn/releases"
+          ctaText="Get on Google Play"
+          ctaLink="https://play.google.com/store/apps/details?id=com.keyjawn"
         />
         <PricingCard
-          title="Full"
+          title="Full unlock"
           price="$4"
           highlighted={true}
-          badge="lifetime -- no subscriptions"
+          badge="lifetime in-app purchase"
           features={[
-            'Everything in Lite, plus:',
+            'Everything in free, plus:',
             'Voice input with streaming transcription',
             'Clipboard history manager',
             'SCP image upload to remote servers',
@@ -49,10 +50,12 @@ import PricingCard from '../components/PricingCard.astro';
             'Per-app autocorrect toggle',
             'No ads. No tracking.',
           ]}
-          ctaText="Get full version"
-          ctaLink="https://github.com/jamditis/keyjawn/releases"
+          ctaText="Get on Google Play"
+          ctaLink="https://play.google.com/store/apps/details?id=com.keyjawn"
         />
       </div>
+
+      <p class="sideload-note">Want the lite version without Google Play? <a href="https://github.com/jamditis/keyjawn/releases">Download the APK from GitHub</a>.</p>
     </div>
   </section>
 
@@ -103,7 +106,14 @@ import PricingCard from '../components/PricingCard.astro';
   }
 
   .why-content p {
-    font-size: 0.95rem;
+    font-size: 1rem;
+  }
+
+  .sideload-note {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: var(--space-md);
   }
 
   @media (max-width: 768px) {
