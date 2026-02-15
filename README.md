@@ -1,6 +1,6 @@
 # KeyJawn: Custom mobile keyboard for LLM CLI usage 
 
-![KeyJawn branding graphic](https://i.imgur.com/7MC8v1C.png)
+![KeyJawn branding graphic](https://i.imgur.com/wAieWl6.png)
 
 A custom Android keyboard designed for using LLM CLI agents (Claude Code, Aider, etc.) from your phone.
 
