@@ -6,7 +6,8 @@ Most mobile keyboards lack the keys you need for terminal work — arrow keys, T
 
 ## What it does
 
-- **Terminal key row:** Esc, Tab, Ctrl (toggle modifier), arrow keys, and an image upload button
+- **Terminal key row:** Esc, Tab, Ctrl (toggle modifier), arrow keys, image upload, and voice-to-text — all always visible
+- **Voice-to-text:** Mic button on the far right of the extra row (where you expect it). Tap to dictate — uses the same speech recognition engine as Gboard.
 - **LLM CLI shortcuts:** Quick-insert for `/` commands, common prompts, and slash-command prefixes used by Claude Code, Aider, and other LLM CLI tools
 - **Basic QWERTY:** Three layers (lowercase, uppercase, symbols) with no autocorrect by default — because autocorrect breaks web-based terminals
 - **Autocorrect toggle:** Long-press spacebar to enable/disable per app. Off for terminals, on for chat apps.

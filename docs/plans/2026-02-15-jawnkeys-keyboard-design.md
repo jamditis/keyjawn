@@ -27,13 +27,15 @@ People who SSH into servers from their phone to use LLM CLI tools. The keyboard 
 
 Primary test case: Claude Code via Cockpit web terminal on a Samsung S24 Ultra.
 
-## Extra row layout (8 keys)
+## Extra row layout (9 keys)
 
 ```
-+-----+-----+------+-----+-----+-----+-----+-----+
-| Esc | Tab | Ctrl |  <  |  v  |  ^  |  >  | Upl |
-+-----+-----+------+-----+-----+-----+-----+-----+
++-----+-----+------+-----+-----+-----+-----+-----+-----+
+| Esc | Tab | Ctrl |  <  |  v  |  ^  |  >  | Upl | Mic |
++-----+-----+------+-----+-----+-----+-----+-----+-----+
 ```
+
+Mic is the rightmost key, matching its familiar position on Gboard (far right, above the number row).
 
 ### Key behaviors
 
@@ -43,6 +45,7 @@ Primary test case: Claude Code via Cockpit web terminal on a Samsung S24 Ultra.
 | Tab | KEYCODE_TAB | -- |
 | Ctrl | Toggle modifier (arm for next keypress) | Sticky lock (stays on until tapped again) |
 | Arrow keys | KEYCODE_DPAD_LEFT/DOWN/UP/RIGHT | Key repeat while held |
+| Mic | Launch voice-to-text (Android SpeechRecognizer) | -- |
 | Upload | Open Android photo/file picker | Open host picker / settings |
 
 ### Ctrl modifier behavior
@@ -50,6 +53,30 @@ Primary test case: Claude Code via Cockpit web terminal on a Samsung S24 Ultra.
 - Tap Ctrl: highlights (armed). Next QWERTY keypress sends as Ctrl+key combo. Auto-releases.
 - Double-tap / long-press Ctrl: locks on for multiple combos. Tap again to release.
 - Visual: key turns amber when armed, red when locked.
+
+## Voice-to-text input
+
+Voice input is essential — many users (especially on phones) rely on speech-to-text for natural language input. Since KeyJawn replaces the system keyboard entirely, we must provide voice input that matches what Gboard offers.
+
+### How it works
+
+1. Tap the Mic key in the extra row
+2. Android's speech recognition UI appears (same engine Gboard uses)
+3. Speak your message
+4. Recognized text is inserted at the cursor via `commitText()`
+
+### Technical approach
+
+Use Android's `SpeechRecognizer` API or launch `ACTION_RECOGNIZE_SPEECH` intent. Both trigger Google's speech recognition service (or Samsung's, depending on the device). The IME receives the transcribed text in `onActivityResult` and commits it to the input connection.
+
+**Permission:** `android.permission.RECORD_AUDIO` required in manifest.
+
+### Behavior
+
+- Mic key has a distinct visual (e.g., lighter color or mic icon) to match familiar positioning
+- While listening, the mic key pulses or changes color to indicate active recording
+- Partial results are shown in a suggestion bar above the keyboard (optional, v1 can just insert final result)
+- Works with autocorrect state — if AC is on, the transcribed text goes through spell check
 
 ## LLM CLI slash command shortcuts
 
@@ -172,6 +199,7 @@ Pipe, tilde, backtick, period available in symbols layer.
 
 ## Technical details
 
+- **Voice input:** Android `SpeechRecognizer` API or `ACTION_RECOGNIZE_SPEECH` intent
 - **Min SDK:** 26 (Android 8.0) — covers all modern Android devices
 - **SSH library:** JSch (com.github.mwiede:jsch) for SCP transfers
 - **Key events:** Sent via `InputConnection.sendKeyEvent()` for terminal keys, `commitText()` for character input
@@ -183,7 +211,7 @@ Pipe, tilde, backtick, period available in symbols layer.
 
 ### In scope (v1)
 
-- Extra terminal key row (Esc, Tab, Ctrl, arrows, upload)
+- Extra terminal key row (Esc, Tab, Ctrl, arrows, mic, upload)
 - Basic QWERTY with shift/symbols layers
 - Slash command quick-insert with popup
 - Autocorrect toggle with per-app memory

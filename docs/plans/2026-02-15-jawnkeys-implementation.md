@@ -460,7 +460,89 @@ git commit -m "feat: add per-app autocorrect toggle via long-press spacebar"
 
 ---
 
-## Task 7: Slash command quick-insert
+## Task 7: Voice-to-text input
+
+**Files:**
+- Create: `app/src/main/java/com/keyjawn/VoiceInputHandler.kt`
+- Modify: `app/src/main/java/com/keyjawn/KeyJawnService.kt`
+- Modify: `app/src/main/AndroidManifest.xml` (add RECORD_AUDIO permission)
+- Test: `app/src/test/java/com/keyjawn/VoiceInputHandlerTest.kt`
+
+Mic button is the rightmost key in the extra row (always visible, matching Gboard's mic position). Launches Android's `SpeechRecognizer`. Transcribed text inserted at cursor via `commitText()`. Mic key pulses or changes color while listening.
+
+**Step 1: Write failing test**
+
+```kotlin
+// app/src/test/java/com/keyjawn/VoiceInputHandlerTest.kt
+package com.keyjawn
+
+import org.junit.Test
+import org.junit.Assert.*
+
+class VoiceInputHandlerTest {
+
+    @Test
+    fun `handler class exists`() {
+        val handler = VoiceInputHandler()
+        assertNotNull(handler)
+    }
+
+    @Test
+    fun `createRecognitionIntent has free form language model`() {
+        val handler = VoiceInputHandler()
+        val intent = handler.createRecognitionIntent()
+        assertEquals(
+            "free_form",
+            intent.getStringExtra("android.speech.extra.LANGUAGE_MODEL")
+        )
+    }
+}
+```
+
+**Step 2: Implement VoiceInputHandler**
+
+```kotlin
+// app/src/main/java/com/keyjawn/VoiceInputHandler.kt
+package com.keyjawn
+
+import android.content.Context
+import android.content.Intent
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+
+class VoiceInputHandler {
+
+    fun isVoiceAvailable(context: Context?): Boolean {
+        return context != null &&
+            SpeechRecognizer.isRecognitionAvailable(context)
+    }
+
+    fun createRecognitionIntent(): Intent {
+        return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        }
+    }
+}
+```
+
+**Step 3: Run tests — expected PASS**
+
+**Step 4: Wire mic button in extra row and service**
+
+Add `RECORD_AUDIO` to manifest. Connect mic key tap to `SpeechRecognizer.startListening()`. Handle `RecognitionListener.onResults()` to commit text. Mic key animation while listening.
+
+**Step 5: Commit**
+
+```bash
+git add app/src/ app/src/main/AndroidManifest.xml
+git commit -m "feat: add voice-to-text input via mic button in extra row"
+```
+
+---
+
+## Task 8: Slash command quick-insert
 
 **Files:**
 - Create: `app/src/main/java/com/keyjawn/SlashCommandRegistry.kt`
@@ -498,7 +580,7 @@ git commit -m "feat: add slash command quick-insert popup with bundled command s
 
 ---
 
-## Task 8: Image upload via SCP
+## Task 9: Image upload via SCP
 
 **Files:**
 - Create: `app/src/main/java/com/keyjawn/HostConfig.kt`
@@ -517,7 +599,7 @@ git commit -m "feat: add SCP image upload with path insertion"
 
 ---
 
-## Task 9: Settings activity
+## Task 10: Settings activity
 
 **Files:**
 - Create: `app/src/main/java/com/keyjawn/SettingsActivity.kt`
@@ -534,7 +616,7 @@ git commit -m "feat: add settings activity with host management"
 
 ---
 
-## Task 10: GitHub Actions CI
+## Task 11: GitHub Actions CI
 
 **Files:**
 - Create: `.github/workflows/build.yml`
@@ -550,7 +632,7 @@ git commit -m "ci: add GitHub Actions build and test workflow"
 
 ---
 
-## Task 11: Integration test and release
+## Task 12: Integration test and release
 
 1. Download debug APK from CI artifacts
 2. Install on S24 Ultra
