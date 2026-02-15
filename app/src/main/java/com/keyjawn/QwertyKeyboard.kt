@@ -183,7 +183,7 @@ class QwertyKeyboard(
                 } else if (isAutocorrectOn()) {
                     ic.setComposingText(key.output.char, 1)
                 } else {
-                    keySender.sendText(ic, key.output.char)
+                    keySender.sendChar(ic, key.output.char)
                 }
                 if (shiftState == ShiftState.SINGLE) {
                     shiftState = ShiftState.OFF
@@ -197,7 +197,7 @@ class QwertyKeyboard(
                 if (isAutocorrectOn()) {
                     ic.finishComposingText()
                 }
-                keySender.sendText(ic, " ")
+                keySender.sendChar(ic, " ")
             }
             is KeyOutput.SymSwitch -> {
                 setLayer(KeyboardLayouts.LAYER_SYMBOLS)

@@ -27,7 +27,7 @@ class NumberRowManager(
         val button = view.findViewById<Button>(buttonId)
         button.setOnClickListener {
             val ic = inputConnectionProvider() ?: return@setOnClickListener
-            keySender.sendText(ic, digit)
+            keySender.sendChar(ic, digit)
         }
         val alts = AltKeyMappings.getAlts(digit)
         if (alts != null && alts.size == 1) {
