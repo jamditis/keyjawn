@@ -1,11 +1,34 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
+val localProps = Properties()
+val localPropsFile = rootProject.file("local.properties")
+if (localPropsFile.exists()) {
+    localPropsFile.inputStream().use { localProps.load(it) }
+}
+
 android {
     namespace = "com.keyjawn"
     compileSdk = 35
+
+    signingConfigs {
+        create("release") {
+            storeFile = file(
+                System.getenv("KEYSTORE_PATH")
+                    ?: localProps.getProperty("signing.storeFile", "../keyjawn-release.jks")
+            )
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+                ?: localProps.getProperty("signing.storePassword", "")
+            keyAlias = System.getenv("KEY_ALIAS")
+                ?: localProps.getProperty("signing.keyAlias", "keyjawn")
+            keyPassword = System.getenv("KEY_PASSWORD")
+                ?: localProps.getProperty("signing.keyPassword", "")
+        }
+    }
 
     defaultConfig {
         applicationId = "com.keyjawn"
@@ -39,6 +62,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

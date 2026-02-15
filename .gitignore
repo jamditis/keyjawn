@@ -16,3 +16,5 @@ local.properties
 .firecrawl/
 .playwright-mcp/
 keyjawn-site-*.png
+*.jks
+*.keystore
