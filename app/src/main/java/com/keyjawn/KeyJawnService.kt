@@ -89,9 +89,13 @@ class KeyJawnService : InputMethodService() {
     }
 
     private fun launchPhotoPicker() {
-        val handler = uploadHandler ?: return
-        val intent = handler.createPickerIntent() ?: return
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        startActivity(intent)
+        try {
+            val pickerClass = Class.forName("com.keyjawn.PickerActivity")
+            val intent = Intent(this, pickerClass)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+        } catch (_: ClassNotFoundException) {
+            // lite flavor — PickerActivity not available
+        }
     }
 }

@@ -23,6 +23,7 @@ class UploadHandler(private val context: Context) {
     val isAvailable = true
 
     private val scpUploader = ScpUploader()
+    private val knownHostsManager = KnownHostsManager(context)
     private var activeHost: HostConfig? = null
     private var inputConnectionProvider: (() -> InputConnection?)? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -85,7 +86,7 @@ class UploadHandler(private val context: Context) {
         val localFile = copyUriToTemp(uri) ?: return
 
         scope.launch {
-            val result = scpUploader.upload(host, localFile)
+            val result = scpUploader.upload(host, localFile, knownHostsManager)
             withContext(Dispatchers.Main) {
                 if (result.success) {
                     showToast("Uploaded -> ${result.remotePath}")

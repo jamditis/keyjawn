@@ -17,7 +17,7 @@ class ScpUploader {
         val error: String = ""
     )
 
-    fun upload(host: HostConfig, localFile: File): UploadResult {
+    fun upload(host: HostConfig, localFile: File, knownHostsManager: KnownHostsManager? = null): UploadResult {
         val jsch = JSch()
 
         if (!host.privateKeyPath.isNullOrBlank()) {
@@ -29,6 +29,17 @@ class ScpUploader {
             session = jsch.getSession(host.username, host.hostname, host.port)
             session.setConfig("StrictHostKeyChecking", "no")
             session.connect(10000)
+
+            if (knownHostsManager != null) {
+                val hostKey = session.hostKey
+                if (hostKey != null && !knownHostsManager.checkAndStore(host.hostname, host.port, hostKey, jsch)) {
+                    session.disconnect()
+                    return UploadResult(
+                        success = false,
+                        error = "Host key changed for ${host.hostname}:${host.port}. Possible MITM attack. Clear the stored key in settings to accept the new one."
+                    )
+                }
+            }
 
             val mkdirChannel = session.openChannel("exec") as ChannelExec
             mkdirChannel.setCommand("mkdir -p ${host.uploadDir}")
