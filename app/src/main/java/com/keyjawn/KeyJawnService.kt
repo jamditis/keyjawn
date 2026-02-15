@@ -16,6 +16,7 @@ class KeyJawnService : InputMethodService() {
     private var voiceInputHandler: VoiceInputHandler? = null
     private var slashCommandRegistry: SlashCommandRegistry? = null
     private var uploadHandler: UploadHandler? = null
+    private var clipboardHistoryManager: ClipboardHistoryManager? = null
 
     companion object {
         var pendingUploadHandler: UploadHandler? = null
@@ -37,12 +38,18 @@ class KeyJawnService : InputMethodService() {
         uploadHandler = upload
         pendingUploadHandler = upload
 
+        val clipManager = ClipboardHistoryManager(this)
+        clipboardHistoryManager = clipManager
+
         val erm = ExtraRowManager(
             view, keySender, { currentInputConnection }, voice,
             uploadHandler = upload,
-            onUploadTap = { launchPhotoPicker() }
+            onUploadTap = { launchPhotoPicker() },
+            clipboardHistoryManager = clipManager
         )
         extraRowManager = erm
+
+        NumberRowManager(view, keySender, { currentInputConnection })
 
         val container = view.findViewById<LinearLayout>(R.id.qwerty_container)
         val registry = slashCommandRegistry
@@ -76,6 +83,7 @@ class KeyJawnService : InputMethodService() {
     override fun onDestroy() {
         voiceInputHandler?.destroy()
         uploadHandler?.destroy()
+        clipboardHistoryManager?.destroy()
         pendingUploadHandler = null
         super.onDestroy()
     }

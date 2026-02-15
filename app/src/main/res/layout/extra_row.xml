@@ -42,6 +42,22 @@
         android:padding="0dp" />
 
     <Button
+        android:id="@+id/key_clipboard"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_weight="1"
+        android:layout_marginStart="1dp"
+        android:layout_marginEnd="1dp"
+        android:background="@drawable/key_bg"
+        android:text="Clip"
+        android:textColor="@color/key_text"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp" />
+
+    <Button
         android:id="@+id/key_ctrl"
         android:layout_width="0dp"
         android:layout_height="36dp"
@@ -137,7 +153,7 @@
         android:minHeight="0dp"
         android:padding="0dp" />
 
-    <Button
+    <ImageButton
         android:id="@+id/key_mic"
         android:layout_width="0dp"
         android:layout_height="36dp"
@@ -145,12 +161,11 @@
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
         android:background="@drawable/key_bg"
-        android:text="Mic"
-        android:textColor="@color/key_text"
-        android:textSize="12sp"
-        android:textAllCaps="false"
+        android:src="@drawable/ic_mic"
+        android:scaleType="center"
         android:minWidth="0dp"
         android:minHeight="0dp"
-        android:padding="0dp" />
+        android:padding="0dp"
+        android:contentDescription="Microphone" />
 
 </LinearLayout>

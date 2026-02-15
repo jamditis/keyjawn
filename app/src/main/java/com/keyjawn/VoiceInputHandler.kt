@@ -1,13 +1,19 @@
 package com.keyjawn
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.View
 import android.view.inputmethod.InputConnection
+import android.widget.Toast
+import androidx.core.content.ContextCompat
 
 class VoiceInputHandler(private val context: Context) {
 
@@ -29,6 +35,13 @@ class VoiceInputHandler(private val context: Context) {
 
     fun startListening() {
         if (!isAvailable() || listening) return
+
+        if (!hasRecordAudioPermission()) {
+            Toast.makeText(context, "Mic permission required. Opening settings.", Toast.LENGTH_LONG).show()
+            openAppSettings()
+            return
+        }
+
         listening = true
         updateMicVisual(true)
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -37,6 +50,19 @@ class VoiceInputHandler(private val context: Context) {
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
         speechRecognizer?.startListening(intent)
+    }
+
+    private fun hasRecordAudioPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
     }
 
     fun stopListening() {

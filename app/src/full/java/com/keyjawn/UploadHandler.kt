@@ -1,11 +1,16 @@
 package com.keyjawn
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
+import android.provider.Settings
 import android.view.inputmethod.InputConnection
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +35,36 @@ class UploadHandler(private val context: Context) {
         inputConnectionProvider = provider
     }
 
+    fun hasMediaPermission(): Boolean {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        return ContextCompat.checkSelfPermission(context, permission) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+
+    fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
+
+    fun hasHostConfigured(): Boolean = activeHost != null
+
     fun createPickerIntent(): Intent? {
+        if (!hasMediaPermission()) {
+            showToast("Image permission required. Opening settings.")
+            openAppSettings()
+            return null
+        }
+        if (!hasHostConfigured()) {
+            showToast("No host configured. Open KeyJawn settings to add one.")
+            return null
+        }
         return Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
             type = "image/*"
         }
@@ -40,7 +74,7 @@ class UploadHandler(private val context: Context) {
         if (uri == null) return
         val host = activeHost
         if (host == null) {
-            showToast("No host configured. Long-press upload to configure.")
+            showToast("No host configured. Open KeyJawn settings to add one.")
             return
         }
 

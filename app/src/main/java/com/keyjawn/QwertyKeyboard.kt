@@ -24,6 +24,8 @@ class QwertyKeyboard(
     private val slashPopup: SlashCommandPopup? = null
 ) {
 
+    private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider)
+
     var currentLayer: Int = KeyboardLayouts.LAYER_LOWER
         private set
 
@@ -98,7 +100,7 @@ class QwertyKeyboard(
         }
 
         if (key.output is KeyOutput.Space && isAutocorrectOn()) {
-            button.text = "${key.label} AC"
+            button.text = "SPACE"
         }
 
         val textSize = when (key.output) {
@@ -107,7 +109,7 @@ class QwertyKeyboard(
             is KeyOutput.Enter, is KeyOutput.SymSwitch,
             is KeyOutput.AbcSwitch -> 14f
             is KeyOutput.Space -> 14f
-            is KeyOutput.Slash -> 18f
+            is KeyOutput.Slash -> 14f
             is KeyOutput.KeyCode -> 14f
         }
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSize)
@@ -145,6 +147,22 @@ class QwertyKeyboard(
                 val longIc = inputConnectionProvider() ?: return@setOnLongClickListener true
                 keySender.sendText(longIc, ".")
                 true
+            }
+        }
+
+        // Alt key long-press for Character keys
+        if (key.output is KeyOutput.Character) {
+            val alts = AltKeyMappings.getAlts(key.label)
+            if (alts != null) {
+                button.setOnLongClickListener {
+                    if (alts.size == 1) {
+                        val ic = inputConnectionProvider() ?: return@setOnLongClickListener true
+                        keySender.sendText(ic, alts[0])
+                    } else {
+                        altKeyPopup.show(button, alts)
+                    }
+                    true
+                }
             }
         }
 

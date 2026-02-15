@@ -5,7 +5,6 @@
 A custom Android keyboard designed for using LLM CLI agents (Claude Code, Aider, etc.) from your phone.
 
 Most mobile keyboards lack the keys you need for terminal work — arrow keys, Tab, Escape, Ctrl modifiers. KeyJawn adds a dedicated terminal key row above a clean QWERTY layout, plus LLM-specific shortcuts and a built-in image upload feature that SCPs screenshots to your server and inserts the file path at your cursor.
-
 ## What it does
 
 - **Terminal key row:** Esc, Tab, Ctrl (toggle modifier), arrow keys, image upload, and voice-to-text — all always visible

@@ -44,7 +44,7 @@ class QwertyKeyboardTest {
 
     private fun addExtraRowButtons(parent: LinearLayout, context: android.content.Context) {
         val ids = listOf(
-            R.id.key_esc, R.id.key_tab, R.id.key_ctrl,
+            R.id.key_esc, R.id.key_tab, R.id.key_clipboard, R.id.key_ctrl,
             R.id.key_left, R.id.key_down, R.id.key_up, R.id.key_right,
             R.id.key_upload, R.id.key_mic
         )

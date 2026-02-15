@@ -12,16 +12,20 @@ class ExtraRowManager(
     private val inputConnectionProvider: () -> InputConnection?,
     private val voiceInputHandler: VoiceInputHandler? = null,
     private val uploadHandler: UploadHandler? = null,
-    private val onUploadTap: (() -> Unit)? = null
+    private val onUploadTap: (() -> Unit)? = null,
+    private val clipboardHistoryManager: ClipboardHistoryManager? = null
 ) {
 
     val ctrlState = CtrlState()
 
     private val ctrlButton: Button = view.findViewById(R.id.key_ctrl)
 
+    private var clipboardPopup: ClipboardPopup? = null
+
     init {
         wireEsc()
         wireTab()
+        wireClipboard()
         wireCtrl()
         wireArrow(R.id.key_left, KeyEvent.KEYCODE_DPAD_LEFT)
         wireArrow(R.id.key_down, KeyEvent.KEYCODE_DPAD_DOWN)
@@ -48,6 +52,29 @@ class ExtraRowManager(
         view.findViewById<Button>(R.id.key_tab).setOnClickListener {
             val ic = inputConnectionProvider() ?: return@setOnClickListener
             keySender.sendKey(ic, KeyEvent.KEYCODE_TAB)
+        }
+    }
+
+    private fun wireClipboard() {
+        val clipButton = view.findViewById<Button>(R.id.key_clipboard)
+        if (clipboardHistoryManager != null) {
+            clipButton.setOnClickListener {
+                val popup = ClipboardPopup(clipboardHistoryManager) { text ->
+                    val ic = inputConnectionProvider() ?: return@ClipboardPopup
+                    clipboardHistoryManager.pasteItem(ic, text)
+                }
+                clipboardPopup = popup
+                popup.show(view)
+            }
+            clipButton.setOnLongClickListener {
+                val ic = inputConnectionProvider() ?: return@setOnLongClickListener true
+                if (!clipboardHistoryManager.paste(ic)) {
+                    Toast.makeText(view.context, "Clipboard empty", Toast.LENGTH_SHORT).show()
+                }
+                true
+            }
+        } else {
+            wirePlaceholder(R.id.key_clipboard, "Clipboard not available")
         }
     }
 
@@ -88,7 +115,7 @@ class ExtraRowManager(
     }
 
     private fun wireMic() {
-        val micButton = view.findViewById<Button>(R.id.key_mic)
+        val micButton = view.findViewById<View>(R.id.key_mic)
         if (voiceInputHandler != null) {
             voiceInputHandler.setup(micButton, inputConnectionProvider)
             micButton.setOnClickListener {
@@ -99,7 +126,9 @@ class ExtraRowManager(
                 }
             }
         } else {
-            wirePlaceholder(R.id.key_mic, "Voice input not available")
+            micButton.setOnClickListener {
+                Toast.makeText(view.context, "Voice input not available", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
