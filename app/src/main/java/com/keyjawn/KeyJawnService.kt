@@ -1,5 +1,6 @@
 package com.keyjawn
 
+import android.content.Intent
 import android.inputmethodservice.InputMethodService
 import android.view.LayoutInflater
 import android.view.View
@@ -14,6 +15,11 @@ class KeyJawnService : InputMethodService() {
     private var qwertyKeyboard: QwertyKeyboard? = null
     private var voiceInputHandler: VoiceInputHandler? = null
     private var slashCommandRegistry: SlashCommandRegistry? = null
+    private var uploadHandler: UploadHandler? = null
+
+    companion object {
+        var pendingUploadHandler: UploadHandler? = null
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -25,7 +31,17 @@ class KeyJawnService : InputMethodService() {
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
         val voice = VoiceInputHandler(this)
         voiceInputHandler = voice
-        val erm = ExtraRowManager(view, keySender, { currentInputConnection }, voice)
+
+        val upload = UploadHandler(this)
+        upload.setInputConnectionProvider { currentInputConnection }
+        uploadHandler = upload
+        pendingUploadHandler = upload
+
+        val erm = ExtraRowManager(
+            view, keySender, { currentInputConnection }, voice,
+            uploadHandler = upload,
+            onUploadTap = { launchPhotoPicker() }
+        )
         extraRowManager = erm
 
         val container = view.findViewById<LinearLayout>(R.id.qwerty_container)
@@ -59,6 +75,15 @@ class KeyJawnService : InputMethodService() {
 
     override fun onDestroy() {
         voiceInputHandler?.destroy()
+        uploadHandler?.destroy()
+        pendingUploadHandler = null
         super.onDestroy()
+    }
+
+    private fun launchPhotoPicker() {
+        val handler = uploadHandler ?: return
+        val intent = handler.createPickerIntent()
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
     }
 }

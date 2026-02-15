@@ -10,7 +10,9 @@ class ExtraRowManager(
     private val view: View,
     private val keySender: KeySender,
     private val inputConnectionProvider: () -> InputConnection?,
-    private val voiceInputHandler: VoiceInputHandler? = null
+    private val voiceInputHandler: VoiceInputHandler? = null,
+    private val uploadHandler: UploadHandler? = null,
+    private val onUploadTap: (() -> Unit)? = null
 ) {
 
     val ctrlState = CtrlState()
@@ -25,7 +27,7 @@ class ExtraRowManager(
         wireArrow(R.id.key_down, KeyEvent.KEYCODE_DPAD_DOWN)
         wireArrow(R.id.key_up, KeyEvent.KEYCODE_DPAD_UP)
         wireArrow(R.id.key_right, KeyEvent.KEYCODE_DPAD_RIGHT)
-        wirePlaceholder(R.id.key_upload, "Upload not yet configured")
+        wireUpload()
         wireMic()
 
         ctrlState.onStateChanged = { mode -> updateCtrlAppearance(mode) }
@@ -68,6 +70,19 @@ class ExtraRowManager(
             if (ctrl) ctrlState.consume()
         }
         button.setOnTouchListener(listener)
+    }
+
+    private fun wireUpload() {
+        val uploadButton = view.findViewById<Button>(R.id.key_upload)
+        if (uploadHandler != null && onUploadTap != null) {
+            uploadButton.setOnClickListener { onUploadTap.invoke() }
+            uploadButton.setOnLongClickListener {
+                Toast.makeText(view.context, "Configure hosts in KeyJawn settings", Toast.LENGTH_SHORT).show()
+                true
+            }
+        } else {
+            wirePlaceholder(R.id.key_upload, "Upload not yet configured")
+        }
     }
 
     private fun wireMic() {
