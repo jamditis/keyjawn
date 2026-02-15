@@ -37,8 +37,9 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `lowercase row 4 has 4 keys`() {
-        assertEquals(4, KeyboardLayouts.lowercase[3].size)
+    fun `lowercase row 4 has 6 keys`() {
+        // sym, comma, space, period, quickkey, enter
+        assertEquals(6, KeyboardLayouts.lowercase[3].size)
     }
 
     @Test
@@ -57,28 +58,30 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `uppercase row 4 has 4 keys`() {
-        assertEquals(4, KeyboardLayouts.uppercase[3].size)
+    fun `uppercase row 4 has 6 keys`() {
+        assertEquals(6, KeyboardLayouts.uppercase[3].size)
     }
 
     @Test
-    fun `symbols row 1 has 9 keys`() {
-        assertEquals(9, KeyboardLayouts.symbols[0].size)
+    fun `symbols row 1 has 10 keys`() {
+        assertEquals(10, KeyboardLayouts.symbols[0].size)
     }
 
     @Test
-    fun `symbols row 2 has 9 keys`() {
-        assertEquals(9, KeyboardLayouts.symbols[1].size)
+    fun `symbols row 2 has 10 keys`() {
+        assertEquals(10, KeyboardLayouts.symbols[1].size)
     }
 
     @Test
-    fun `symbols row 3 has 9 keys`() {
-        assertEquals(9, KeyboardLayouts.symbols[2].size)
+    fun `symbols row 3 has 8 keys`() {
+        // 1/2 + 6 chars + Del = 8
+        assertEquals(8, KeyboardLayouts.symbols[2].size)
     }
 
     @Test
-    fun `symbols row 4 has 5 keys`() {
-        assertEquals(5, KeyboardLayouts.symbols[3].size)
+    fun `symbols row 4 has 4 keys`() {
+        // abc, space, slash, enter
+        assertEquals(4, KeyboardLayouts.symbols[3].size)
     }
 
     @Test
@@ -96,7 +99,7 @@ class KeyboardLayoutTest {
     @Test
     fun `symbols row 1 contains punctuation`() {
         val labels = KeyboardLayouts.symbols[0].map { it.label }
-        assertEquals(listOf("-", "_", "=", "+", ".", "\\", "|", "~", "`"), labels)
+        assertEquals(listOf("@", "#", "$", "_", "&", "-", "+", "(", ")", "/"), labels)
     }
 
     @Test
@@ -114,22 +117,25 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `lowercase row 4 has sym, space, quickkey, enter`() {
+    fun `lowercase row 4 has sym, comma, space, period, quickkey, enter`() {
         val row = KeyboardLayouts.lowercase[3]
         assertTrue(row[0].output is KeyOutput.SymSwitch)
-        assertTrue(row[1].output is KeyOutput.Space)
-        assertTrue(row[2].output is KeyOutput.QuickKey)
-        assertTrue(row[3].output is KeyOutput.Enter)
+        assertTrue(row[1].output is KeyOutput.Character)
+        assertEquals(",", (row[1].output as KeyOutput.Character).char)
+        assertTrue(row[2].output is KeyOutput.Space)
+        assertTrue(row[3].output is KeyOutput.Character)
+        assertEquals(".", (row[3].output as KeyOutput.Character).char)
+        assertTrue(row[4].output is KeyOutput.QuickKey)
+        assertTrue(row[5].output is KeyOutput.Enter)
     }
 
     @Test
-    fun `symbols row 4 has abc, space, char slash, slash command, enter`() {
+    fun `symbols row 4 has abc, space, slash command, enter`() {
         val row = KeyboardLayouts.symbols[3]
         assertTrue(row[0].output is KeyOutput.AbcSwitch)
         assertTrue(row[1].output is KeyOutput.Space)
-        assertTrue(row[2].output is KeyOutput.Character)
-        assertTrue(row[3].output is KeyOutput.Slash)
-        assertTrue(row[4].output is KeyOutput.Enter)
+        assertTrue(row[2].output is KeyOutput.Slash)
+        assertTrue(row[3].output is KeyOutput.Enter)
     }
 
     @Test
@@ -140,10 +146,10 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `space key has weight 5`() {
-        val spaceKey = KeyboardLayouts.lowercase[3][1]
+    fun `space key has weight 3_5`() {
+        val spaceKey = KeyboardLayouts.lowercase[3][2]
         assertTrue(spaceKey.output is KeyOutput.Space)
-        assertEquals(5f, spaceKey.weight)
+        assertEquals(3.5f, spaceKey.weight)
     }
 
     @Test
@@ -155,14 +161,14 @@ class KeyboardLayoutTest {
 
     @Test
     fun `enter key has weight 1_5`() {
-        val enterKey = KeyboardLayouts.lowercase[3][3]
+        val enterKey = KeyboardLayouts.lowercase[3][5]
         assertTrue(enterKey.output is KeyOutput.Enter)
         assertEquals(1.5f, enterKey.weight)
     }
 
     @Test
     fun `quick key has weight 1`() {
-        val quickKey = KeyboardLayouts.lowercase[3][2]
+        val quickKey = KeyboardLayouts.lowercase[3][4]
         assertTrue(quickKey.output is KeyOutput.QuickKey)
         assertEquals(1f, quickKey.weight)
     }
@@ -221,12 +227,27 @@ class KeyboardLayoutTest {
     @Test
     fun `symbols row 2 contains expected symbols`() {
         val labels = KeyboardLayouts.symbols[1].map { it.label }
-        assertEquals(listOf("!", "@", "#", "$", "%", "&", "*", "(", ")"), labels)
+        assertEquals(listOf("*", "\"", "'", ":", ";", "!", "?", "%", "=", "^"), labels)
     }
 
     @Test
-    fun `symbols row 3 contains expected brackets`() {
+    fun `symbols row 3 contains expected characters`() {
         val labels = KeyboardLayouts.symbols[2].map { it.label }
-        assertEquals(listOf("[", "]", "{", "}", "<", ">", "^", "\"", "'"), labels)
+        assertEquals(listOf("1/2", ",", ".", "<", ">", "{", "}", "Del"), labels)
+    }
+
+    @Test
+    fun `symbols2 layer exists with 4 rows`() {
+        assertEquals(4, KeyboardLayouts.symbols2.size)
+    }
+
+    @Test
+    fun `symbols2 row 1 has 10 keys`() {
+        assertEquals(10, KeyboardLayouts.symbols2[0].size)
+    }
+
+    @Test
+    fun `getLayer returns symbols2 for index 3`() {
+        assertSame(KeyboardLayouts.symbols2, KeyboardLayouts.getLayer(3))
     }
 }
