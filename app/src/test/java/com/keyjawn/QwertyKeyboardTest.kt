@@ -38,7 +38,7 @@ class QwertyKeyboardTest {
         addExtraRowButtons(extraRowView, context)
         extraRowManager = ExtraRowManager(extraRowView, keySender) { ic }
 
-        keyboard = QwertyKeyboard(container, keySender, extraRowManager) { ic }
+        keyboard = QwertyKeyboard(container, keySender, extraRowManager, { ic })
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
     }
 
