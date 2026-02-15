@@ -6,10 +6,25 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description: string;
+  ogType?: string;
+  ogImage?: string;
+  articleDate?: string;
+  articleAuthor?: string;
+  jsonLd?: object;
 }
 
-const { title, description } = Astro.props;
+const {
+  title,
+  description,
+  ogType = 'website',
+  ogImage = '/og-image.png',
+  articleDate,
+  articleAuthor,
+  jsonLd,
+} = Astro.props;
+
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImageURL = new URL(ogImage, Astro.site);
 ---
 
 <!DOCTYPE html>
@@ -24,16 +39,28 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <!-- OG tags -->
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:site_name" content="KeyJawn" />
+    <meta property="og:image" content={ogImageURL} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    {articleDate && <meta property="article:published_time" content={articleDate} />}
+    {articleAuthor && <meta property="article:author" content={articleAuthor} />}
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageURL} />
 
-    <!-- Favicon: terminal cursor SVG -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='10' y='10' width='80' height='80' rx='12' fill='%230a0a0f' stroke='%236cf2a8' stroke-width='6'/><text x='28' y='72' font-family='monospace' font-size='55' font-weight='bold' fill='%236cf2a8'>%3E_</text></svg>" />
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    {jsonLd && (
+      <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    )}
 
     <title>{title}</title>
   </head>

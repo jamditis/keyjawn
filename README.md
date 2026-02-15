@@ -1,8 +1,15 @@
-# KeyJawn: Custom mobile keyboard for LLM CLI usage 
+# KeyJawn: Custom mobile keyboard for LLM CLI usage
 
 ![KeyJawn branding graphic](https://i.imgur.com/wAieWl6.png)
 
-A custom Android keyboard designed for using LLM CLI agents (Claude Code, Aider, etc.) from your phone.
+[![Build](https://github.com/jamditis/keyjawn/actions/workflows/build.yml/badge.svg)](https://github.com/jamditis/keyjawn/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-6cf2a8?style=flat)](LICENSE)
+[![Android](https://img.shields.io/badge/android-8.0%2B-6cf2a8?style=flat&logo=android&logoColor=white)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/kotlin-2.1.0-7F52FF?style=flat&logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![GitHub release](https://img.shields.io/github/v/release/jamditis/keyjawn?color=6cf2a8&style=flat)](https://github.com/jamditis/keyjawn/releases)
+[![Site](https://img.shields.io/badge/site-keyjawn.amditis.tech-6cf2a8?style=flat)](https://keyjawn.amditis.tech)
+
+A custom Android keyboard designed for using LLM CLI agents (Claude Code, OpenClaw, etc.) from your phone.
 
 Most mobile keyboards lack the keys you need for terminal work — arrow keys, Tab, Escape, Ctrl modifiers. KeyJawn adds a dedicated terminal key row above a clean QWERTY layout, plus LLM-specific shortcuts and a built-in image upload feature that SCPs screenshots to your server and inserts the file path at your cursor.
 ## What it does
@@ -12,7 +19,7 @@ Most mobile keyboards lack the keys you need for terminal work — arrow keys, T
 - **Long-press alt characters:** Hold a letter key to get accented variants (a -> a, a, a, a, a, ae) or punctuation alternatives. Single-alt keys fire immediately; multi-alt keys show a popup above the pressed key.
 - **Voice-to-text:** Mic button on the far right of the extra row. Tap to dictate -- uses the same speech recognition engine as Gboard.
 - **Clipboard history:** Tracks recent clipboard entries. Tap the clipboard button in the extra row to see history and paste.
-- **LLM CLI shortcuts:** Quick-insert for `/` commands, common prompts, and slash-command prefixes used by Claude Code, Aider, and other LLM CLI tools
+- **LLM CLI shortcuts:** Quick-insert for `/` commands, common prompts, and slash-command prefixes used by Claude Code, OpenClaw, and other LLM CLI tools
 - **Basic QWERTY:** Three layers (lowercase, uppercase, symbols) with no autocorrect by default -- because autocorrect breaks web-based terminals
 - **Autocorrect toggle:** Long-press spacebar to enable/disable per app. Off for terminals, on for chat apps.
 - **Image upload via SCP:** Tap the upload button, pick a photo, and KeyJawn SCPs it to your server and types the file path into the terminal. Useful for sharing screenshots with Claude Code.
@@ -25,7 +32,7 @@ Anyone who SSHs into a server from their phone to use a CLI-based AI assistant. 
 Built for and tested with:
 - Claude Code via Cockpit web terminal (Edge browser on Android)
 - Direct SSH terminal apps (Termux, JuiceSSH, ConnectBot)
-- Any LLM CLI tool that uses slash commands (Aider, Open Interpreter, etc.)
+- Any LLM CLI tool that uses slash commands (OpenClaw, etc.)
 
 ## Versions
 

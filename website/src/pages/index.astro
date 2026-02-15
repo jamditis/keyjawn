@@ -9,6 +9,41 @@ import KeyCap from '../components/KeyCap.astro';
 <Base
   title="KeyJawn -- the keyboard for the CLI renaissance"
   description="Terminal keys, voice input, and SCP upload on an Android keyboard built for AI-era CLI users."
+  jsonLd={{
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "KeyJawn",
+        "url": "https://keyjawn.amditis.tech",
+        "description": "Custom Android keyboard for terminal and LLM CLI usage",
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "KeyJawn",
+        "operatingSystem": "Android",
+        "applicationCategory": "UtilitiesApplication",
+        "description": "Terminal keys, voice input, and SCP upload on an Android keyboard built for AI-era CLI users.",
+        "url": "https://keyjawn.amditis.tech",
+        "downloadUrl": "https://github.com/jamditis/keyjawn/releases",
+        "softwareVersion": "0.1.0",
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "KeyJawn Full",
+            "price": "4.00",
+            "priceCurrency": "USD",
+          },
+          {
+            "@type": "Offer",
+            "name": "KeyJawn Lite",
+            "price": "0",
+            "priceCurrency": "USD",
+          },
+        ],
+      },
+    ],
+  }}
 >
   <!-- Hero -->
   <section class="hero">
@@ -93,7 +128,7 @@ import KeyCap from '../components/KeyCap.astro';
         <span class="built-for-sep">//</span>
         <span class="built-for-item">Termux</span>
         <span class="built-for-sep">//</span>
-        <span class="built-for-item">Aider</span>
+        <span class="built-for-item">OpenClaw</span>
         <span class="built-for-sep">//</span>
         <span class="built-for-item">JuiceSSH</span>
         <span class="built-for-sep">//</span>

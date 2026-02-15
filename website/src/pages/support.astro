@@ -6,6 +6,52 @@ import FAQ from '../components/FAQ.astro';
 <Base
   title="Support -- KeyJawn"
   description="FAQ, bug reporting, known limitations, and how to get help with KeyJawn."
+  jsonLd={{
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I install KeyJawn?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Download the APK from GitHub releases, install it via ADB or by opening it on your phone, then enable it in Settings > System > Languages & input > On-screen keyboard." }
+      },
+      {
+        "@type": "Question",
+        "name": "Why don't keys work in my browser terminal?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Some web-based terminals use JavaScript to capture keyboard events. Android's commitText method doesn't trigger the same key events as physical keypresses. Native terminal apps like Termux and JuiceSSH handle key events correctly." }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I set up SCP upload?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Open KeyJawn settings, add a host with hostname, port, username, password, and remote upload directory. Then tap the upload button in the extra row, pick a photo, and KeyJawn handles the rest." }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use this with Termux?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. KeyJawn works with any app that accepts keyboard input. Termux, JuiceSSH, ConnectBot, and any other terminal emulator will work." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is my SSH password stored securely?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. SSH credentials are encrypted using AndroidX EncryptedSharedPreferences with AES-256 encryption. The keys are stored in the Android Keystore, which is hardware-backed on most modern devices." }
+      },
+      {
+        "@type": "Question",
+        "name": "Why is autocorrect off by default?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Autocorrect uses setComposingText, which breaks web-based terminals and many SSH clients. Long-press the spacebar to enable it per app." }
+      },
+      {
+        "@type": "Question",
+        "name": "Will there be an iOS version?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Not planned. iOS doesn't allow third-party keyboards to send key events (like Escape or Ctrl sequences) the way Android does." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is this open source?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. MIT license. Full source at github.com/jamditis/keyjawn. Both the lite and full versions are built from the same codebase." }
+      }
+    ]
+  }}
 >
   <section class="section">
     <div class="container">

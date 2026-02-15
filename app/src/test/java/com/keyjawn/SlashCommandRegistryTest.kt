@@ -24,7 +24,7 @@ class SlashCommandRegistryTest {
     fun `loads command sets from assets`() {
         val sets = registry.getAvailableSets()
         assertTrue(sets.containsKey("claude_code"))
-        assertTrue(sets.containsKey("aider"))
+        assertTrue(sets.containsKey("openclaw"))
         assertTrue(sets.containsKey("general"))
     }
 
@@ -36,17 +36,18 @@ class SlashCommandRegistryTest {
         assertTrue(claude.commands.contains("/help"))
         assertTrue(claude.commands.contains("/commit"))
         assertTrue(claude.commands.contains("/compact"))
-        assertEquals(9, claude.commands.size)
+        assertTrue(claude.commands.contains("/usage"))
+        assertEquals(10, claude.commands.size)
     }
 
     @Test
-    fun `aider set has correct commands`() {
+    fun `openclaw set has correct commands`() {
         val sets = registry.getAvailableSets()
-        val aider = sets["aider"]!!
-        assertEquals("Aider", aider.label)
-        assertTrue(aider.commands.contains("/add"))
-        assertTrue(aider.commands.contains("/test"))
-        assertEquals(9, aider.commands.size)
+        val openclaw = sets["openclaw"]!!
+        assertEquals("OpenClaw", openclaw.label)
+        assertTrue(openclaw.commands.contains("/status"))
+        assertTrue(openclaw.commands.contains("/reset"))
+        assertEquals(9, openclaw.commands.size)
     }
 
     @Test
@@ -62,7 +63,7 @@ class SlashCommandRegistryTest {
         val enabled = registry.getEnabledSets()
         assertTrue(enabled.contains("claude_code"))
         assertTrue(enabled.contains("general"))
-        assertFalse(enabled.contains("aider"))
+        assertFalse(enabled.contains("openclaw"))
     }
 
     @Test
@@ -70,7 +71,7 @@ class SlashCommandRegistryTest {
         val commands = registry.getCommands()
         assertTrue(commands.contains("/commit"))
         assertTrue(commands.contains("/exit"))
-        assertFalse(commands.contains("/add"))
+        assertFalse(commands.contains("/status"))
     }
 
     @Test
@@ -82,10 +83,10 @@ class SlashCommandRegistryTest {
 
     @Test
     fun `enabling a set includes its commands`() {
-        registry.setEnabled("aider", true)
+        registry.setEnabled("openclaw", true)
         val commands = registry.getCommands()
-        assertTrue(commands.contains("/add"))
-        assertTrue(commands.contains("/test"))
+        assertTrue(commands.contains("/status"))
+        assertTrue(commands.contains("/reset"))
     }
 
     @Test

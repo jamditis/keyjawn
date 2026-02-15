@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# AI search bots
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://keyjawn.amditis.tech/sitemap-index.xml

@@ -18,7 +18,7 @@ This is absurd.
 
 A couple years ago, "using the terminal" meant you were a sysadmin debugging a production server, or a developer running build scripts. The command line was for people who already lived there.
 
-That changed fast. Claude Code showed up. Then Aider. Then Goose, Open Interpreter, and a dozen other AI CLI tools. Suddenly, people who'd never opened a terminal in their lives were typing `claude` in a shell because someone on Twitter said they should.
+That changed fast. Claude Code showed up. Then OpenClaw. Then a dozen other AI CLI tools. Suddenly, people who'd never opened a terminal in their lives were buying Mac Minis and Raspberry Pis to run AI agents on because someone on Twitter said they should.
 
 These aren't traditional terminal users. They're not writing bash scripts or configuring nginx. They're having conversations. They're describing bugs in natural language and letting an AI agent fix them. The terminal became a chat interface that happens to run in a shell.
 
@@ -57,7 +57,7 @@ I built a keyboard that puts terminal keys front and center.
 
 Here's what I think is happening: mobile CLI usage is growing. Not because people suddenly love terminals, but because AI agents live there.
 
-Claude Code runs in a terminal. Aider runs in a terminal. If you want to use these tools, you need a shell. And if you want to use them from your couch at midnight -- or your commute, or a waiting room, or bed -- you need a phone keyboard that doesn't fight you every step of the way.
+Claude Code runs in a terminal. OpenClaw runs on a server. If you want to use these tools, you need a shell. And if you want to use them from your couch at midnight -- or your commute, or a waiting room, or bed -- you need a phone keyboard that doesn't fight you every step of the way.
 
 The keyboard is the bottleneck. Nobody's building for this use case because it didn't exist two years ago. Now it does, and the gap between "what mobile keyboards can do" and "what terminal users need" is wide.
 

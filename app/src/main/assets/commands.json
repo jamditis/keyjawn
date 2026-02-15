@@ -2,11 +2,11 @@
   "command_sets": {
     "claude_code": {
       "label": "Claude Code",
-      "commands": ["/help", "/clear", "/commit", "/review-pr", "/compact", "/cost", "/doctor", "/init", "/login"]
+      "commands": ["/help", "/clear", "/commit", "/review-pr", "/compact", "/cost", "/doctor", "/init", "/login", "/usage"]
     },
-    "aider": {
-      "label": "Aider",
-      "commands": ["/add", "/drop", "/run", "/test", "/diff", "/undo", "/commit", "/model", "/chat-mode"]
+    "openclaw": {
+      "label": "OpenClaw",
+      "commands": ["/status", "/new", "/reset", "/compact", "/think", "/verbose", "/usage", "/restart", "/activation"]
     },
     "general": {
       "label": "General",

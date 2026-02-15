@@ -12,7 +12,7 @@ What you'd like KeyJawn to do.
 
 ## Use case
 
-How would this help your LLM CLI workflow? Which tool are you using (Claude Code, Aider, etc.)?
+How would this help your LLM CLI workflow? Which tool are you using (Claude Code, OpenClaw, etc.)?
 
 ## Proposed solution
 
