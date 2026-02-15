@@ -1,15 +1,15 @@
-# JawnKeys — custom Android terminal keyboard
+# KeyJawn — custom Android terminal keyboard
 
 **Date:** 2026-02-15
 **Status:** Approved
 
 ## Problem
 
-Using Claude Code via SSH from a phone (Samsung S24 Ultra → Edge browser → Cockpit web terminal) lacks arrow keys, Tab, Escape, and Ctrl modifiers. Standard mobile keyboards don't provide terminal-specific keys, and autocorrect causes text duplication in web-based terminals (xterm.js).
+Using Claude Code via SSH from a phone (Samsung S24 Ultra -> Edge browser -> Cockpit web terminal) lacks arrow keys, Tab, Escape, and Ctrl modifiers. Standard mobile keyboards don't provide terminal-specific keys, autocorrect causes text duplication in web-based terminals (xterm.js), and there's no quick way to type LLM CLI slash commands.
 
 ## Solution
 
-An Android Input Method Editor (IME) — a system keyboard replacement — with a dedicated terminal key row above a basic QWERTY layout. Includes an image upload feature for sharing screenshots with Claude Code.
+An Android Input Method Editor (IME) — a system keyboard replacement — with a dedicated terminal key row above a basic QWERTY layout. Includes LLM CLI slash command shortcuts and a built-in image upload feature for sharing screenshots with Claude Code.
 
 ## Architecture
 
@@ -19,10 +19,13 @@ An Android Input Method Editor (IME) — a system keyboard replacement — with 
 - `KeySender` utility translates button taps into `KeyEvent` objects via `InputConnection`
 - JSch library for SCP file transfer (image upload)
 - Per-app settings stored in SharedPreferences
+- Slash command registry loaded from bundled JSON, user-extensible
 
 ## Target user
 
-Joe Amditis, SSHing into houseofjawn (100.122.208.15) and officejawn (100.84.214.24) via Tailscale from a Samsung S24 Ultra. Primary use: conversing with Claude Code through a terminal. Occasionally uses other terminal/dev apps.
+People who SSH into servers from their phone to use LLM CLI tools. The keyboard is optimized for the workflow where you type natural language 90% of the time and need terminal escape hatches 10% of the time.
+
+Primary test case: Claude Code via Cockpit web terminal on a Samsung S24 Ultra.
 
 ## Extra row layout (8 keys)
 
@@ -48,6 +51,42 @@ Joe Amditis, SSHing into houseofjawn (100.122.208.15) and officejawn (100.84.214
 - Double-tap / long-press Ctrl: locks on for multiple combos. Tap again to release.
 - Visual: key turns amber when armed, red when locked.
 
+## LLM CLI slash command shortcuts
+
+### The problem
+
+LLM CLI tools use slash commands (`/help`, `/commit`, `/clear`, `/review-pr`, etc.) that are tedious to type on a phone. The `/` key is buried in the symbols layer, and command names are long.
+
+### Solution: slash command quick-insert
+
+A `/` key on the QWERTY layer triggers a popup of common commands. Tapping a command inserts the full text.
+
+**How it works:**
+1. Tap the `/` key (replaces `.` in the bottom row, or accessible via long-press on `.`)
+2. A popup appears above the keyboard showing recently used and common commands
+3. Tap a command to insert it (e.g., `/commit`, `/help`, `/clear`)
+4. The popup dismisses and the text is inserted at the cursor
+5. Most-recently-used commands float to the top
+
+### Default command set (bundled)
+
+**Claude Code:**
+- `/help`, `/clear`, `/commit`, `/review-pr`, `/compact`, `/cost`, `/doctor`
+
+**Aider:**
+- `/add`, `/drop`, `/run`, `/test`, `/diff`, `/undo`, `/commit`
+
+**General:**
+- `/exit`, `/quit`, `/help`
+
+### User-customizable
+
+Users can add custom slash commands in KeyJawn settings. The app ships with built-in command sets per tool that users can enable/disable.
+
+### Smart detection (future)
+
+Detect which LLM CLI tool is running and show relevant commands. Not in v1.
+
 ## Main QWERTY layout
 
 Three layers toggled by shift/sym keys.
@@ -62,9 +101,11 @@ Three layers toggled by shift/sym keys.
 +---+---+---+---+---+---+---+---+---+---+
 | ^ | z | x | c | v | b | n | m |  <x   |
 +---+---+---+---+---+---+---+---+-------+
-|sym|         space             | . | Ret |
+|sym|         space             | / | Ret |
 +---+---------------------------+---+-----+
 ```
+
+Note: `.` replaced by `/` in the bottom row. Period available via long-press on `/`, or in the symbols layer.
 
 ### Layer 2 — Uppercase (shift)
 
@@ -76,21 +117,21 @@ Same layout, capitalized. Single tap shift = one capital then revert. Double-tap
 +---+---+---+---+---+---+---+---+---+---+
 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 |
 +---+---+---+---+---+---+---+---+---+---+
-| - | _ | = | + | / | \ | | | ~ | ` |   |
+| - | _ | = | + | . | \ | | | ~ | ` |   |
 +---+---+---+---+---+---+---+---+---+---+
 | ! | @ | # | $ | % | & | * | ( | ) |   |
 +---+---+---+---+---+---+---+---+---+---+
-|abc|         space             | . | Ret |
+|abc|         space             | / | Ret |
 +---+---------------------------+---+-----+
 ```
 
-Pipe, tilde, backtick available in symbols layer.
+Pipe, tilde, backtick, period available in symbols layer.
 
 ## Autocorrect
 
 - **Off by default** — web terminals (xterm.js) mishandle autocorrect's delete-then-replace pattern, causing text duplication
 - **Toggle via long-press spacebar** — small "AC" badge on spacebar shows current state
-- **Per-app memory** — JawnKeys remembers autocorrect preference per app (off for Edge/Cockpit, on for messaging apps)
+- **Per-app memory** — KeyJawn remembers autocorrect preference per app (off for Edge/Cockpit, on for messaging apps)
 
 ## Image upload feature
 
@@ -101,24 +142,23 @@ Pipe, tilde, backtick available in symbols layer.
 
 ### Setup (one-time)
 
-- Configure in JawnKeys settings (gear icon via long-press on upload button)
+- Configure in KeyJawn settings (gear icon via long-press on upload button)
 - Server connection: hostname/IP, username, SSH private key
-- Upload directory: `/tmp/jawnkeys/` (default, auto-created on first use)
+- Upload directory: `/tmp/keyjawn/` (default, auto-created on first use)
 - Multiple hosts supported, switchable via long-press on upload button
 
 ### Upload flow
 
 1. Tap upload button -> Android photo picker opens
-2. Select image -> JawnKeys SCPs it to active server
-3. Toast confirms: "Uploaded -> /tmp/jawnkeys/img-20260215-1423.png"
+2. Select image -> KeyJawn SCPs it to active server
+3. Toast confirms: "Uploaded -> /tmp/keyjawn/img-20260215-1423.png"
 4. File path inserted at cursor in terminal
 5. Tell Claude Code to read that path
 
-### Connection details (default)
+### Connection details (example)
 
-- houseofjawn: 100.122.208.15 (Tailscale)
-- officejawn: 100.84.214.24 (Tailscale)
-- Username: jamditis
+- Server: IP or hostname via Tailscale or direct
+- Username: configurable
 - Auth: SSH key pair (generated in-app or imported)
 
 ## Visual design
@@ -127,15 +167,17 @@ Pipe, tilde, backtick available in symbols layer.
 - Muted gray keys, white text
 - Ctrl key: amber when armed, red when locked
 - AC badge on spacebar: visible when autocorrect is on
+- Slash command popup: dark background, rounded corners, scrollable list
 - Extra row visually separated from QWERTY area with a subtle divider
 
 ## Technical details
 
-- **Min SDK:** 26 (Android 8.0) — covers S24 Ultra and all modern Samsung devices
-- **SSH library:** JSch or Apache MINA SSHD for SCP transfers
+- **Min SDK:** 26 (Android 8.0) — covers all modern Android devices
+- **SSH library:** JSch (com.github.mwiede:jsch) for SCP transfers
 - **Key events:** Sent via `InputConnection.sendKeyEvent()` for terminal keys, `commitText()` for character input
 - **Autocorrect:** Android's `TextServicesManager` for spell checking when enabled
 - **Storage:** SharedPreferences for per-app settings, EncryptedSharedPreferences for SSH credentials
+- **Slash commands:** Bundled JSON registry, user additions stored in SharedPreferences
 
 ## Scope boundaries
 
@@ -143,6 +185,7 @@ Pipe, tilde, backtick available in symbols layer.
 
 - Extra terminal key row (Esc, Tab, Ctrl, arrows, upload)
 - Basic QWERTY with shift/symbols layers
+- Slash command quick-insert with popup
 - Autocorrect toggle with per-app memory
 - Image upload via SCP with path insertion
 - Multi-host configuration
@@ -150,6 +193,7 @@ Pipe, tilde, backtick available in symbols layer.
 
 ### Out of scope (future)
 
+- Smart LLM tool detection (auto-show relevant commands)
 - Alt modifier key
 - Customizable key layouts / reordering
 - Swipe typing
