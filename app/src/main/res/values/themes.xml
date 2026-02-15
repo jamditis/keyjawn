@@ -22,4 +22,40 @@
         <item name="android:minHeight">0dp</item>
         <item name="android:padding">0dp</item>
     </style>
+
+    <style name="NumberKeyFrame">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">1dp</item>
+        <item name="android:layout_marginEnd">1dp</item>
+        <item name="android:background">@drawable/key_bg</item>
+    </style>
+
+    <style name="NumberKeyLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/key_text</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">monospace</item>
+    </style>
+
+    <style name="NumberKeyHint">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_gravity">top|end</item>
+        <item name="android:textColor">@color/key_hint</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingEnd">3dp</item>
+    </style>
+
+    <style name="NumberKeyOverlay">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:background">?android:attr/selectableItemBackground</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+    </style>
 </resources>

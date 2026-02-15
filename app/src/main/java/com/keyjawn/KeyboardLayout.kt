@@ -56,11 +56,13 @@ object KeyboardLayouts {
     )
 
     val symbols: Layer = listOf(
-        "1234567890".map { Key(it.toString(), KeyOutput.Character(it.toString())) },
         listOf("-", "_", "=", "+", ".", "\\", "|", "~", "`").map {
             Key(it, KeyOutput.Character(it))
         },
         listOf("!", "@", "#", "$", "%", "&", "*", "(", ")").map {
+            Key(it, KeyOutput.Character(it))
+        },
+        listOf("[", "]", "{", "}", "<", ">", "^", "\"", "'").map {
             Key(it, KeyOutput.Character(it))
         },
         listOf(

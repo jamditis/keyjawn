@@ -10,4 +10,5 @@
     <color name="accent">#6C9BF2</color>
     <color name="accent_locked">#E86C5A</color>
     <color name="divider">#38383E</color>
+    <color name="key_hint">#6E6E78</color>
 </resources>

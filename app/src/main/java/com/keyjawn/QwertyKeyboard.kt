@@ -4,9 +4,12 @@ import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.View
 import android.view.inputmethod.InputConnection
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 
 enum class ShiftState {
@@ -71,46 +74,51 @@ class QwertyKeyboard(
             }
 
             for (key in row) {
-                val button = createKeyButton(key)
+                val keyView = createKeyView(key)
                 val params = LinearLayout.LayoutParams(0, dpToPx(48), key.weight)
                 val margin = dpToPx(2)
                 params.setMargins(margin, margin, margin, margin)
-                button.layoutParams = params
-                rowLayout.addView(button)
+                keyView.layoutParams = params
+                rowLayout.addView(keyView)
             }
 
             container.addView(rowLayout)
         }
 
-        container.setOnTouchListener(SwipeGestureDetector { direction ->
-            val ic = inputConnectionProvider() ?: return@SwipeGestureDetector false
-            when (direction) {
-                SwipeGestureDetector.SwipeDirection.LEFT -> {
-                    keySender.sendKey(ic, android.view.KeyEvent.KEYCODE_DEL, ctrl = true)
-                    true
-                }
-                SwipeGestureDetector.SwipeDirection.RIGHT -> {
-                    keySender.sendChar(ic, " ")
-                    true
-                }
-                SwipeGestureDetector.SwipeDirection.UP -> {
-                    if (currentLayer != KeyboardLayouts.LAYER_SYMBOLS) {
-                        setLayer(KeyboardLayouts.LAYER_SYMBOLS)
+        // Swipe gestures on each row's padding area (not on the container,
+        // which can interfere with child button touch dispatch)
+        for (i in 0 until container.childCount) {
+            val rowLayout = container.getChildAt(i) as? LinearLayout ?: continue
+            rowLayout.setOnTouchListener(SwipeGestureDetector { direction ->
+                val ic = inputConnectionProvider() ?: return@SwipeGestureDetector false
+                when (direction) {
+                    SwipeGestureDetector.SwipeDirection.LEFT -> {
+                        keySender.sendKey(ic, android.view.KeyEvent.KEYCODE_DEL, ctrl = true)
+                        true
                     }
-                    true
-                }
-                SwipeGestureDetector.SwipeDirection.DOWN -> {
-                    if (currentLayer == KeyboardLayouts.LAYER_SYMBOLS) {
-                        shiftState = ShiftState.OFF
-                        setLayer(KeyboardLayouts.LAYER_LOWER)
+                    SwipeGestureDetector.SwipeDirection.RIGHT -> {
+                        keySender.sendChar(ic, " ")
+                        true
                     }
-                    true
+                    SwipeGestureDetector.SwipeDirection.UP -> {
+                        if (currentLayer != KeyboardLayouts.LAYER_SYMBOLS) {
+                            setLayer(KeyboardLayouts.LAYER_SYMBOLS)
+                        }
+                        true
+                    }
+                    SwipeGestureDetector.SwipeDirection.DOWN -> {
+                        if (currentLayer == KeyboardLayouts.LAYER_SYMBOLS) {
+                            shiftState = ShiftState.OFF
+                            setLayer(KeyboardLayouts.LAYER_LOWER)
+                        }
+                        true
+                    }
                 }
-            }
-        })
+            })
+        }
     }
 
-    private fun createKeyButton(key: Key): Button {
+    private fun createKeyView(key: Key): View {
         val context = container.context
         val button = Button(context).apply {
             text = key.label
@@ -190,19 +198,46 @@ class QwertyKeyboard(
         }
 
         // Alt key long-press for Character keys
-        if (key.output is KeyOutput.Character) {
-            val alts = AltKeyMappings.getAlts(key.label)
-            if (alts != null) {
-                button.setOnLongClickListener {
-                    if (alts.size == 1) {
-                        val ic = inputConnectionProvider() ?: return@setOnLongClickListener true
-                        keySender.sendText(ic, alts[0])
-                    } else {
-                        altKeyPopup.show(button, alts)
-                    }
-                    true
+        val alts = if (key.output is KeyOutput.Character) AltKeyMappings.getAlts(key.label) else null
+        if (key.output is KeyOutput.Character && alts != null) {
+            button.setOnLongClickListener {
+                if (alts.size == 1) {
+                    val ic = inputConnectionProvider() ?: return@setOnLongClickListener true
+                    keySender.sendText(ic, alts[0])
+                } else {
+                    altKeyPopup.show(button, alts)
+                }
+                true
+            }
+        }
+
+        // Wrap character keys that have alts in a FrameLayout with a hint label
+        if (key.output is KeyOutput.Character && alts != null) {
+            val hintChar = if (alts.size == 1) alts[0] else alts[0]
+            button.background = null
+            val frame = FrameLayout(context).apply {
+                setBackgroundResource(R.drawable.key_bg)
+            }
+            button.layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            frame.addView(button)
+            val hint = TextView(context).apply {
+                text = hintChar
+                setTextColor(context.getColor(R.color.key_hint))
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.TOP or Gravity.END
+                ).apply {
+                    topMargin = dpToPx(1)
+                    marginEnd = dpToPx(2)
                 }
             }
+            frame.addView(hint)
+            return frame
         }
 
         return button
@@ -223,8 +258,6 @@ class QwertyKeyboard(
                         keySender.sendKey(ic, keyCode, ctrl = true)
                     }
                     extraRowManager.consumeCtrl()
-                } else if (isAutocorrectOn()) {
-                    ic.setComposingText(key.output.char, 1)
                 } else {
                     keySender.sendChar(ic, key.output.char)
                 }
@@ -237,9 +270,6 @@ class QwertyKeyboard(
                 keySender.sendKey(ic, KeyEvent.KEYCODE_ENTER)
             }
             is KeyOutput.Space -> {
-                if (isAutocorrectOn()) {
-                    ic.finishComposingText()
-                }
                 keySender.sendChar(ic, " ")
             }
             is KeyOutput.SymSwitch -> {
