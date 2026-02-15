@@ -84,8 +84,12 @@ All source is in `com.keyjawn` — flat package, no sub-packages.
 - Ctrl modifier uses a three-state machine: OFF, ARMED (one-shot), LOCKED (sticky until toggled off).
 - The `slash` key on the symbols layer has `KeyOutput.Slash` output and triggers the slash command popup. The `/` key on lower/upper layers is `KeyOutput.Character("/")` and just types `/`. Long-pressing the `/` character key types `.` instead.
 - Long-press behavior on QWERTY keys: looks up `AltKeyMappings.getAlts(key.label)`. If one alt, sends it directly. If multiple, shows `AltKeyPopup`. Keys with existing long-press handlers (Space, Slash) are skipped because they use different `KeyOutput` subtypes.
-- Tests use Robolectric for Android framework classes and Mockito-Kotlin for mocking.
-- Some test classes have pre-existing failures (SlashCommandRegistryTest file-not-found, QwertyKeyboardTest resource-not-found). These are not regressions.
+- Tests use Robolectric for Android framework classes and Mockito-Kotlin for mocking. `isIncludeAndroidResources = true` is set in build.gradle.kts so Robolectric can load assets and layouts.
+
+## Google Play
+
+- Developer account: `thejawnstars@gmail.com`
+- Application ID: `com.keyjawn` (full), `com.keyjawn.lite` (lite)
 
 ## Code style
 
