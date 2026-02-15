@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="key_bg">#3C3C3C</color>
+    <color name="key_bg_pressed">#505050</color>
+    <color name="key_text">#FFFFFF</color>
+    <color name="extra_row_bg">#181818</color>
+    <color name="qwerty_bg">#2D2D2D</color>
+    <color name="ctrl_armed">#FFB300</color>
+    <color name="ctrl_locked">#D32F2F</color>
+</resources>

@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/extra_row"
+    android:layout_width="match_parent"
+    android:layout_height="42dp"
+    android:orientation="horizontal"
+    android:background="@color/extra_row_bg"
+    android:gravity="center_vertical"
+    android:paddingStart="2dp"
+    android:paddingEnd="2dp">
+
+    <Button
+        android:id="@+id/key_esc"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_weight="1"
+        android:layout_marginStart="1dp"
+        android:layout_marginEnd="1dp"
+        android:background="@drawable/key_bg"
+        android:text="Esc"
+        android:textColor="@color/key_text"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp" />
+
+    <Button
+        android:id="@+id/key_tab"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_weight="1"
+        android:layout_marginStart="1dp"
+        android:layout_marginEnd="1dp"
+        android:background="@drawable/key_bg"
+        android:text="Tab"
+        android:textColor="@color/key_text"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp" />
+
+    <Button
+        android:id="@+id/key_ctrl"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_weight="1"
+        android:layout_marginStart="1dp"
+        android:layout_marginEnd="1dp"
+        android:background="@drawable/key_bg"
+        android:text="Ctrl"
+        android:textColor="@color/key_text"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp" />
+
+    <Button
+        android:id="@+id/key_left"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_weight="1"
+        android:layout_marginStart="1dp"
+        android:layout_marginEnd="1dp"
+        android:background="@drawable/key_bg"
+        android:text="\u25C0"
+        android:textColor="@color/key_text"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp" />
+
+    <Button
+        android:id="@+id/key_down"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_weight="1"
+        android:layout_marginStart="1dp"
+        android:layout_marginEnd="1dp"
+        android:background="@drawable/key_bg"
+        android:text="\u25BC"
+        android:textColor="@color/key_text"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp" />
+
+    <Button
+        android:id="@+id/key_up"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_weight="1"
+        android:layout_marginStart="1dp"
+        android:layout_marginEnd="1dp"
+        android:background="@drawable/key_bg"
+        android:text="\u25B2"
+        android:textColor="@color/key_text"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp" />
+
+    <Button
+        android:id="@+id/key_right"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_weight="1"
+        android:layout_marginStart="1dp"
+        android:layout_marginEnd="1dp"
+        android:background="@drawable/key_bg"
+        android:text="\u25B6"
+        android:textColor="@color/key_text"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp" />
+
+    <Button
+        android:id="@+id/key_upload"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_weight="1"
+        android:layout_marginStart="1dp"
+        android:layout_marginEnd="1dp"
+        android:background="@drawable/key_bg"
+        android:text="\u21E7"
+        android:textColor="@color/key_text"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp" />
+
+    <Button
+        android:id="@+id/key_mic"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_weight="1"
+        android:layout_marginStart="1dp"
+        android:layout_marginEnd="1dp"
+        android:background="@drawable/key_bg"
+        android:text="Mic"
+        android:textColor="@color/key_text"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp" />
+
+</LinearLayout>
