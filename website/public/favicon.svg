@@ -1,4 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect x="10" y="10" width="80" height="80" rx="12" fill="#0a0a0f" stroke="#6cf2a8" stroke-width="6"/>
-  <text x="28" y="72" font-family="monospace" font-size="55" font-weight="bold" fill="#6cf2a8">&gt;_</text>
+  <rect x="5" y="20" width="90" height="60" rx="10" fill="#14141c" stroke="#1e1e2a" stroke-width="3"/>
+  <rect x="14" y="30" width="16" height="12" rx="2" fill="#2B2B30" stroke="#3a3a4a" stroke-width="1"/>
+  <rect x="34" y="30" width="16" height="12" rx="2" fill="#2B2B30" stroke="#3a3a4a" stroke-width="1"/>
+  <rect x="54" y="30" width="16" height="12" rx="2" fill="#2B2B30" stroke="#3a3a4a" stroke-width="1"/>
+  <rect x="74" y="30" width="12" height="12" rx="2" fill="#2a4a35" stroke="#3a6a4a" stroke-width="1"/>
+  <rect x="14" y="46" width="12" height="12" rx="2" fill="#2B2B30" stroke="#3a3a4a" stroke-width="1"/>
+  <rect x="30" y="46" width="12" height="12" rx="2" fill="#2B2B30" stroke="#3a3a4a" stroke-width="1"/>
+  <rect x="46" y="46" width="12" height="12" rx="2" fill="#2B2B30" stroke="#3a3a4a" stroke-width="1"/>
+  <rect x="62" y="46" width="24" height="12" rx="2" fill="#2B2B30" stroke="#3a3a4a" stroke-width="1"/>
+  <rect x="14" y="62" width="8" height="10" rx="2" fill="#4A2525" stroke="#6a3535" stroke-width="1"/>
+  <rect x="26" y="62" width="48" height="10" rx="2" fill="#333338" stroke="#3a3a4a" stroke-width="1"/>
+  <rect x="78" y="62" width="8" height="10" rx="2" fill="#253050" stroke="#354a70" stroke-width="1"/>
+  <text x="50" y="39" font-family="monospace" font-size="9" font-weight="bold" fill="#6cf2a8" text-anchor="middle">KJ</text>
 </svg>

@@ -42,6 +42,8 @@ After installing:
 - SCP image upload to remote SSH servers
 - Multi-host SSH management with encrypted credentials (AES-256)
 - Slash command shortcuts for LLM CLIs
+- Custom slash command sets
+- Keyboard color themes (Dark, Light, OLED black, Terminal)
 - Swipe gestures (delete word, space, layer switching)
 
 ## Who it's for

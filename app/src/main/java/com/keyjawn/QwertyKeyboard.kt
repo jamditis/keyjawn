@@ -24,7 +24,8 @@ class QwertyKeyboard(
     private val extraRowManager: ExtraRowManager,
     private val inputConnectionProvider: () -> InputConnection?,
     private val appPrefs: AppPrefs? = null,
-    private val slashPopup: SlashCommandPopup? = null
+    private val slashPopup: SlashCommandPopup? = null,
+    private val themeManager: ThemeManager? = null
 ) {
 
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider)
@@ -121,11 +122,17 @@ class QwertyKeyboard(
 
     private fun createKeyView(key: Key): View {
         val context = container.context
+        val tm = themeManager
         val button = Button(context).apply {
             text = key.label
             isAllCaps = false
-            setBackgroundResource(R.drawable.key_bg)
-            setTextColor(context.getColor(R.color.key_text))
+            if (tm != null) {
+                background = tm.createKeyDrawable(tm.keyBg())
+                setTextColor(tm.keyText())
+            } else {
+                setBackgroundResource(R.drawable.key_bg)
+                setTextColor(context.getColor(R.color.key_text))
+            }
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 0)
             minWidth = 0
@@ -144,7 +151,11 @@ class QwertyKeyboard(
             key.output is KeyOutput.QuickKey
 
         if (isSpecialKey) {
-            button.setBackgroundResource(R.drawable.key_bg_special)
+            if (tm != null) {
+                button.background = tm.createKeyDrawable(tm.keySpecialBg())
+            } else {
+                button.setBackgroundResource(R.drawable.key_bg_special)
+            }
             button.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         }
 
@@ -225,7 +236,11 @@ class QwertyKeyboard(
             val hintChar = if (alts.size == 1) alts[0] else alts[0]
             button.background = null
             val frame = FrameLayout(context).apply {
-                setBackgroundResource(R.drawable.key_bg)
+                if (tm != null) {
+                    background = tm.createKeyDrawable(tm.keyBg())
+                } else {
+                    setBackgroundResource(R.drawable.key_bg)
+                }
             }
             button.layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -234,7 +249,7 @@ class QwertyKeyboard(
             frame.addView(button)
             val hint = TextView(context).apply {
                 text = hintChar
-                setTextColor(context.getColor(R.color.key_hint))
+                setTextColor(if (tm != null) tm.keyHint() else context.getColor(R.color.key_hint))
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
                 layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -335,10 +350,19 @@ class QwertyKeyboard(
 
     private fun updateShiftAppearance(button: Button?) {
         button ?: return
-        when (shiftState) {
-            ShiftState.OFF -> button.setBackgroundResource(R.drawable.key_bg_special)
-            ShiftState.SINGLE -> button.setBackgroundResource(R.drawable.key_bg_active)
-            ShiftState.CAPS_LOCK -> button.setBackgroundResource(R.drawable.key_bg_locked)
+        val tm = themeManager
+        if (tm != null) {
+            when (shiftState) {
+                ShiftState.OFF -> button.background = tm.createKeyDrawable(tm.keySpecialBg())
+                ShiftState.SINGLE -> button.background = tm.createFlatDrawable(tm.accent())
+                ShiftState.CAPS_LOCK -> button.background = tm.createFlatDrawable(tm.accentLocked())
+            }
+        } else {
+            when (shiftState) {
+                ShiftState.OFF -> button.setBackgroundResource(R.drawable.key_bg_special)
+                ShiftState.SINGLE -> button.setBackgroundResource(R.drawable.key_bg_active)
+                ShiftState.CAPS_LOCK -> button.setBackgroundResource(R.drawable.key_bg_locked)
+            }
         }
     }
 

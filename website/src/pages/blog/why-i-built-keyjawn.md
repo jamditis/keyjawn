@@ -50,7 +50,9 @@ The keyboard has a dedicated terminal row above the QWERTY layout: `Esc`, `Tab`,
 
 **Ctrl as a three-state toggle.** Tap it once to arm it for one keypress (`Ctrl+C`). Long-press to lock it for a series of combos. Tap again to turn it off. Simple, and more useful than not having Ctrl at all.
 
-**Slash command picker.** Claude Code, OpenClaw, and Gemini CLI all use slash commands (`/help`, `/clear`, `/compact`, `/status`). KeyJawn gives you a quick-pick popup instead of making you type them from memory.
+**Slash command picker.** Claude Code, OpenClaw, and Gemini CLI all use slash commands (`/help`, `/clear`, `/compact`, `/status`). KeyJawn gives you a quick-pick popup instead of making you type them from memory. You can also create custom command sets for your own tools and workflows -- add whatever commands you need, group them by project, toggle sets on and off.
+
+**Keyboard themes.** Four color presets: the default dark, a light theme for outdoor use, true-black OLED for battery savings on AMOLED screens, and a green-on-black terminal theme for the aesthetic. The whole keyboard changes -- keys, backgrounds, hints, accent colors.
 
 **Autocorrect is off by default.** Autocorrect breaks web-based terminals because it uses `setComposingText`, which doesn't map to the key events a shell expects. You can turn it on per app -- keep it off for Termux, on for Slack.
 
@@ -58,7 +60,7 @@ The keyboard has a dedicated terminal row above the QWERTY layout: `Esc`, `Tab`,
 
 **KeyJawn Lite** is free. Full QWERTY keyboard with the terminal key row, number row, alt character popups, and shift/caps lock. No permissions required. No network access.
 
-**KeyJawn Full** is $4, lifetime. It adds voice input, clipboard history, SCP upload, SSH host management, slash commands, swipe gestures, and per-app autocorrect toggle. No subscriptions, no ads, no tracking. One payment, done.
+**KeyJawn Full** is $4, lifetime. It adds voice input, clipboard history, SCP upload, SSH host management, slash commands, custom command sets, keyboard color themes, swipe gestures, and per-app autocorrect toggle. No subscriptions, no ads, no tracking. One payment, done.
 
 The code is MIT-licensed and [on GitHub](https://github.com/jamditis/keyjawn). Both versions are built from the same codebase -- the full version unlocks features that need additional permissions (microphone, network, storage).
 

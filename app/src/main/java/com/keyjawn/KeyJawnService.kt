@@ -12,6 +12,7 @@ class KeyJawnService : InputMethodService() {
     private val keySender = KeySender()
     private lateinit var appPrefs: AppPrefs
     private lateinit var billingManager: BillingManager
+    private lateinit var themeManager: ThemeManager
     private var extraRowManager: ExtraRowManager? = null
     private var qwertyKeyboard: QwertyKeyboard? = null
     private var voiceInputHandler: VoiceInputHandler? = null
@@ -28,12 +29,23 @@ class KeyJawnService : InputMethodService() {
         appPrefs = AppPrefs(this)
         billingManager = BillingManager(this)
         billingManager.connect()
+        themeManager = ThemeManager(this)
+        if (!billingManager.isFullVersion) {
+            themeManager.currentTheme = KeyboardTheme.DARK
+        }
         slashCommandRegistry = SlashCommandRegistry(this)
     }
 
     override fun onCreateInputView(): View {
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
         val paid = billingManager.isFullVersion
+        val tm = themeManager
+
+        // Apply theme colors to layout backgrounds
+        view.setBackgroundColor(tm.keyboardBg())
+        view.findViewById<View>(R.id.extra_row)?.setBackgroundColor(tm.extraRowBg())
+        view.findViewById<View>(R.id.number_row)?.setBackgroundColor(tm.extraRowBg())
+        view.findViewById<LinearLayout>(R.id.qwerty_container)?.setBackgroundColor(tm.qwertyBg())
 
         val voice = if (paid) VoiceInputHandler(this) else null
         voiceInputHandler = voice
@@ -53,11 +65,12 @@ class KeyJawnService : InputMethodService() {
             view, keySender, { currentInputConnection }, voice,
             uploadHandler = upload,
             onUploadTap = if (paid) {{ launchPhotoPicker() }} else null,
-            clipboardHistoryManager = clipManager
+            clipboardHistoryManager = clipManager,
+            themeManager = tm
         )
         extraRowManager = erm
 
-        NumberRowManager(view, keySender, { currentInputConnection })
+        NumberRowManager(view, keySender, { currentInputConnection }, tm)
 
         val container = view.findViewById<LinearLayout>(R.id.qwerty_container)
         val registry = slashCommandRegistry
@@ -75,7 +88,7 @@ class KeyJawnService : InputMethodService() {
             )
         } else null
 
-        val qwerty = QwertyKeyboard(container, keySender, erm, { currentInputConnection }, appPrefs, slashPopup)
+        val qwerty = QwertyKeyboard(container, keySender, erm, { currentInputConnection }, appPrefs, slashPopup, tm)
         qwerty.setLayer(KeyboardLayouts.LAYER_LOWER)
         qwertyKeyboard = qwerty
 

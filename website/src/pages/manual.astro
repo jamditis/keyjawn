@@ -27,6 +27,8 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li><a href="#scp-upload">SCP upload</a></li>
             <li><a href="#slash-commands">Slash commands</a></li>
             <li><a href="#swipe-gestures">Swipe gestures</a></li>
+            <li><a href="#themes">Themes</a></li>
+            <li><a href="#custom-commands">Custom commands</a></li>
             <li><a href="#autocorrect">Autocorrect</a></li>
           </ul>
         </nav>
@@ -201,6 +203,53 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li><strong>Swipe up</strong> -- switches to the symbols layer.</li>
             <li><strong>Swipe down</strong> -- switches to the letters layer.</li>
           </ul>
+          <p class="text-muted">Full version only.</p>
+        </section>
+
+        <!-- Themes -->
+        <section class="manual-section" id="themes">
+          <h2>Themes</h2>
+          <p>KeyJawn includes four keyboard color themes:</p>
+          <ul>
+            <li><strong>Dark</strong> -- the default. Dark grey keys on a near-black background.</li>
+            <li><strong>Light</strong> -- white keys on a light grey background. Better for outdoor use.</li>
+            <li><strong>OLED black</strong> -- true black background for AMOLED screens. Saves battery.</li>
+            <li><strong>Terminal</strong> -- green text on a dark green background. The classic terminal look.</li>
+          </ul>
+          <h3>Changing themes</h3>
+          <ol>
+            <li>Open KeyJawn settings (gear icon or app drawer).</li>
+            <li>Under the <strong>Theme</strong> section, tap a color swatch.</li>
+            <li>The new theme applies the next time the keyboard opens.</li>
+          </ol>
+          <p>Themes change every visible element: key backgrounds, text colors, hint labels, the extra row, number row, and accent colors for Ctrl and Shift states.</p>
+          <p class="text-muted">Full version only. Free users get the Dark theme.</p>
+        </section>
+
+        <!-- Custom commands -->
+        <section class="manual-section" id="custom-commands">
+          <h2>Custom commands</h2>
+          <p>In addition to the built-in slash command sets (Claude Code, OpenClaw, Gemini CLI, general), you can create your own command sets.</p>
+          <h3>Creating a command set</h3>
+          <ol>
+            <li>Open KeyJawn settings.</li>
+            <li>Scroll to the <strong>Slash commands</strong> section.</li>
+            <li>Tap <strong>Add command set</strong>.</li>
+            <li>Enter a name for your set (e.g., "my-project").</li>
+          </ol>
+          <h3>Adding commands</h3>
+          <ol>
+            <li>Find your custom set in the list.</li>
+            <li>Tap the <strong>+</strong> button next to it.</li>
+            <li>Type the command text. The leading <code>/</code> is added automatically.</li>
+          </ol>
+          <h3>Managing sets</h3>
+          <ul>
+            <li>Toggle any set (built-in or custom) on/off with the checkbox.</li>
+            <li>Delete a custom set with the <strong>X</strong> button.</li>
+            <li>Remove individual commands from custom sets by tapping the command.</li>
+          </ul>
+          <p>Custom commands appear in the slash command popup alongside the built-in ones. Only commands from enabled sets are shown.</p>
           <p class="text-muted">Full version only.</p>
         </section>
 

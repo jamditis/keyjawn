@@ -13,7 +13,8 @@ class ExtraRowManager(
     private val voiceInputHandler: VoiceInputHandler? = null,
     private val uploadHandler: UploadHandler? = null,
     private val onUploadTap: (() -> Unit)? = null,
-    private val clipboardHistoryManager: ClipboardHistoryManager? = null
+    private val clipboardHistoryManager: ClipboardHistoryManager? = null,
+    private val themeManager: ThemeManager? = null
 ) {
 
     val ctrlState = CtrlState()
@@ -40,7 +41,28 @@ class ExtraRowManager(
         wireUpload()
         wireMic()
 
+        applyThemeColors()
+
         ctrlState.onStateChanged = { mode -> updateCtrlAppearance(mode) }
+    }
+
+    private fun applyThemeColors() {
+        val tm = themeManager ?: return
+        view.findViewById<View>(R.id.key_esc)?.background = tm.createExtraRowButtonDrawable(tm.escBg())
+        view.findViewById<View>(R.id.key_tab)?.background = tm.createExtraRowButtonDrawable(tm.tabBg())
+        view.findViewById<View>(R.id.key_clipboard)?.background = tm.createExtraRowButtonDrawable(tm.clipboardBg())
+        ctrlButton.background = tm.createExtraRowButtonDrawable(tm.keyBg())
+        ctrlButton.setTextColor(tm.keyText())
+        view.findViewById<View>(R.id.key_left)?.background = tm.createExtraRowButtonDrawable(tm.arrowBg())
+        view.findViewById<View>(R.id.key_down)?.background = tm.createExtraRowButtonDrawable(tm.arrowBg())
+        view.findViewById<View>(R.id.key_up)?.background = tm.createExtraRowButtonDrawable(tm.arrowBg())
+        view.findViewById<View>(R.id.key_right)?.background = tm.createExtraRowButtonDrawable(tm.arrowBg())
+        view.findViewById<View>(R.id.key_upload)?.background = tm.createExtraRowButtonDrawable(tm.uploadBg())
+        view.findViewById<View>(R.id.key_mic)?.background = tm.createExtraRowButtonDrawable(tm.micBg())
+        // Set text color on text buttons
+        for (id in listOf(R.id.key_esc, R.id.key_tab, R.id.key_left, R.id.key_down, R.id.key_up, R.id.key_right)) {
+            (view.findViewById<View>(id) as? Button)?.setTextColor(tm.keyText())
+        }
     }
 
     fun isCtrlActive(): Boolean = ctrlState.isActive()
@@ -182,11 +204,20 @@ class ExtraRowManager(
     }
 
     private fun updateCtrlAppearance(mode: CtrlMode) {
-        val bgRes = when (mode) {
-            CtrlMode.OFF -> R.drawable.key_bg
-            CtrlMode.ARMED -> R.drawable.key_bg_active
-            CtrlMode.LOCKED -> R.drawable.key_bg_locked
+        val tm = themeManager
+        if (tm != null) {
+            when (mode) {
+                CtrlMode.OFF -> ctrlButton.background = tm.createExtraRowButtonDrawable(tm.keyBg())
+                CtrlMode.ARMED -> ctrlButton.background = tm.createFlatDrawable(tm.accent())
+                CtrlMode.LOCKED -> ctrlButton.background = tm.createFlatDrawable(tm.accentLocked())
+            }
+        } else {
+            val bgRes = when (mode) {
+                CtrlMode.OFF -> R.drawable.key_bg
+                CtrlMode.ARMED -> R.drawable.key_bg_active
+                CtrlMode.LOCKED -> R.drawable.key_bg_locked
+            }
+            ctrlButton.setBackgroundResource(bgRes)
         }
-        ctrlButton.setBackgroundResource(bgRes)
     }
 }

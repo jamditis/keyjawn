@@ -168,6 +168,61 @@ import KeyCap from '../components/KeyCap.astro';
     </div>
   </section>
 
+  <!-- Themes -->
+  <section class="section feature-section" id="themes">
+    <div class="container feature-row reverse">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --themes</h2>
+        <p>Four color themes to match your setup: Dark (the default), Light for outdoor use, OLED black for true-black displays, and Terminal green for the classic look.</p>
+        <p>Themes apply to every element -- keys, backgrounds, hints, accent colors. Pick one in settings and the keyboard changes on the next open.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="theme-demo">
+          <div class="theme-swatch" style="background: #1B1B1F; border: 2px solid #6C9BF2;">
+            <span class="theme-label" style="color: #E8E8EC;">Dark</span>
+            <span class="theme-key" style="background: #2B2B30; color: #E8E8EC; border: 1px solid #333338;">A</span>
+          </div>
+          <div class="theme-swatch" style="background: #E8E8EC; border: 2px solid #2563EB;">
+            <span class="theme-label" style="color: #1A1A1F;">Light</span>
+            <span class="theme-key" style="background: #FFFFFF; color: #1A1A1F; border: 1px solid #D8D8E0;">A</span>
+          </div>
+          <div class="theme-swatch" style="background: #000000; border: 2px solid #6C9BF2;">
+            <span class="theme-label" style="color: #E8E8EC;">OLED</span>
+            <span class="theme-key" style="background: #111114; color: #E8E8EC; border: 1px solid #1A1A1E;">A</span>
+          </div>
+          <div class="theme-swatch" style="background: #0A1A0A; border: 2px solid #33FF33;">
+            <span class="theme-label" style="color: #33FF33;">Term</span>
+            <span class="theme-key" style="background: #0F2B0F; color: #33FF33; border: 1px solid #1A3A1A;">A</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Custom slash commands -->
+  <section class="section feature-section" id="custom-commands">
+    <div class="container feature-row">
+      <div class="feature-content">
+        <h2 class="prompt">keyjawn --custom-commands</h2>
+        <p>Create your own slash command sets alongside the built-in ones. Add commands for tools you use, group them by project, toggle sets on and off.</p>
+        <p>Built-in sets cover Claude Code, OpenClaw, and Gemini CLI patterns. Custom sets let you add whatever commands your workflow needs.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="custom-cmd-demo card">
+          <div class="cmd-set-header">
+            <span class="cmd-set-name">my-project</span>
+            <span class="cmd-set-badge">custom</span>
+          </div>
+          <div class="slash-item">/deploy-staging</div>
+          <div class="slash-item">/run-tests</div>
+          <div class="slash-item">/check-logs</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Swipe gestures -->
   <section class="section feature-section" id="swipe">
     <div class="container feature-row reverse">
@@ -304,8 +359,8 @@ import KeyCap from '../components/KeyCap.astro';
   }
 
   .page-intro {
-    color: var(--text-muted);
-    font-size: 1.05rem;
+    color: var(--text);
+    font-size: 1.1rem;
     max-width: 680px;
   }
 
@@ -333,8 +388,8 @@ import KeyCap from '../components/KeyCap.astro';
   }
 
   .feature-content p {
-    font-size: 1rem;
-    line-height: 1.75;
+    font-size: 1.05rem;
+    line-height: 1.8;
   }
 
   .feature-content ul {
@@ -640,6 +695,80 @@ import KeyCap from '../components/KeyCap.astro';
     padding: 0.5em 0.8em;
     border-radius: 5px;
     white-space: nowrap;
+  }
+
+  /* Theme demo */
+  .theme-demo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding: var(--space-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .theme-swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: var(--radius);
+  }
+
+  .theme-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .theme-key {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 500;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+  }
+
+  /* Custom command demo */
+  .custom-cmd-demo {
+    padding: var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 200px;
+  }
+
+  .cmd-set-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5em 0.75em;
+    margin-bottom: 0.25rem;
+  }
+
+  .cmd-set-name {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .cmd-set-badge {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    background: rgba(108, 242, 168, 0.1);
+    padding: 0.15em 0.5em;
+    border-radius: 3px;
+    border: 1px solid rgba(108, 242, 168, 0.2);
   }
 
   /* Responsive */
