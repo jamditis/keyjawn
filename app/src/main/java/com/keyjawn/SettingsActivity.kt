@@ -221,6 +221,11 @@ class SettingsActivity : Activity() {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
         }
         val usernameField = EditText(this).apply { hint = "Username" }
+        val passwordField = EditText(this).apply {
+            hint = "Password (optional)"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
         val keyPathField = EditText(this).apply { hint = "Private key path (optional)" }
         val uploadDirField = EditText(this).apply {
             hint = "Upload dir (default /tmp/keyjawn/)"
@@ -230,6 +235,7 @@ class SettingsActivity : Activity() {
         dialogView.addView(hostnameField)
         dialogView.addView(portField)
         dialogView.addView(usernameField)
+        dialogView.addView(passwordField)
         dialogView.addView(keyPathField)
         dialogView.addView(uploadDirField)
 
@@ -241,12 +247,14 @@ class SettingsActivity : Activity() {
                 val port = portText.toIntOrNull() ?: 22
                 val uploadDir = uploadDirField.text.toString().ifBlank { "/tmp/keyjawn/" }
                 val keyPath = keyPathField.text.toString().ifBlank { null }
+                val password = passwordField.text.toString().ifBlank { null }
 
                 val host = HostConfig(
                     name = nameField.text.toString().trim(),
                     hostname = hostnameField.text.toString().trim(),
                     port = port,
                     username = usernameField.text.toString().trim(),
+                    password = password,
                     privateKeyPath = keyPath,
                     uploadDir = uploadDir
                 )

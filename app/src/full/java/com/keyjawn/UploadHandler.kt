@@ -106,7 +106,14 @@ class UploadHandler(private val context: Context) {
     private fun copyUriToTemp(uri: Uri): File? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-            val tempFile = File(context.cacheDir, "upload_${System.currentTimeMillis()}.png")
+            val mimeType = context.contentResolver.getType(uri)
+            val ext = when (mimeType) {
+                "image/jpeg" -> "jpg"
+                "image/webp" -> "webp"
+                "image/gif" -> "gif"
+                else -> "png"
+            }
+            val tempFile = File(context.cacheDir, "upload_${System.currentTimeMillis()}.$ext")
             tempFile.outputStream().use { out -> inputStream.copyTo(out) }
             inputStream.close()
             tempFile

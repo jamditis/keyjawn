@@ -297,7 +297,7 @@ class QwertyKeyboard(
                 }
                 if (shiftState == ShiftState.SINGLE) {
                     shiftState = ShiftState.OFF
-                    setLayer(KeyboardLayouts.LAYER_LOWER)
+                    container.post { setLayer(KeyboardLayouts.LAYER_LOWER) }
                 }
             }
             is KeyOutput.Enter -> {

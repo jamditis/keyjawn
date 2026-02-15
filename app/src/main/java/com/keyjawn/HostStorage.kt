@@ -29,7 +29,8 @@ class HostStorage private constructor(private val prefs: SharedPreferences) {
                 hostname = obj.getString("hostname"),
                 port = obj.optInt("port", 22),
                 username = obj.getString("username"),
-                privateKeyPath = obj.optString("privateKeyPath", null),
+                password = obj.optString("password", "").ifEmpty { null },
+                privateKeyPath = obj.optString("privateKeyPath", "").ifEmpty { null },
                 uploadDir = obj.optString("uploadDir", "/tmp/keyjawn/")
             )
         }
@@ -43,6 +44,7 @@ class HostStorage private constructor(private val prefs: SharedPreferences) {
                 put("hostname", host.hostname)
                 put("port", host.port)
                 put("username", host.username)
+                put("password", host.password ?: "")
                 put("privateKeyPath", host.privateKeyPath ?: "")
                 put("uploadDir", host.uploadDir)
             })

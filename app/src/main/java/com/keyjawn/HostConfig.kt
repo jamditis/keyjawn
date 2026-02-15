@@ -5,6 +5,7 @@ data class HostConfig(
     val hostname: String,
     val port: Int = 22,
     val username: String,
+    val password: String? = null,
     val privateKeyPath: String? = null,
     val uploadDir: String = "/tmp/keyjawn/"
 ) {
