@@ -12,6 +12,7 @@ class KeyJawnService : InputMethodService() {
     private lateinit var appPrefs: AppPrefs
     private var extraRowManager: ExtraRowManager? = null
     private var qwertyKeyboard: QwertyKeyboard? = null
+    private var voiceInputHandler: VoiceInputHandler? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -20,7 +21,9 @@ class KeyJawnService : InputMethodService() {
 
     override fun onCreateInputView(): View {
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
-        val erm = ExtraRowManager(view, keySender) { currentInputConnection }
+        val voice = VoiceInputHandler(this)
+        voiceInputHandler = voice
+        val erm = ExtraRowManager(view, keySender, { currentInputConnection }, voice)
         extraRowManager = erm
 
         val container = view.findViewById<LinearLayout>(R.id.qwerty_container)
@@ -35,5 +38,10 @@ class KeyJawnService : InputMethodService() {
         super.onStartInputView(info, restarting)
         val packageName = info?.packageName ?: "unknown"
         qwertyKeyboard?.updatePackage(packageName)
+    }
+
+    override fun onDestroy() {
+        voiceInputHandler?.destroy()
+        super.onDestroy()
     }
 }

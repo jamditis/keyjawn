@@ -9,7 +9,8 @@ import android.widget.Toast
 class ExtraRowManager(
     private val view: View,
     private val keySender: KeySender,
-    private val inputConnectionProvider: () -> InputConnection?
+    private val inputConnectionProvider: () -> InputConnection?,
+    private val voiceInputHandler: VoiceInputHandler? = null
 ) {
 
     val ctrlState = CtrlState()
@@ -25,7 +26,7 @@ class ExtraRowManager(
         wireArrow(R.id.key_up, KeyEvent.KEYCODE_DPAD_UP)
         wireArrow(R.id.key_right, KeyEvent.KEYCODE_DPAD_RIGHT)
         wirePlaceholder(R.id.key_upload, "Upload not yet configured")
-        wirePlaceholder(R.id.key_mic, "Voice input not yet configured")
+        wireMic()
 
         ctrlState.onStateChanged = { mode -> updateCtrlAppearance(mode) }
     }
@@ -67,6 +68,22 @@ class ExtraRowManager(
             if (ctrl) ctrlState.consume()
         }
         button.setOnTouchListener(listener)
+    }
+
+    private fun wireMic() {
+        val micButton = view.findViewById<Button>(R.id.key_mic)
+        if (voiceInputHandler != null) {
+            voiceInputHandler.setup(micButton, inputConnectionProvider)
+            micButton.setOnClickListener {
+                if (voiceInputHandler.isListening()) {
+                    voiceInputHandler.stopListening()
+                } else {
+                    voiceInputHandler.startListening()
+                }
+            }
+        } else {
+            wirePlaceholder(R.id.key_mic, "Voice input not available")
+        }
     }
 
     private fun wirePlaceholder(buttonId: Int, message: String) {
