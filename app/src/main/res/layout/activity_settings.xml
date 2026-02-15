@@ -58,6 +58,19 @@
             android:layout_height="wrap_content"
             android:orientation="vertical" />
 
+        <!-- Upgrade -->
+        <Button
+            android:id="@+id/upgrade_btn"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Upgrade to full version ($3.99)"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:backgroundTint="#2E7D32"
+            android:layout_marginTop="24dp"
+            android:visibility="gone" />
+
         <!-- About -->
         <TextView
             android:id="@+id/version_text"

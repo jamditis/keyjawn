@@ -19,6 +19,7 @@ class SettingsActivity : Activity() {
     private var hostListContainer: LinearLayout? = null
     private lateinit var commandSetsContainer: LinearLayout
     private var slashCommandRegistry: SlashCommandRegistry? = null
+    private lateinit var billingManager: BillingManager
 
     private val hasScpUpload: Boolean
         get() = BuildConfig.FLAVOR == "full"
@@ -27,7 +28,12 @@ class SettingsActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
+        billingManager = BillingManager(this)
+        billingManager.connect()
+
         commandSetsContainer = findViewById(R.id.command_sets)
+
+        setupUpgradeButton()
 
         val hostSection = findViewById<LinearLayout>(R.id.host_section)
         if (hasScpUpload) {
@@ -149,6 +155,30 @@ class SettingsActivity : Activity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    override fun onDestroy() {
+        billingManager.destroy()
+        super.onDestroy()
+    }
+
+    private fun setupUpgradeButton() {
+        val upgradeBtn = findViewById<Button>(R.id.upgrade_btn)
+        if (billingManager.isFullVersion) {
+            upgradeBtn.visibility = View.GONE
+        } else {
+            upgradeBtn.visibility = View.VISIBLE
+            upgradeBtn.setOnClickListener {
+                billingManager.launchPurchaseFlow(this)
+            }
+            billingManager.onPurchaseStateChanged = {
+                runOnUiThread {
+                    if (billingManager.isFullVersion) {
+                        upgradeBtn.visibility = View.GONE
+                    }
+                }
+            }
+        }
     }
 
     private fun refreshCommandSets() {

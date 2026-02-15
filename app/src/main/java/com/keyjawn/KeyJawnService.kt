@@ -11,6 +11,7 @@ class KeyJawnService : InputMethodService() {
 
     private val keySender = KeySender()
     private lateinit var appPrefs: AppPrefs
+    private lateinit var billingManager: BillingManager
     private var extraRowManager: ExtraRowManager? = null
     private var qwertyKeyboard: QwertyKeyboard? = null
     private var voiceInputHandler: VoiceInputHandler? = null
@@ -25,26 +26,33 @@ class KeyJawnService : InputMethodService() {
     override fun onCreate() {
         super.onCreate()
         appPrefs = AppPrefs(this)
+        billingManager = BillingManager(this)
+        billingManager.connect()
         slashCommandRegistry = SlashCommandRegistry(this)
     }
 
     override fun onCreateInputView(): View {
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
-        val voice = VoiceInputHandler(this)
+        val paid = billingManager.isFullVersion
+
+        val voice = if (paid) VoiceInputHandler(this) else null
         voiceInputHandler = voice
 
-        val upload = UploadHandler(this)
-        upload.setInputConnectionProvider { currentInputConnection }
+        val upload = if (paid) {
+            UploadHandler(this).also {
+                it.setInputConnectionProvider { currentInputConnection }
+                pendingUploadHandler = it
+            }
+        } else null
         uploadHandler = upload
-        pendingUploadHandler = upload
 
-        val clipManager = ClipboardHistoryManager(this)
+        val clipManager = if (paid) ClipboardHistoryManager(this) else null
         clipboardHistoryManager = clipManager
 
         val erm = ExtraRowManager(
             view, keySender, { currentInputConnection }, voice,
             uploadHandler = upload,
-            onUploadTap = { launchPhotoPicker() },
+            onUploadTap = if (paid) {{ launchPhotoPicker() }} else null,
             clipboardHistoryManager = clipManager
         )
         extraRowManager = erm
@@ -53,7 +61,7 @@ class KeyJawnService : InputMethodService() {
 
         val container = view.findViewById<LinearLayout>(R.id.qwerty_container)
         val registry = slashCommandRegistry
-        val slashPopup = if (registry != null) {
+        val slashPopup = if (paid && registry != null) {
             SlashCommandPopup(
                 registry = registry,
                 onCommandSelected = { command ->
@@ -84,6 +92,7 @@ class KeyJawnService : InputMethodService() {
         voiceInputHandler?.destroy()
         uploadHandler?.destroy()
         clipboardHistoryManager?.destroy()
+        billingManager.destroy()
         pendingUploadHandler = null
         super.onDestroy()
     }

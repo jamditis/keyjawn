@@ -62,8 +62,8 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `symbols row 1 has 10 keys`() {
-        assertEquals(10, KeyboardLayouts.symbols[0].size)
+    fun `symbols row 1 has 9 keys`() {
+        assertEquals(9, KeyboardLayouts.symbols[0].size)
     }
 
     @Test
@@ -77,8 +77,8 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `symbols row 4 has 4 keys`() {
-        assertEquals(4, KeyboardLayouts.symbols[3].size)
+    fun `symbols row 4 has 5 keys`() {
+        assertEquals(5, KeyboardLayouts.symbols[3].size)
     }
 
     @Test
@@ -94,9 +94,9 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `symbols row 1 contains digits`() {
+    fun `symbols row 1 contains punctuation`() {
         val labels = KeyboardLayouts.symbols[0].map { it.label }
-        assertEquals(listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0"), labels)
+        assertEquals(listOf("-", "_", "=", "+", ".", "\\", "|", "~", "`"), labels)
     }
 
     @Test
@@ -114,21 +114,22 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `lowercase row 4 has sym, space, slash, enter`() {
+    fun `lowercase row 4 has sym, space, quickkey, enter`() {
         val row = KeyboardLayouts.lowercase[3]
         assertTrue(row[0].output is KeyOutput.SymSwitch)
         assertTrue(row[1].output is KeyOutput.Space)
-        assertTrue(row[2].output is KeyOutput.Slash)
+        assertTrue(row[2].output is KeyOutput.QuickKey)
         assertTrue(row[3].output is KeyOutput.Enter)
     }
 
     @Test
-    fun `symbols row 4 has abc, space, slash, enter`() {
+    fun `symbols row 4 has abc, space, char slash, slash command, enter`() {
         val row = KeyboardLayouts.symbols[3]
         assertTrue(row[0].output is KeyOutput.AbcSwitch)
         assertTrue(row[1].output is KeyOutput.Space)
-        assertTrue(row[2].output is KeyOutput.Slash)
-        assertTrue(row[3].output is KeyOutput.Enter)
+        assertTrue(row[2].output is KeyOutput.Character)
+        assertTrue(row[3].output is KeyOutput.Slash)
+        assertTrue(row[4].output is KeyOutput.Enter)
     }
 
     @Test
@@ -160,10 +161,10 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `slash key has weight 1`() {
-        val slashKey = KeyboardLayouts.lowercase[3][2]
-        assertTrue(slashKey.output is KeyOutput.Slash)
-        assertEquals(1f, slashKey.weight)
+    fun `quick key has weight 1`() {
+        val quickKey = KeyboardLayouts.lowercase[3][2]
+        assertTrue(quickKey.output is KeyOutput.QuickKey)
+        assertEquals(1f, quickKey.weight)
     }
 
     @Test
@@ -218,14 +219,14 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `symbols row 2 contains expected punctuation`() {
+    fun `symbols row 2 contains expected symbols`() {
         val labels = KeyboardLayouts.symbols[1].map { it.label }
-        assertEquals(listOf("-", "_", "=", "+", ".", "\\", "|", "~", "`"), labels)
+        assertEquals(listOf("!", "@", "#", "$", "%", "&", "*", "(", ")"), labels)
     }
 
     @Test
-    fun `symbols row 3 contains expected symbols`() {
+    fun `symbols row 3 contains expected brackets`() {
         val labels = KeyboardLayouts.symbols[2].map { it.label }
-        assertEquals(listOf("!", "@", "#", "$", "%", "&", "*", "(", ")"), labels)
+        assertEquals(listOf("[", "]", "{", "}", "<", ">", "^", "\"", "'"), labels)
     }
 }

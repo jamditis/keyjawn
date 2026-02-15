@@ -3,3 +3,6 @@
 
 # AndroidX security-crypto
 -keep class androidx.security.crypto.** { *; }
+
+# Google Play Billing
+-keep class com.android.billingclient.** { *; }

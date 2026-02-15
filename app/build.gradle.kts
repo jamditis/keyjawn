@@ -60,6 +60,9 @@ dependencies {
     // SCP upload (full flavor only)
     "fullImplementation"("com.github.mwiede:jsch:0.2.21")
 
+    // Google Play Billing (full flavor only)
+    "fullImplementation"("com.android.billingclient:billing-ktx:7.1.1")
+
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
