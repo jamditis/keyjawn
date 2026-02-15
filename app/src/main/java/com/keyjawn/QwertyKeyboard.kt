@@ -20,7 +20,8 @@ class QwertyKeyboard(
     private val keySender: KeySender,
     private val extraRowManager: ExtraRowManager,
     private val inputConnectionProvider: () -> InputConnection?,
-    private val appPrefs: AppPrefs? = null
+    private val appPrefs: AppPrefs? = null,
+    private val slashPopup: SlashCommandPopup? = null
 ) {
 
     var currentLayer: Int = KeyboardLayouts.LAYER_LOWER
@@ -139,6 +140,14 @@ class QwertyKeyboard(
             }
         }
 
+        if (key.output is KeyOutput.Slash) {
+            button.setOnLongClickListener {
+                val longIc = inputConnectionProvider() ?: return@setOnLongClickListener true
+                keySender.sendText(longIc, ".")
+                true
+            }
+        }
+
         return button
     }
 
@@ -180,7 +189,11 @@ class QwertyKeyboard(
                 setLayer(KeyboardLayouts.LAYER_LOWER)
             }
             is KeyOutput.Slash -> {
-                keySender.sendText(ic, "/")
+                if (slashPopup != null) {
+                    slashPopup.show(container)
+                } else {
+                    keySender.sendText(ic, "/")
+                }
             }
             is KeyOutput.KeyCode -> {
                 keySender.sendKey(ic, key.output.code)

@@ -1,0 +1,17 @@
+{
+  "command_sets": {
+    "claude_code": {
+      "label": "Claude Code",
+      "commands": ["/help", "/clear", "/commit", "/review-pr", "/compact", "/cost", "/doctor", "/init", "/login"]
+    },
+    "aider": {
+      "label": "Aider",
+      "commands": ["/add", "/drop", "/run", "/test", "/diff", "/undo", "/commit", "/model", "/chat-mode"]
+    },
+    "general": {
+      "label": "General",
+      "commands": ["/exit", "/quit", "/help"]
+    }
+  },
+  "default_enabled": ["claude_code", "general"]
+}

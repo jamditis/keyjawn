@@ -13,10 +13,12 @@ class KeyJawnService : InputMethodService() {
     private var extraRowManager: ExtraRowManager? = null
     private var qwertyKeyboard: QwertyKeyboard? = null
     private var voiceInputHandler: VoiceInputHandler? = null
+    private var slashCommandRegistry: SlashCommandRegistry? = null
 
     override fun onCreate() {
         super.onCreate()
         appPrefs = AppPrefs(this)
+        slashCommandRegistry = SlashCommandRegistry(this)
     }
 
     override fun onCreateInputView(): View {
@@ -27,7 +29,22 @@ class KeyJawnService : InputMethodService() {
         extraRowManager = erm
 
         val container = view.findViewById<LinearLayout>(R.id.qwerty_container)
-        val qwerty = QwertyKeyboard(container, keySender, erm, { currentInputConnection }, appPrefs)
+        val registry = slashCommandRegistry
+        val slashPopup = if (registry != null) {
+            SlashCommandPopup(
+                registry = registry,
+                onCommandSelected = { command ->
+                    val ic = currentInputConnection ?: return@SlashCommandPopup
+                    keySender.sendText(ic, command)
+                },
+                onDismissedEmpty = {
+                    val ic = currentInputConnection ?: return@SlashCommandPopup
+                    keySender.sendText(ic, "/")
+                }
+            )
+        } else null
+
+        val qwerty = QwertyKeyboard(container, keySender, erm, { currentInputConnection }, appPrefs, slashPopup)
         qwerty.setLayer(KeyboardLayouts.LAYER_LOWER)
         qwertyKeyboard = qwerty
 
