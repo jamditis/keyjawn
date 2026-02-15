@@ -19,7 +19,8 @@ class QwertyKeyboard(
     private val container: LinearLayout,
     private val keySender: KeySender,
     private val extraRowManager: ExtraRowManager,
-    private val inputConnectionProvider: () -> InputConnection?
+    private val inputConnectionProvider: () -> InputConnection?,
+    private val appPrefs: AppPrefs? = null
 ) {
 
     var currentLayer: Int = KeyboardLayouts.LAYER_LOWER
@@ -28,9 +29,21 @@ class QwertyKeyboard(
     var shiftState: ShiftState = ShiftState.OFF
         private set
 
+    var currentPackage: String = "unknown"
+        private set
+
     private var shiftButton: Button? = null
     private var lastShiftTapTime: Long = 0
     private val doubleTapThresholdMs = 400L
+
+    fun updatePackage(packageName: String) {
+        currentPackage = packageName
+        render()
+    }
+
+    fun isAutocorrectOn(): Boolean {
+        return appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
+    }
 
     fun setLayer(layer: Int) {
         currentLayer = layer
@@ -83,6 +96,10 @@ class QwertyKeyboard(
             typeface = Typeface.MONOSPACE
         }
 
+        if (key.output is KeyOutput.Space && isAutocorrectOn()) {
+            button.text = "${key.label} AC"
+        }
+
         val textSize = when (key.output) {
             is KeyOutput.Character -> 18f
             is KeyOutput.Shift, is KeyOutput.Backspace,
@@ -114,7 +131,10 @@ class QwertyKeyboard(
 
         if (key.output is KeyOutput.Space) {
             button.setOnLongClickListener {
-                Toast.makeText(container.context, "Autocorrect toggled", Toast.LENGTH_SHORT).show()
+                val enabled = appPrefs?.toggleAutocorrect(currentPackage) ?: false
+                val state = if (enabled) "on" else "off"
+                Toast.makeText(container.context, "Autocorrect $state", Toast.LENGTH_SHORT).show()
+                render()
                 true
             }
         }
@@ -133,6 +153,8 @@ class QwertyKeyboard(
                     val keyCode = KeyEvent.keyCodeFromString("KEYCODE_${charCode.uppercaseChar()}")
                     keySender.sendKey(ic, keyCode, ctrl = true)
                     extraRowManager.consumeCtrl()
+                } else if (isAutocorrectOn()) {
+                    ic.setComposingText(key.output.char, 1)
                 } else {
                     keySender.sendText(ic, key.output.char)
                 }
@@ -145,6 +167,9 @@ class QwertyKeyboard(
                 keySender.sendKey(ic, KeyEvent.KEYCODE_ENTER)
             }
             is KeyOutput.Space -> {
+                if (isAutocorrectOn()) {
+                    ic.finishComposingText()
+                }
                 keySender.sendText(ic, " ")
             }
             is KeyOutput.SymSwitch -> {
