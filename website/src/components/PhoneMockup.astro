@@ -2,7 +2,7 @@
 ---
 
 <div class="phone-mockup">
-  <svg viewBox="0 0 260 560" fill="none" xmlns="http://www.w3.org/2000/svg" class="phone-frame">
+  <svg viewBox="0 0 260 560" fill="none" xmlns="http://www.w3.org/2000/svg" class="phone-frame" id="phone-svg">
     <!-- Phone body - Samsung Ultra style: sharp corners, thin bezels -->
     <rect x="2" y="2" width="256" height="556" rx="16" stroke="#3a3a4a" stroke-width="2.5" fill="#0a0a0f" />
     <!-- Side button (power) -->
@@ -16,13 +16,17 @@
     <circle cx="130" cy="22" r="5" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5" />
 
     <!-- Terminal session content -->
-    <text x="20" y="52" font-family="monospace" font-size="9" fill="#8888a0">jamditis@pi:~$</text>
-    <text x="20" y="66" font-family="monospace" font-size="9" fill="#6cf2a8">claude</text>
-    <text x="20" y="86" font-family="monospace" font-size="9" fill="#8888a0">Claude Code v1.2.0</text>
-    <text x="20" y="100" font-family="monospace" font-size="9" fill="#8888a0">Type your message...</text>
-    <text x="20" y="120" font-family="monospace" font-size="9" fill="#d8d8e0">> fix the auth bug in</text>
-    <text x="20" y="134" font-family="monospace" font-size="9" fill="#d8d8e0">  login.ts</text>
-    <rect x="20" y="139" width="6" height="12" fill="#6cf2a8" opacity="0.7">
+    <g id="terminal-area">
+      <text x="20" y="52" font-family="monospace" font-size="9" fill="#8888a0">jamditis@pi:~$</text>
+      <text x="20" y="66" font-family="monospace" font-size="9" fill="#6cf2a8">claude</text>
+      <text x="20" y="86" font-family="monospace" font-size="9" fill="#8888a0">Claude Code v1.2.0</text>
+      <text x="20" y="106" font-family="monospace" font-size="9" fill="#8888a0">Type your message...</text>
+      <text x="20" y="126" font-family="monospace" font-size="9" fill="#d8d8e0" class="prompt-prefix">> </text>
+    </g>
+    <!-- Dynamic terminal lines rendered by script -->
+    <g id="terminal-dynamic" font-family="monospace" font-size="9"></g>
+    <!-- Blinking cursor -->
+    <rect id="terminal-cursor" x="30" y="117" width="5" height="10" fill="#6cf2a8" opacity="0.7">
       <animate attributeName="opacity" values="0.7;0;0.7" dur="1s" repeatCount="indefinite" />
     </rect>
 
@@ -31,46 +35,66 @@
 
     <!-- Extra row: Esc Tab Clip Ctrl < v ^ > Upload Mic -->
     <g font-family="monospace" text-anchor="middle" transform="translate(0, 364)">
-      <!-- Esc - dark -->
-      <rect x="11" y="0" width="22" height="18" rx="3" fill="#1A1A1A" stroke="#333" stroke-width="0.5" />
-      <text x="22" y="12" fill="#fff" font-size="6" font-weight="bold">ESC</text>
-      <!-- Tab - green tint -->
-      <rect x="35" y="0" width="22" height="18" rx="3" fill="#2A4A35" stroke="#3a6a4a" stroke-width="0.5" />
-      <text x="46" y="12" fill="#fff" font-size="7">Tab</text>
-      <!-- Clipboard - amber -->
-      <rect x="59" y="0" width="22" height="18" rx="3" fill="#4A3D20" stroke="#6a5d40" stroke-width="0.5" />
-      <text x="70" y="12" fill="#fff" font-size="6">Clip</text>
-      <!-- Ctrl - neutral -->
-      <rect x="83" y="0" width="22" height="18" rx="3" fill="#2a2a2f" stroke="#3a3a4a" stroke-width="0.5" />
-      <text x="94" y="12" fill="#6cf2a8" font-size="7">Ctrl</text>
+      <!-- Esc -->
+      <g data-action="esc" class="svg-key">
+        <rect x="11" y="0" width="22" height="18" rx="3" fill="#1A1A1A" stroke="#333" stroke-width="0.5" />
+        <text x="22" y="12" fill="#fff" font-size="6" font-weight="bold">ESC</text>
+      </g>
+      <!-- Tab -->
+      <g data-action="tab" class="svg-key">
+        <rect x="35" y="0" width="22" height="18" rx="3" fill="#2A4A35" stroke="#3a6a4a" stroke-width="0.5" />
+        <text x="46" y="12" fill="#fff" font-size="7">Tab</text>
+      </g>
+      <!-- Clipboard -->
+      <g data-action="clip" class="svg-key">
+        <rect x="59" y="0" width="22" height="18" rx="3" fill="#4A3D20" stroke="#6a5d40" stroke-width="0.5" />
+        <text x="70" y="12" fill="#fff" font-size="6">Clip</text>
+      </g>
+      <!-- Ctrl -->
+      <g data-action="ctrl" class="svg-key">
+        <rect x="83" y="0" width="22" height="18" rx="3" fill="#2a2a2f" stroke="#3a3a4a" stroke-width="0.5" />
+        <text x="94" y="12" fill="#6cf2a8" font-size="7">Ctrl</text>
+      </g>
       <!-- Arrow left -->
-      <rect x="107" y="0" width="19" height="18" rx="3" fill="#3A3A3F" stroke="#4a4a5a" stroke-width="0.5" />
-      <text x="116.5" y="13" fill="#d8d8e0" font-size="9">&#x25C0;</text>
+      <g data-action="left" class="svg-key">
+        <rect x="107" y="0" width="19" height="18" rx="3" fill="#3A3A3F" stroke="#4a4a5a" stroke-width="0.5" />
+        <text x="116.5" y="13" fill="#d8d8e0" font-size="9">&#x25C0;</text>
+      </g>
       <!-- Arrow down -->
-      <rect x="128" y="0" width="19" height="18" rx="3" fill="#3A3A3F" stroke="#4a4a5a" stroke-width="0.5" />
-      <text x="137.5" y="13" fill="#d8d8e0" font-size="9">&#x25BC;</text>
+      <g data-action="down" class="svg-key">
+        <rect x="128" y="0" width="19" height="18" rx="3" fill="#3A3A3F" stroke="#4a4a5a" stroke-width="0.5" />
+        <text x="137.5" y="13" fill="#d8d8e0" font-size="9">&#x25BC;</text>
+      </g>
       <!-- Arrow up -->
-      <rect x="149" y="0" width="19" height="18" rx="3" fill="#3A3A3F" stroke="#4a4a5a" stroke-width="0.5" />
-      <text x="158.5" y="13" fill="#d8d8e0" font-size="9">&#x25B2;</text>
+      <g data-action="up" class="svg-key">
+        <rect x="149" y="0" width="19" height="18" rx="3" fill="#3A3A3F" stroke="#4a4a5a" stroke-width="0.5" />
+        <text x="158.5" y="13" fill="#d8d8e0" font-size="9">&#x25B2;</text>
+      </g>
       <!-- Arrow right -->
-      <rect x="170" y="0" width="19" height="18" rx="3" fill="#3A3A3F" stroke="#4a4a5a" stroke-width="0.5" />
-      <text x="179.5" y="13" fill="#d8d8e0" font-size="9">&#x25B6;</text>
-      <!-- Upload - blue -->
-      <rect x="191" y="0" width="26" height="18" rx="3" fill="#253050" stroke="#354a70" stroke-width="0.5" />
-      <text x="204" y="12" fill="#fff" font-size="8">+</text>
-      <!-- Mic - red -->
-      <rect x="219" y="0" width="26" height="18" rx="3" fill="#4A2525" stroke="#6a3535" stroke-width="0.5" />
-      <text x="232" y="12" fill="#fff" font-size="7">Mic</text>
+      <g data-action="right" class="svg-key">
+        <rect x="170" y="0" width="19" height="18" rx="3" fill="#3A3A3F" stroke="#4a4a5a" stroke-width="0.5" />
+        <text x="179.5" y="13" fill="#d8d8e0" font-size="9">&#x25B6;</text>
+      </g>
+      <!-- Upload -->
+      <g data-action="upload" class="svg-key">
+        <rect x="191" y="0" width="26" height="18" rx="3" fill="#253050" stroke="#354a70" stroke-width="0.5" />
+        <text x="204" y="12" fill="#fff" font-size="8">+</text>
+      </g>
+      <!-- Mic -->
+      <g data-action="mic" class="svg-key">
+        <rect x="219" y="0" width="26" height="18" rx="3" fill="#4A2525" stroke="#6a3535" stroke-width="0.5" />
+        <text x="232" y="12" fill="#fff" font-size="7">Mic</text>
+      </g>
     </g>
 
     <!-- Number row -->
     <g font-family="monospace" font-size="9" text-anchor="middle">
       <g transform="translate(0, 388)">
         {[1,2,3,4,5,6,7,8,9,0].map((n, i) => (
-          <>
+          <g data-key={String(n)} class="svg-key">
             <rect x={13 + i * 23.4} y="0" width="21" height="20" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5" />
             <text x={23.5 + i * 23.4} y="14" fill="#d8d8e0" font-size="9">{n}</text>
-          </>
+          </g>
         ))}
       </g>
     </g>
@@ -80,43 +104,55 @@
       <!-- Row 1: QWERTYUIOP -->
       <g transform="translate(0, 414)">
         {['q','w','e','r','t','y','u','i','o','p'].map((k, i) => (
-          <>
+          <g data-key={k} class="svg-key">
             <rect x={13 + i * 23.4} y="0" width="21" height="24" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5" />
             <text x={23.5 + i * 23.4} y="16" fill="#d8d8e0">{k}</text>
-          </>
+          </g>
         ))}
       </g>
       <!-- Row 2: ASDFGHJKL -->
       <g transform="translate(12, 442)">
         {['a','s','d','f','g','h','j','k','l'].map((k, i) => (
-          <>
+          <g data-key={k} class="svg-key">
             <rect x={13 + i * 23.4} y="0" width="21" height="24" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5" />
             <text x={23.5 + i * 23.4} y="16" fill="#d8d8e0">{k}</text>
-          </>
+          </g>
         ))}
       </g>
       <!-- Row 3: Shift ZXCVBNM Del -->
       <g transform="translate(0, 470)">
-        <rect x="13" y="0" width="28" height="24" rx="3" fill="#14141c" stroke="#2a2a3a" stroke-width="0.5" />
-        <text x="27" y="16" fill="#d8d8e0" font-size="7">Shift</text>
+        <g data-action="shift" class="svg-key" id="shift-key">
+          <rect x="13" y="0" width="28" height="24" rx="3" fill="#14141c" stroke="#2a2a3a" stroke-width="0.5" />
+          <text x="27" y="16" fill="#d8d8e0" font-size="7">Shift</text>
+        </g>
         {['z','x','c','v','b','n','m'].map((k, i) => (
-          <>
+          <g data-key={k} class="svg-key">
             <rect x={45 + i * 23.4} y="0" width="21" height="24" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5" />
             <text x={55.5 + i * 23.4} y="16" fill="#d8d8e0">{k}</text>
-          </>
+          </g>
         ))}
-        <rect x="209" y="0" width="28" height="24" rx="3" fill="#14141c" stroke="#2a2a3a" stroke-width="0.5" />
-        <text x="223" y="16" fill="#d8d8e0" font-size="7">Del</text>
+        <g data-action="del" class="svg-key">
+          <rect x="209" y="0" width="28" height="24" rx="3" fill="#14141c" stroke="#2a2a3a" stroke-width="0.5" />
+          <text x="223" y="16" fill="#d8d8e0" font-size="7">Del</text>
+        </g>
       </g>
       <!-- Row 4: ?123 Space / Enter -->
       <g transform="translate(0, 498)">
-        <rect x="13" y="0" width="36" height="24" rx="3" fill="#14141c" stroke="#2a2a3a" stroke-width="0.5" />
-        <text x="31" y="16" fill="#d8d8e0" font-size="8">?123</text>
-        <rect x="53" y="0" width="120" height="24" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5" />
-        <rect x="177" y="0" width="21" height="24" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5" />
-        <text x="187.5" y="16" fill="#d8d8e0" font-size="10">/</text>
-        <rect x="202" y="0" width="36" height="24" rx="3" fill="#14141c" stroke="#2a2a3a" stroke-width="0.5" />
-        <text x="220" y="16" fill="#d8d8e0" font-size="8">Enter</text>
+        <g data-action="symbols" class="svg-key">
+          <rect x="13" y="0" width="36" height="24" rx="3" fill="#14141c" stroke="#2a2a3a" stroke-width="0.5" />
+          <text x="31" y="16" fill="#d8d8e0" font-size="8">?123</text>
+        </g>
+        <g data-action="space" class="svg-key">
+          <rect x="53" y="0" width="120" height="24" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5" />
+        </g>
+        <g data-key="/" class="svg-key">
+          <rect x="177" y="0" width="21" height="24" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5" />
+          <text x="187.5" y="16" fill="#d8d8e0" font-size="10">/</text>
+        </g>
+        <g data-action="enter" class="svg-key">
+          <rect x="202" y="0" width="36" height="24" rx="3" fill="#14141c" stroke="#2a2a3a" stroke-width="0.5" />
+          <text x="220" y="16" fill="#d8d8e0" font-size="8">Enter</text>
+        </g>
       </g>
     </g>
 
@@ -138,4 +174,244 @@
     width: 100%;
     height: auto;
   }
+
+  .svg-key {
+    cursor: pointer;
+  }
+
+  .svg-key:hover rect {
+    filter: brightness(1.3);
+  }
+
+  .svg-key.flash rect {
+    fill: #6cf2a8 !important;
+    transition: fill 0s;
+  }
+
+  .svg-key.shifted rect {
+    fill: #3a6a4a !important;
+  }
 </style>
+
+<script>
+  const CHARS_PER_LINE = 22;
+  const MAX_VISIBLE_LINES = 14;
+  const PROMPT_PREFIX = '> ';
+  const LINE_START_Y = 126;
+  const LINE_HEIGHT = 14;
+
+  let buffer = '';
+  let shifted = false;
+  let cursorPos = 0;
+
+  const svg = document.getElementById('phone-svg');
+  const dynamicGroup = document.getElementById('terminal-dynamic');
+  const cursor = document.getElementById('terminal-cursor');
+  const shiftKey = document.getElementById('shift-key');
+
+  function getDisplayLines() {
+    const fullText = PROMPT_PREFIX + buffer.slice(0, cursorPos) + buffer.slice(cursorPos);
+    const lines: string[] = [];
+
+    for (const rawLine of fullText.split('\n')) {
+      if (rawLine.length === 0) {
+        lines.push('');
+      } else {
+        for (let i = 0; i < rawLine.length; i += CHARS_PER_LINE) {
+          lines.push(rawLine.slice(i, i + CHARS_PER_LINE));
+        }
+      }
+    }
+
+    // Only show last MAX_VISIBLE_LINES
+    const visible = lines.slice(-MAX_VISIBLE_LINES);
+    return { lines: visible, totalLines: lines.length };
+  }
+
+  function getCursorPosition() {
+    // Figure out where the cursor is in display coordinates
+    const beforeCursor = PROMPT_PREFIX + buffer.slice(0, cursorPos);
+    const allLines: string[] = [];
+
+    for (const rawLine of beforeCursor.split('\n')) {
+      if (rawLine.length === 0) {
+        allLines.push('');
+      } else {
+        for (let i = 0; i < rawLine.length; i += CHARS_PER_LINE) {
+          allLines.push(rawLine.slice(i, i + CHARS_PER_LINE));
+        }
+      }
+    }
+
+    const lastLine = allLines[allLines.length - 1] || '';
+    return { line: allLines.length - 1, col: lastLine.length };
+  }
+
+  function render() {
+    // Clear dynamic lines
+    while (dynamicGroup?.firstChild) {
+      dynamicGroup.removeChild(dynamicGroup.firstChild);
+    }
+
+    const { lines, totalLines } = getDisplayLines();
+    const scrollOffset = Math.max(0, totalLines - MAX_VISIBLE_LINES);
+
+    lines.forEach((line, i) => {
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', '20');
+      text.setAttribute('y', String(LINE_START_Y + i * LINE_HEIGHT));
+      text.setAttribute('font-family', 'monospace');
+      text.setAttribute('font-size', '9');
+      text.setAttribute('fill', '#d8d8e0');
+      text.textContent = line;
+      dynamicGroup?.appendChild(text);
+    });
+
+    // Position cursor
+    const cursorInfo = getCursorPosition();
+    const displayLine = cursorInfo.line - scrollOffset;
+
+    if (cursor) {
+      // ~5.4px per char at font-size 9 monospace
+      const charWidth = 5.4;
+      cursor.setAttribute('x', String(20 + cursorInfo.col * charWidth));
+      cursor.setAttribute('y', String(LINE_START_Y - 9 + displayLine * LINE_HEIGHT));
+
+      // Hide cursor if it would be above the visible area
+      if (displayLine < 0) {
+        cursor.setAttribute('opacity', '0');
+      }
+    }
+  }
+
+  function typeChar(ch: string) {
+    buffer = buffer.slice(0, cursorPos) + ch + buffer.slice(cursorPos);
+    cursorPos += ch.length;
+    render();
+  }
+
+  function flashKey(el: Element) {
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 100);
+  }
+
+  function setShift(on: boolean) {
+    shifted = on;
+    if (shiftKey) {
+      if (on) {
+        shiftKey.classList.add('shifted');
+      } else {
+        shiftKey.classList.remove('shifted');
+      }
+    }
+    // Update letter key labels
+    svg?.querySelectorAll('[data-key]').forEach(g => {
+      const key = g.getAttribute('data-key') || '';
+      if (key.length === 1 && key.match(/[a-z]/)) {
+        const text = g.querySelector('text');
+        if (text) text.textContent = on ? key.toUpperCase() : key;
+      }
+    });
+  }
+
+  // Handle character keys
+  svg?.querySelectorAll('[data-key]').forEach(g => {
+    g.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const key = g.getAttribute('data-key') || '';
+      const ch = shifted && key.length === 1 && key.match(/[a-z]/) ? key.toUpperCase() : key;
+      typeChar(ch);
+      flashKey(g);
+      if (shifted) setShift(false);
+    });
+  });
+
+  // Handle action keys
+  svg?.querySelectorAll('[data-action]').forEach(g => {
+    g.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const action = g.getAttribute('data-action');
+      flashKey(g);
+
+      switch (action) {
+        case 'del':
+          if (cursorPos > 0) {
+            buffer = buffer.slice(0, cursorPos - 1) + buffer.slice(cursorPos);
+            cursorPos--;
+          }
+          break;
+        case 'enter':
+          typeChar('\n');
+          return; // typeChar already calls render
+        case 'space':
+          typeChar(' ');
+          return;
+        case 'shift':
+          setShift(!shifted);
+          return;
+        case 'tab':
+          typeChar('    ');
+          return;
+        case 'esc':
+          // Type ^[ (escape sequence visual)
+          typeChar('^[');
+          return;
+        case 'ctrl':
+          typeChar('^');
+          return;
+        case 'left':
+          if (cursorPos > 0) cursorPos--;
+          break;
+        case 'right':
+          if (cursorPos < buffer.length) cursorPos++;
+          break;
+        case 'up':
+        case 'down':
+        case 'clip':
+        case 'upload':
+        case 'mic':
+          // Visual-only feedback for demo
+          break;
+        case 'symbols':
+          // Could toggle symbol layer - for now just flash
+          break;
+      }
+      render();
+    });
+  });
+
+  // Expose for hero keys
+  (window as any).__phoneMockup = {
+    typeChar,
+    doAction(action: string) {
+      const actionEl = svg?.querySelector(`[data-action="${action}"]`);
+      if (actionEl) flashKey(actionEl);
+
+      switch (action) {
+        case 'esc': typeChar('^['); break;
+        case 'tab': typeChar('    '); break;
+        case 'ctrl': typeChar('^'); break;
+        case 'left': if (cursorPos > 0) { cursorPos--; render(); } break;
+        case 'right': if (cursorPos < buffer.length) { cursorPos++; render(); } break;
+        case 'mic':
+        case 'scp':
+        case 'clip':
+        case 'upload':
+          break;
+      }
+    }
+  };
+
+  // Hide static prompt text, we're rendering dynamically now
+  const terminalArea = document.getElementById('terminal-area');
+  if (terminalArea) {
+    // Keep the header lines (first 4), remove the prompt prefix
+    const texts = terminalArea.querySelectorAll('text');
+    if (texts[4]) texts[4].remove(); // Remove the "> " prompt prefix
+  }
+
+  // Initial render
+  render();
+</script>

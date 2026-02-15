@@ -4,6 +4,18 @@ interface Props {
 }
 
 const { label } = Astro.props;
+
+const actionMap: Record<string, string> = {
+  'Esc': 'esc',
+  'Tab': 'tab',
+  'Ctrl': 'ctrl',
+  '<': 'left',
+  '>': 'right',
+  'Mic': 'mic',
+  'SCP': 'scp',
+};
+
+const action = actionMap[label] || label.toLowerCase();
 ---
 
-<kbd>{label}</kbd>
+<kbd data-hero-key={action}>{label}</kbd>

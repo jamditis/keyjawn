@@ -323,4 +323,44 @@ import KeyCap from '../components/KeyCap.astro';
       justify-content: center;
     }
   }
+
+  /* Hero key click feedback */
+  .hero-keys kbd {
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+  }
+
+  .hero-keys kbd:active,
+  .hero-keys kbd.flash {
+    background: var(--accent);
+    color: #0a0a0f;
+  }
 </style>
+
+<script>
+  document.querySelectorAll('[data-hero-key]').forEach(kbd => {
+    kbd.addEventListener('click', () => {
+      const action = kbd.getAttribute('data-hero-key');
+      if (!action) return;
+
+      // Flash the hero key
+      kbd.classList.add('flash');
+      setTimeout(() => kbd.classList.remove('flash'), 150);
+
+      // Scroll phone into view on mobile if needed
+      const phone = document.querySelector('.phone-mockup');
+      if (phone) {
+        const rect = phone.getBoundingClientRect();
+        if (rect.top > window.innerHeight || rect.bottom < 0) {
+          phone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+
+      // Trigger the phone mockup action
+      const mockup = (window as any).__phoneMockup;
+      if (mockup) {
+        mockup.doAction(action);
+      }
+    });
+  });
+</script>
