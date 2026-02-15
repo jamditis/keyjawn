@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -14,18 +15,31 @@ import android.widget.TextView
 
 class SettingsActivity : Activity() {
 
-    private lateinit var hostStorage: HostStorage
-    private lateinit var hostListContainer: LinearLayout
+    private var hostStorage: HostStorage? = null
+    private var hostListContainer: LinearLayout? = null
     private lateinit var commandSetsContainer: LinearLayout
     private var slashCommandRegistry: SlashCommandRegistry? = null
+
+    private val hasScpUpload: Boolean
+        get() = BuildConfig.FLAVOR == "full"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
-        hostStorage = HostStorage(this)
-        hostListContainer = findViewById(R.id.host_list)
         commandSetsContainer = findViewById(R.id.command_sets)
+
+        val hostSection = findViewById<LinearLayout>(R.id.host_section)
+        if (hasScpUpload) {
+            hostStorage = HostStorage(this)
+            hostListContainer = findViewById(R.id.host_list)
+            findViewById<Button>(R.id.add_host_btn).setOnClickListener {
+                showAddHostDialog()
+            }
+            refreshHostList()
+        } else {
+            hostSection.visibility = View.GONE
+        }
 
         try {
             slashCommandRegistry = SlashCommandRegistry(this)
@@ -33,25 +47,23 @@ class SettingsActivity : Activity() {
             // commands.json missing or malformed
         }
 
-        findViewById<Button>(R.id.add_host_btn).setOnClickListener {
-            showAddHostDialog()
-        }
-
+        val flavorLabel = if (hasScpUpload) "" else " lite"
         findViewById<TextView>(R.id.version_text).text =
-            "KeyJawn v${BuildConfig.VERSION_NAME}"
+            "KeyJawn$flavorLabel v${BuildConfig.VERSION_NAME}"
 
-        refreshHostList()
         refreshCommandSets()
     }
 
     private fun refreshHostList() {
-        hostListContainer.removeAllViews()
-        val hosts = hostStorage.getHosts()
-        val activeIndex = hostStorage.getActiveHostIndex()
+        val storage = hostStorage ?: return
+        val container = hostListContainer ?: return
+        container.removeAllViews()
+        val hosts = storage.getHosts()
+        val activeIndex = storage.getActiveHostIndex()
 
         hosts.forEachIndexed { index, host ->
             val itemView = LayoutInflater.from(this)
-                .inflate(R.layout.host_item, hostListContainer, false)
+                .inflate(R.layout.host_item, container, false)
 
             val radio = itemView.findViewById<RadioButton>(R.id.host_radio)
             val nameText = itemView.findViewById<TextView>(R.id.host_name)
@@ -63,7 +75,7 @@ class SettingsActivity : Activity() {
             radio.isChecked = index == activeIndex
 
             radio.setOnClickListener {
-                hostStorage.setActiveHostIndex(index)
+                storage.setActiveHostIndex(index)
                 refreshHostList()
             }
 
@@ -72,10 +84,10 @@ class SettingsActivity : Activity() {
                     .setTitle("Remove host")
                     .setMessage("Remove ${host.displayName()}?")
                     .setPositiveButton("Remove") { _, _ ->
-                        hostStorage.removeHost(index)
-                        val newActive = hostStorage.getActiveHostIndex()
-                        if (newActive >= hostStorage.getHosts().size) {
-                            hostStorage.setActiveHostIndex(0)
+                        storage.removeHost(index)
+                        val newActive = storage.getActiveHostIndex()
+                        if (newActive >= storage.getHosts().size) {
+                            storage.setActiveHostIndex(0)
                         }
                         refreshHostList()
                     }
@@ -83,7 +95,7 @@ class SettingsActivity : Activity() {
                     .show()
             }
 
-            hostListContainer.addView(itemView)
+            container.addView(itemView)
         }
     }
 
@@ -131,7 +143,7 @@ class SettingsActivity : Activity() {
                 )
 
                 if (host.isValid()) {
-                    hostStorage.addHost(host)
+                    hostStorage?.addHost(host)
                     refreshHostList()
                 }
             }

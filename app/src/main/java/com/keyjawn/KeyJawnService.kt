@@ -82,7 +82,7 @@ class KeyJawnService : InputMethodService() {
 
     private fun launchPhotoPicker() {
         val handler = uploadHandler ?: return
-        val intent = handler.createPickerIntent()
+        val intent = handler.createPickerIntent() ?: return
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
     }

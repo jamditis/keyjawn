@@ -14,10 +14,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class UploadHandler(
-    private val context: Context,
-    private val scpUploader: ScpUploader = ScpUploader()
-) {
+class UploadHandler(private val context: Context) {
+    val isAvailable = true
+
+    private val scpUploader = ScpUploader()
     private var activeHost: HostConfig? = null
     private var inputConnectionProvider: (() -> InputConnection?)? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -30,7 +30,7 @@ class UploadHandler(
         inputConnectionProvider = provider
     }
 
-    fun createPickerIntent(): Intent {
+    fun createPickerIntent(): Intent? {
         return Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
             type = "image/*"
         }

@@ -74,12 +74,14 @@ class ExtraRowManager(
 
     private fun wireUpload() {
         val uploadButton = view.findViewById<Button>(R.id.key_upload)
-        if (uploadHandler != null && onUploadTap != null) {
+        if (uploadHandler != null && uploadHandler.isAvailable && onUploadTap != null) {
             uploadButton.setOnClickListener { onUploadTap.invoke() }
             uploadButton.setOnLongClickListener {
                 Toast.makeText(view.context, "Configure hosts in KeyJawn settings", Toast.LENGTH_SHORT).show()
                 true
             }
+        } else if (uploadHandler != null && !uploadHandler.isAvailable) {
+            wirePlaceholder(R.id.key_upload, "SCP upload available in full version")
         } else {
             wirePlaceholder(R.id.key_upload, "Upload not yet configured")
         }

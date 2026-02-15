@@ -23,6 +23,20 @@ Built for and tested with:
 - Direct SSH terminal apps (Termux, JuiceSSH, ConnectBot)
 - Any LLM CLI tool that uses slash commands (Aider, Open Interpreter, etc.)
 
+## Versions
+
+KeyJawn ships in two flavors:
+
+| | Full | Lite |
+|---|---|---|
+| Terminal keys, voice, slash commands | Yes | Yes |
+| SCP image upload | Yes | No |
+| Permissions | INTERNET, READ_MEDIA_IMAGES, RECORD_AUDIO | RECORD_AUDIO |
+| SSH credential storage | Yes | No |
+| Application ID | `com.keyjawn` | `com.keyjawn.lite` |
+
+**Lite** is for users who want terminal keys and voice input without granting network or storage permissions. **Full** adds SCP upload for sharing screenshots with CLI tools on a remote server.
+
 ## Status
 
 Design phase. See [design doc](docs/plans/2026-02-15-jawnkeys-keyboard-design.md) for the full specification.
