@@ -11,55 +11,79 @@
 
 A custom Android keyboard designed for using LLM CLI agents (Claude Code, OpenClaw, etc.) from your phone.
 
-Most mobile keyboards lack the keys you need for terminal work — arrow keys, Tab, Escape, Ctrl modifiers. KeyJawn adds a dedicated terminal key row above a clean QWERTY layout, plus LLM-specific shortcuts and a built-in image upload feature that SCPs screenshots to your server and inserts the file path at your cursor.
-## What it does
+## Install
 
-- **Terminal key row:** Esc, Tab, Ctrl (toggle modifier), arrow keys, image upload, and voice-to-text -- all always visible
-- **Number row:** Dedicated 0-9 row above the QWERTY grid. Long-press any number to type its shifted symbol (!@#$%^&*()).
-- **Long-press alt characters:** Hold a letter key to get accented variants (a -> a, a, a, a, a, ae) or punctuation alternatives. Single-alt keys fire immediately; multi-alt keys show a popup above the pressed key.
-- **Voice-to-text:** Mic button on the far right of the extra row. Tap to dictate -- uses the same speech recognition engine as Gboard.
-- **Clipboard history:** Tracks recent clipboard entries. Tap the clipboard button in the extra row to see history and paste.
-- **LLM CLI shortcuts:** Quick-insert for `/` commands, common prompts, and slash-command prefixes used by Claude Code, OpenClaw, and other LLM CLI tools
-- **Basic QWERTY:** Three layers (lowercase, uppercase, symbols) with no autocorrect by default -- because autocorrect breaks web-based terminals
-- **Autocorrect toggle:** Long-press spacebar to enable/disable per app. Off for terminals, on for chat apps.
-- **Image upload via SCP:** Tap the upload button, pick a photo, and KeyJawn SCPs it to your server and types the file path into the terminal. Useful for sharing screenshots with Claude Code.
-- **Multi-host support:** Configure multiple SSH servers and switch between them.
+**Google Play** (recommended): Search for "KeyJawn" or use the link above. Free download with optional $3.99 in-app purchase for premium features.
+
+**GitHub releases**: Download the APK from [releases](https://github.com/jamditis/keyjawn/releases). The lite flavor (`com.keyjawn.lite`) is a standalone sideload build with no billing or network features.
+
+After installing:
+1. Go to **Settings > System > Languages & input > On-screen keyboard**
+2. Enable **KeyJawn**
+3. Set KeyJawn as your default keyboard
+
+## Features
+
+### Free (included with download)
+
+- QWERTY keyboard with three layers (lowercase, uppercase, symbols)
+- Terminal key row: Esc, Tab, Ctrl (three-state toggle), arrow keys
+- Number row with shift-symbol hints (long-press for shifted symbols)
+- Alt character popups on long-press (accented letters, punctuation variants)
+- Configurable quick key (bottom row, defaults to `/`)
+- Color-coded extra row keys for quick identification
+- Shift / caps lock with visual state indicator
+- Per-app autocorrect toggle (long-press spacebar)
+
+### Premium ($3.99 one-time unlock)
+
+- Voice input with streaming transcription
+- Clipboard history manager
+- SCP image upload to remote SSH servers
+- Multi-host SSH management with encrypted credentials (AES-256)
+- Slash command shortcuts for LLM CLIs
+- Swipe gestures (delete word, space, layer switching)
 
 ## Who it's for
 
-Anyone who SSHs into a server from their phone to use a CLI-based AI assistant. The keyboard is optimized for the workflow where you're typing natural language 90% of the time and need terminal escape hatches 10% of the time.
-
-Built for and tested with:
-- Claude Code via Cockpit web terminal (Edge browser on Android)
-- Direct SSH terminal apps (Termux, JuiceSSH, ConnectBot)
-- Any LLM CLI tool that uses slash commands (OpenClaw, etc.)
+Anyone who SSHs into a server from their phone to use a CLI-based AI assistant. Built for and tested with:
+- Claude Code via Cockpit web terminal
+- Direct SSH apps (Termux, JuiceSSH, ConnectBot)
+- Any LLM CLI that uses slash commands (OpenClaw, etc.)
 
 ## Versions
 
-KeyJawn ships in two flavors:
-
-| | Full | Lite |
+| | Play Store | Lite (sideload) |
 |---|---|---|
-| Terminal keys, voice, slash commands | Yes | Yes |
-| SCP image upload | Yes | No |
-| Permissions | INTERNET, READ_MEDIA_IMAGES, RECORD_AUDIO | RECORD_AUDIO |
-| SSH credential storage | Yes | No |
-| Application ID | `com.keyjawn` | `com.keyjawn.lite` |
+| Package | `com.keyjawn` | `com.keyjawn.lite` |
+| Free features | All | All |
+| Premium unlock | $3.99 in-app purchase | Not available |
+| SCP upload | Yes (premium) | No |
+| Permissions | INTERNET, READ_MEDIA_IMAGES, RECORD_AUDIO | RECORD_AUDIO only |
+| Distribution | Google Play | GitHub releases |
 
-**Lite** is for users who want terminal keys and voice input without granting network or storage permissions. **Full** adds SCP upload for sharing screenshots with CLI tools on a remote server.
+## Build
 
-## Status
+```bash
+# Debug builds
+./gradlew assembleFullDebug
+./gradlew assembleLiteDebug
 
-Active development. Core keyboard, terminal keys, number row, voice input, clipboard history, alt-key popups, and SCP upload are implemented. See [design doc](docs/plans/2026-02-15-jawnkeys-keyboard-design.md) for the original specification.
+# Release builds (requires signing config)
+./gradlew assembleFullRelease bundleFullRelease
 
-## Requirements
+# Tests
+./gradlew testFullDebugUnitTest
+./gradlew testLiteDebugUnitTest
+```
 
-- Android 8.0+ (API 26+)
-- Kotlin / Gradle build system
+Requires JDK 17, Android SDK with compileSdk 35.
 
-## Contributing
+## Links
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+- [Website](https://keyjawn.amditis.tech)
+- [Privacy policy](https://keyjawn.amditis.tech/privacy)
+- [User manual](https://keyjawn.amditis.tech/manual)
 
 ## License
 
