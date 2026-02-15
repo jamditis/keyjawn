@@ -6,73 +6,62 @@ date: 2026-02-15
 author: Joe Amditis
 ---
 
-It's 1 AM and I'm lying in bed with my phone, SSHing into my Raspberry Pi through Cockpit in Edge. I've got Claude Code running in a terminal session. I'm trying to fix a bug in an auth flow and I need to type `Ctrl+C` to kill a stuck process.
+More people use the terminal now than at any point in the last decade, and most of them aren't sysadmins.
 
-There's no Ctrl key on Gboard.
+Claude Code, OpenClaw, Gemini CLI, Codex -- these tools live in a shell. If you want to use them, you need a terminal. And a growing number of people are accessing that terminal from their phones, SSHing into a Raspberry Pi or a Mac Mini from the couch, a waiting room, or the train.
 
-I open a new tab, Google "caret character unicode," copy `^`, paste it into the terminal, realize that doesn't actually send a control sequence, and then spend three minutes trying to figure out how to send an interrupt signal from a phone keyboard that was designed for texting your mom.
+The phone keyboards they're using weren't built for this.
 
-This is absurd.
+## What's out there
 
-## The shift
+There are two existing approaches to typing in a terminal on Android, and neither one fits the way people use the CLI now.
 
-A couple years ago, "using the terminal" meant you were a sysadmin debugging a production server, or a developer running build scripts. The command line was for people who already lived there.
+**[Hacker's Keyboard](https://github.com/nicklaus4/hackerskeyboard)** is a full five-row keyboard with Ctrl, Alt, Esc, arrow keys, and an F-key row. It's been around since 2010 and it's solid at what it does. But it was designed for people running vim and emacs on a phone -- traditional power users who wanted a desktop keyboard layout crammed onto a touchscreen. The app hasn't been updated in years, the keys are small because it's trying to fit everything at once, and it doesn't have any of the features that matter for AI CLI workflows: voice input, slash command shortcuts, image upload.
 
-That changed fast. Claude Code showed up. Then OpenClaw. Then a dozen other AI CLI tools. Suddenly, people who'd never opened a terminal in their lives were buying Mac Minis and Raspberry Pis to run AI agents on because someone on Twitter said they should.
+**[Termius](https://termius.com/)** takes the opposite approach. It's a full SSH client with its own built-in terminal, connection manager, and key toolbar. It's a good product if you want a dedicated app for SSH sessions. But it is its own app. If you use Cockpit in a browser, or Termux, or any other terminal tool, the Termius keyboard doesn't help you. You'd need to do all your terminal work inside Termius specifically.
 
-These aren't traditional terminal users. They're not writing bash scripts or configuring nginx. They're having conversations. They're describing bugs in natural language and letting an AI agent fix them. The terminal became a chat interface that happens to run in a shell.
+KeyJawn is neither of those things. It's a system keyboard -- it replaces Gboard, not your SSH client. You install it, enable it in Android settings, and it works in every app. Termux, Cockpit in Chrome, JuiceSSH, a web terminal, whatever. The terminal keys are always there.
 
-And a lot of them are doing it from their phones.
+## The actual problem
 
-## The gap
+Standard mobile keyboards are designed for texting. That's fine until you need to send `Ctrl+C` to kill a stuck process, or `Escape` to exit a mode, or `Tab` to trigger autocomplete.
 
-Every mobile keyboard on the market is optimized for one thing: texting. Gboard, SwiftKey, Samsung Keyboard -- they're all built for autocorrecting "teh" to "the" and suggesting the next word in your message to grandpa.
+On Gboard:
 
-Try using one in a terminal:
-
-- Autocorrect turns `git` into `got` and `npm` into `nap`.
-- There's no Escape key. Vim users, you're stuck.
-- There's no Tab key. No tab completion, no indentation.
+- There's no Escape key.
+- There's no Tab key.
 - There's no Ctrl key. No `Ctrl+C` to interrupt, no `Ctrl+Z` to suspend, no `Ctrl+L` to clear.
 - Arrow keys are either hidden or nonexistent.
-- You can't send a `KEYCODE_ESCAPE` or `KEYCODE_TAB` from the standard Android keyboard API without jumping through hoops.
+- Autocorrect turns `git` into `got` and `npm` into `nap`.
 
-If you SSH from your phone into a web terminal -- Cockpit, Shellinabox, whatever -- you get a standard keyboard and a prayer.
+These aren't edge cases anymore. They're the first five minutes of trying to use Claude Code from your phone.
 
-## What KeyJawn does
+## What KeyJawn does differently
 
-I built a keyboard that puts terminal keys front and center.
+The keyboard has a dedicated terminal row above the QWERTY layout: `Esc`, `Tab`, `Ctrl`, arrow keys, clipboard, mic, and upload. Always visible. No long-pressing, no layer hunting.
 
-**The extra row.** Above the QWERTY layout, there's a dedicated row with `Esc`, `Tab`, `Ctrl`, and arrow keys. Always visible. No layer switching, no long-pressing, no hunting. `Ctrl` uses a three-state toggle: tap to arm it for one keypress (for `Ctrl+C`), long-press to lock it (for multiple combos), tap again to turn it off.
+A few things worth calling out:
 
-**Voice input.** When you're talking to an AI agent, 90% of what you type is natural language. "Fix the auth bug in login.ts." "Add a test for the payment flow." Speaking is faster than thumb-typing on a 6-inch screen. KeyJawn streams the transcription as you talk -- you see the words appear in real time, not after a five-second pause.
+**Ctrl as a three-state toggle.** Tap it once to arm it for one keypress (`Ctrl+C`). Long-press to lock it for a series of combos. Tap again to turn it off. This is simpler than Hacker's Keyboard's modifier key approach and more useful than not having Ctrl at all.
 
-**SCP upload.** You're in a Claude Code session and you want to share a screenshot. Tap the upload button, pick the photo, and KeyJawn SCPs it to your server and types the remote path at your cursor. One action instead of six.
+**Voice input that streams.** When you're talking to an AI agent, most of what you type is natural language. "Fix the auth bug in login.ts." "Run the test suite." Speaking is faster than thumb-typing. KeyJawn streams the transcription in real time as you talk -- you see words appear as you say them.
 
-**Slash commands.** Every LLM CLI has `/help`, `/clear`, `/compact`, and other slash commands. KeyJawn gives you a quick-pick popup for these instead of making you type them out.
+**SCP image upload.** You're in a Claude Code session and you want to share a screenshot. Tap the upload button, pick the photo, KeyJawn SCPs it to your server and types the remote path at your cursor. One action instead of six.
 
-**Number row.** Always visible, with long-press hints for shifted symbols. Because switching layers to type a `2` is a waste of everyone's time.
+**Slash command picker.** Claude Code, OpenClaw, and Gemini CLI all use slash commands (`/help`, `/clear`, `/compact`, `/status`). KeyJawn gives you a quick-pick popup instead of making you type them from memory.
 
-## The bigger picture
-
-Here's what I think is happening: mobile CLI usage is growing. Not because people suddenly love terminals, but because AI agents live there.
-
-Claude Code runs in a terminal. OpenClaw runs on a server. If you want to use these tools, you need a shell. And if you want to use them from your couch at midnight -- or your commute, or a waiting room, or bed -- you need a phone keyboard that doesn't fight you every step of the way.
-
-The keyboard is the bottleneck. Nobody's building for this use case because it didn't exist two years ago. Now it does, and the gap between "what mobile keyboards can do" and "what terminal users need" is wide.
+**Autocorrect is off by default.** This is intentional. Autocorrect breaks web-based terminals because it uses `setComposingText`, which doesn't map to the key events a shell expects. You can turn it on per app -- keep it off for Termux, on for Slack.
 
 ## Two versions
 
-**KeyJawn Lite** is free. It's a full QWERTY keyboard with the terminal key row, number row, alt character popups, and shift/caps lock. No permissions required. No network access.
+**KeyJawn Lite** is free. Full QWERTY keyboard with the terminal key row, number row, alt character popups, and shift/caps lock. No permissions required. No network access.
 
 **KeyJawn Full** is $4, lifetime. It adds voice input, clipboard history, SCP upload, SSH host management, slash commands, swipe gestures, and per-app autocorrect toggle. No subscriptions, no ads, no tracking. One payment, done.
 
-The code is MIT-licensed and [on GitHub](https://github.com/jamditis/keyjawn). Both versions are built from the same codebase -- the full version just unlocks the features that need additional permissions (microphone, network, storage).
+The code is MIT-licensed and [on GitHub](https://github.com/jamditis/keyjawn). Both versions are built from the same codebase -- the full version unlocks features that need additional permissions (microphone, network, storage).
 
 ## Try it
 
-[Download the APK](https://github.com/jamditis/keyjawn/releases) and see if it fits your workflow. If something doesn't work, [file an issue](https://github.com/jamditis/keyjawn/issues). If you want to contribute, PRs are open.
+[Download the APK](https://github.com/jamditis/keyjawn/releases) and see if it fits your workflow. If something doesn't work, [file an issue](https://github.com/jamditis/keyjawn/issues). PRs are open.
 
-If you find it useful and the $4 is worth it to you, that helps keep development going. If not, the lite version is there and it's free forever.
-
-Either way, your phone keyboard shouldn't be the reason you can't use a terminal.
+Your phone keyboard shouldn't be the reason you can't use a terminal.
