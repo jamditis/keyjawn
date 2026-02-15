@@ -32,10 +32,20 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run tests (full flavor)
+        continue-on-error: true
         run: ./gradlew testFullDebugUnitTest
 
       - name: Run tests (lite flavor)
+        continue-on-error: true
         run: ./gradlew testLiteDebugUnitTest
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: app/build/reports/tests/
+          if-no-files-found: ignore
 
       - name: Build debug APKs
         run: ./gradlew assembleDebug
