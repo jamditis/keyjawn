@@ -36,7 +36,7 @@ class QwertyKeyboardTest {
 
         val extraRowView = LinearLayout(context)
         addExtraRowButtons(extraRowView, context)
-        extraRowManager = ExtraRowManager(extraRowView, keySender) { ic }
+        extraRowManager = ExtraRowManager(extraRowView, keySender, { ic })
 
         keyboard = QwertyKeyboard(container, keySender, extraRowManager, { ic })
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
