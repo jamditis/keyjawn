@@ -15,7 +15,7 @@ class AltKeyPopup(
 
     private var popup: PopupWindow? = null
 
-    fun show(anchor: android.view.View, alts: List<String>) {
+    fun show(anchor: android.view.View, alts: List<String>, onSelect: ((String) -> Unit)? = null) {
         dismiss()
         val context = anchor.context
         val density = context.resources.displayMetrics.density
@@ -45,8 +45,12 @@ class AltKeyPopup(
                 typeface = Typeface.MONOSPACE
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
                 setOnClickListener {
-                    val ic = inputConnectionProvider() ?: return@setOnClickListener
-                    keySender.sendText(ic, alt)
+                    if (onSelect != null) {
+                        onSelect(alt)
+                    } else {
+                        val ic = inputConnectionProvider() ?: return@setOnClickListener
+                        keySender.sendText(ic, alt)
+                    }
                     dismiss()
                 }
             }

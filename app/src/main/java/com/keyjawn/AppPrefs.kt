@@ -20,4 +20,16 @@ class AppPrefs(context: Context) {
     fun setAutocorrect(packageName: String, enabled: Boolean) {
         prefs.edit().putBoolean("ac_$packageName", enabled).apply()
     }
+
+    fun getQuickKey(): String {
+        return prefs.getString("quick_key", "/") ?: "/"
+    }
+
+    fun setQuickKey(char: String) {
+        prefs.edit().putString("quick_key", char).apply()
+    }
+
+    companion object {
+        val QUICK_KEY_OPTIONS = listOf("/", ".", ",", "?", "!", "\u2014", "'", "\"", ":", ";")
+    }
 }

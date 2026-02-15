@@ -11,4 +11,11 @@
     <color name="accent_locked">#E86C5A</color>
     <color name="divider">#38383E</color>
     <color name="key_hint">#6E6E78</color>
+
+    <color name="key_esc_bg">#1A1A1A</color>
+    <color name="key_tab_bg">#2A4A35</color>
+    <color name="key_clipboard_bg">#4A3D20</color>
+    <color name="key_arrow_bg">#3A3A3F</color>
+    <color name="key_upload_bg">#253050</color>
+    <color name="key_mic_bg">#4A2525</color>
 </resources>

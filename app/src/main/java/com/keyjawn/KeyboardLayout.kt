@@ -16,6 +16,7 @@ sealed class KeyOutput {
     object SymSwitch : KeyOutput()
     object AbcSwitch : KeyOutput()
     object Slash : KeyOutput()
+    object QuickKey : KeyOutput()
 }
 
 typealias Row = List<Key>
@@ -34,7 +35,7 @@ object KeyboardLayouts {
         listOf(
             Key("?123", KeyOutput.SymSwitch, weight = 1.5f),
             Key(" ", KeyOutput.Space, weight = 5f),
-            Key("/", KeyOutput.Character("/")),
+            Key("/", KeyOutput.QuickKey),
             Key("Enter", KeyOutput.Enter, weight = 1.5f)
         )
     )
@@ -50,7 +51,7 @@ object KeyboardLayouts {
         listOf(
             Key("?123", KeyOutput.SymSwitch, weight = 1.5f),
             Key(" ", KeyOutput.Space, weight = 5f),
-            Key("/", KeyOutput.Character("/")),
+            Key("/", KeyOutput.QuickKey),
             Key("Enter", KeyOutput.Enter, weight = 1.5f)
         )
     )

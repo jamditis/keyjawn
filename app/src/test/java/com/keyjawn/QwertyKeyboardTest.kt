@@ -112,13 +112,13 @@ class QwertyKeyboardTest {
     }
 
     @Test
-    fun `tapping a character key sends text`() {
+    fun `tapping a character key sends char`() {
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
         val row1 = container.getChildAt(0) as LinearLayout
         val qButton = row1.getChildAt(0) as android.widget.Button
         qButton.performClick()
 
-        verify(keySender).sendText(eq(ic), eq("q"))
+        verify(keySender).sendChar(eq(ic), eq("q"))
     }
 
     @Test
@@ -128,7 +128,7 @@ class QwertyKeyboardTest {
         val spaceButton = row4.getChildAt(1) as android.widget.Button
         spaceButton.performClick()
 
-        verify(keySender).sendText(eq(ic), eq(" "))
+        verify(keySender).sendChar(eq(ic), eq(" "))
     }
 
     @Test
@@ -142,13 +142,13 @@ class QwertyKeyboardTest {
     }
 
     @Test
-    fun `tapping slash sends slash character`() {
+    fun `tapping quick key sends default slash character`() {
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
         val row4 = container.getChildAt(3) as LinearLayout
-        val slashButton = row4.getChildAt(2) as android.widget.Button
-        slashButton.performClick()
+        val quickKeyButton = row4.getChildAt(2) as android.widget.Button
+        quickKeyButton.performClick()
 
-        verify(keySender).sendText(eq(ic), eq("/"))
+        verify(keySender).sendChar(eq(ic), eq("/"))
     }
 
     @Test
@@ -271,7 +271,7 @@ class QwertyKeyboardTest {
 
         val row1 = container.getChildAt(0) as LinearLayout
         val firstKey = row1.getChildAt(0) as android.widget.Button
-        assertEquals("1", firstKey.text.toString())
+        assertEquals("-", firstKey.text.toString())
     }
 
     @Test
@@ -301,6 +301,6 @@ class QwertyKeyboardTest {
         keyboard.setLayer(KeyboardLayouts.LAYER_SYMBOLS)
         val row2 = container.getChildAt(1) as LinearLayout
         val firstKey = row2.getChildAt(0) as android.widget.Button
-        assertEquals("-", firstKey.text.toString())
+        assertEquals("!", firstKey.text.toString())
     }
 }

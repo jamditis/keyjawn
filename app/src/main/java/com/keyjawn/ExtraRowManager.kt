@@ -62,7 +62,7 @@ class ExtraRowManager(
     }
 
     private fun wireClipboard() {
-        val clipButton = view.findViewById<Button>(R.id.key_clipboard)
+        val clipButton = view.findViewById<View>(R.id.key_clipboard)
         if (clipboardHistoryManager != null) {
             clipButton.setOnClickListener {
                 val popup = ClipboardPopup(clipboardHistoryManager) { text ->
@@ -106,7 +106,7 @@ class ExtraRowManager(
     }
 
     private fun wireUpload() {
-        val uploadButton = view.findViewById<Button>(R.id.key_upload)
+        val uploadButton = view.findViewById<View>(R.id.key_upload)
         if (uploadHandler != null && uploadHandler.isAvailable && onUploadTap != null) {
             uploadButton.setOnClickListener { onUploadTap.invoke() }
             uploadButton.setOnLongClickListener {
@@ -176,7 +176,7 @@ class ExtraRowManager(
     }
 
     private fun wirePlaceholder(buttonId: Int, message: String) {
-        view.findViewById<Button>(buttonId).setOnClickListener {
+        view.findViewById<View>(buttonId).setOnClickListener {
             Toast.makeText(view.context, message, Toast.LENGTH_SHORT).show()
         }
     }

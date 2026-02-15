@@ -28,6 +28,7 @@ class QwertyKeyboard(
 ) {
 
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider)
+    private var quickKeyButton: Button? = null
 
     var currentLayer: Int = KeyboardLayouts.LAYER_LOWER
         private set
@@ -139,7 +140,8 @@ class QwertyKeyboard(
             key.output is KeyOutput.Enter ||
             key.output is KeyOutput.SymSwitch ||
             key.output is KeyOutput.AbcSwitch ||
-            key.output is KeyOutput.Space
+            key.output is KeyOutput.Space ||
+            key.output is KeyOutput.QuickKey
 
         if (isSpecialKey) {
             button.setBackgroundResource(R.drawable.key_bg_special)
@@ -157,6 +159,7 @@ class QwertyKeyboard(
             is KeyOutput.AbcSwitch -> 13f
             is KeyOutput.Space -> 13f
             is KeyOutput.Slash -> 13f
+            is KeyOutput.QuickKey -> 18f
             is KeyOutput.KeyCode -> 13f
         }
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSize)
@@ -189,10 +192,16 @@ class QwertyKeyboard(
             }
         }
 
-        if (key.output is KeyOutput.Slash) {
+        if (key.output is KeyOutput.QuickKey) {
+            val currentQuickKey = appPrefs?.getQuickKey() ?: "/"
+            button.text = currentQuickKey
+            quickKeyButton = button
             button.setOnLongClickListener {
-                val longIc = inputConnectionProvider() ?: return@setOnLongClickListener true
-                keySender.sendText(longIc, ".")
+                val options = AppPrefs.QUICK_KEY_OPTIONS
+                altKeyPopup.show(button, options, onSelect = { selected ->
+                    appPrefs?.setQuickKey(selected)
+                    button.text = selected
+                })
                 true
             }
         }
@@ -285,6 +294,10 @@ class QwertyKeyboard(
                 } else {
                     keySender.sendText(ic, "/")
                 }
+            }
+            is KeyOutput.QuickKey -> {
+                val quickChar = appPrefs?.getQuickKey() ?: "/"
+                keySender.sendChar(ic, quickChar)
             }
             is KeyOutput.KeyCode -> {
                 keySender.sendKey(ic, key.output.code)
