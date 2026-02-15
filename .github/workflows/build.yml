@@ -1,0 +1,93 @@
+name: Build
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run tests (full flavor)
+        run: ./gradlew testFullDebugUnitTest
+
+      - name: Run tests (lite flavor)
+        run: ./gradlew testLiteDebugUnitTest
+
+      - name: Build debug APKs
+        run: ./gradlew assembleDebug
+
+      - name: Upload full APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: keyjawn-full-debug
+          path: app/build/outputs/apk/full/debug/*.apk
+
+      - name: Upload lite APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: keyjawn-lite-debug
+          path: app/build/outputs/apk/lite/debug/*.apk
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build release APKs
+        run: ./gradlew assembleRelease
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app/build/outputs/apk/full/release/*.apk
+            app/build/outputs/apk/lite/release/*.apk
+          generate_release_notes: true
