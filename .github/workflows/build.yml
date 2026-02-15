@@ -32,11 +32,11 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run tests (full flavor)
-        continue-on-error: true
+        continue-on-error: false
         run: ./gradlew testFullDebugUnitTest
 
       - name: Run tests (lite flavor)
-        continue-on-error: true
+        continue-on-error: false
         run: ./gradlew testLiteDebugUnitTest
 
       - name: Upload test results

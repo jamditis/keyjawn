@@ -178,7 +178,11 @@ class QwertyKeyboard(
                 if (ctrlActive) {
                     val charCode = key.output.char.lowercase()[0]
                     val keyCode = KeyEvent.keyCodeFromString("KEYCODE_${charCode.uppercaseChar()}")
-                    keySender.sendKey(ic, keyCode, ctrl = true)
+                    if (keyCode == KeyEvent.KEYCODE_UNKNOWN) {
+                        keySender.sendText(ic, key.output.char)
+                    } else {
+                        keySender.sendKey(ic, keyCode, ctrl = true)
+                    }
                     extraRowManager.consumeCtrl()
                 } else if (isAutocorrectOn()) {
                     ic.setComposingText(key.output.char, 1)

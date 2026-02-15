@@ -27,6 +27,10 @@ class UploadHandler(private val context: Context) {
     private var inputConnectionProvider: (() -> InputConnection?)? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    init {
+        activeHost = HostStorage(context).getActiveHost()
+    }
+
     fun setHost(host: HostConfig) {
         activeHost = host
     }
@@ -101,7 +105,7 @@ class UploadHandler(private val context: Context) {
     private fun copyUriToTemp(uri: Uri): File? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-            val tempFile = File(context.cacheDir, "upload_temp.png")
+            val tempFile = File(context.cacheDir, "upload_${System.currentTimeMillis()}.png")
             tempFile.outputStream().use { out -> inputStream.copyTo(out) }
             inputStream.close()
             tempFile
