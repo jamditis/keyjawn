@@ -29,6 +29,14 @@ class AppPrefs(context: Context) {
         prefs.edit().putString("quick_key", char).apply()
     }
 
+    fun isHapticEnabled(): Boolean {
+        return prefs.getBoolean("haptic_enabled", true)
+    }
+
+    fun setHapticEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("haptic_enabled", enabled).apply()
+    }
+
     companion object {
         val QUICK_KEY_OPTIONS = listOf("/", ".", ",", "?", "!", "\u2014", "'", "\"", ":", ";")
     }

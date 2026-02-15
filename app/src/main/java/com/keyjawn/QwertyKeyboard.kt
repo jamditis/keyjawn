@@ -3,6 +3,7 @@ package com.keyjawn
 import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.InputConnection
@@ -109,7 +110,7 @@ class QwertyKeyboard(
                         true
                     }
                     SwipeGestureDetector.SwipeDirection.DOWN -> {
-                        if (currentLayer == KeyboardLayouts.LAYER_SYMBOLS) {
+                        if (currentLayer == KeyboardLayouts.LAYER_SYMBOLS || currentLayer == KeyboardLayouts.LAYER_SYMBOLS2) {
                             shiftState = ShiftState.OFF
                             setLayer(KeyboardLayouts.LAYER_LOWER)
                         }
@@ -146,6 +147,7 @@ class QwertyKeyboard(
             key.output is KeyOutput.Backspace ||
             key.output is KeyOutput.Enter ||
             key.output is KeyOutput.SymSwitch ||
+            key.output is KeyOutput.Sym2Switch ||
             key.output is KeyOutput.AbcSwitch ||
             key.output is KeyOutput.Space ||
             key.output is KeyOutput.QuickKey
@@ -167,7 +169,7 @@ class QwertyKeyboard(
             is KeyOutput.Character -> 18f
             is KeyOutput.Shift, is KeyOutput.Backspace,
             is KeyOutput.Enter, is KeyOutput.SymSwitch,
-            is KeyOutput.AbcSwitch -> 13f
+            is KeyOutput.Sym2Switch, is KeyOutput.AbcSwitch -> 13f
             is KeyOutput.Space -> 13f
             is KeyOutput.Slash -> 13f
             is KeyOutput.QuickKey -> 18f
@@ -183,6 +185,7 @@ class QwertyKeyboard(
             }
             is KeyOutput.Backspace -> {
                 val listener = RepeatTouchListener {
+                    performHaptic()
                     val ic = inputConnectionProvider() ?: return@RepeatTouchListener
                     keySender.sendKey(ic, KeyEvent.KEYCODE_DEL)
                 }
@@ -267,7 +270,14 @@ class QwertyKeyboard(
         return button
     }
 
+    private fun performHaptic() {
+        if (appPrefs?.isHapticEnabled() != false) {
+            container.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+    }
+
     private fun handleKeyPress(key: Key) {
+        performHaptic()
         val ic = inputConnectionProvider() ?: return
 
         when (key.output) {
@@ -299,6 +309,9 @@ class QwertyKeyboard(
             is KeyOutput.SymSwitch -> {
                 setLayer(KeyboardLayouts.LAYER_SYMBOLS)
             }
+            is KeyOutput.Sym2Switch -> {
+                setLayer(KeyboardLayouts.LAYER_SYMBOLS2)
+            }
             is KeyOutput.AbcSwitch -> {
                 shiftState = ShiftState.OFF
                 setLayer(KeyboardLayouts.LAYER_LOWER)
@@ -323,6 +336,7 @@ class QwertyKeyboard(
     }
 
     private fun handleShiftTap() {
+        performHaptic()
         val now = System.currentTimeMillis()
         val timeSinceLastTap = now - lastShiftTapTime
         lastShiftTapTime = now

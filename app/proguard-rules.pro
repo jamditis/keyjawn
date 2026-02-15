@@ -14,3 +14,7 @@
 -dontwarn org.ietf.jgss.**
 -dontwarn org.newsclub.net.unix.**
 -dontwarn org.slf4j.**
+
+# Google Tink (used by security-crypto) annotations
+-dontwarn com.google.errorprone.annotations.Immutable
+-dontwarn javax.annotation.concurrent.GuardedBy

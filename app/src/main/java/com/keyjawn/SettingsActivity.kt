@@ -39,6 +39,7 @@ class SettingsActivity : Activity() {
         commandSetsContainer = findViewById(R.id.command_sets)
 
         setupUpgradeButton()
+        setupHapticToggle()
         setupThemePicker()
 
         val hostSection = findViewById<LinearLayout>(R.id.host_section)
@@ -66,6 +67,17 @@ class SettingsActivity : Activity() {
             "KeyJawn$flavorLabel v${BuildConfig.VERSION_NAME}"
 
         refreshCommandSets()
+    }
+
+    // -- Haptic toggle --
+
+    private fun setupHapticToggle() {
+        val appPrefs = AppPrefs(this)
+        val toggle = findViewById<CheckBox>(R.id.haptic_toggle)
+        toggle.isChecked = appPrefs.isHapticEnabled()
+        toggle.setOnCheckedChangeListener { _, isChecked ->
+            appPrefs.setHapticEnabled(isChecked)
+        }
     }
 
     // -- Theme picker --
