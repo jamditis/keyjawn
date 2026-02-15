@@ -23,25 +23,15 @@ class KeySender {
      * instead of appending.
      */
     fun sendChar(ic: InputConnection, char: String, shift: Boolean = false) {
-        if (char.length == 1) {
-            val c = char[0]
-            val keyCode = charToKeyCode(c)
-            if (keyCode != null) {
-                val now = SystemClock.uptimeMillis()
-                var metaState = 0
-                if (shift || c.isUpperCase()) {
-                    metaState = metaState or KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON
-                }
-                ic.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, metaState))
-                ic.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0, metaState))
-                return
-            }
-        }
-        // Fallback for multi-char strings or chars without keycodes (accented, etc.)
+        // Clear composing state before every character. WebView InputConnections
+        // (Cockpit/xterm.js in Edge) keep a composing region open and replace it
+        // on each input instead of appending.
+        ic.finishComposingText()
         ic.commitText(char, 1)
     }
 
     fun sendText(ic: InputConnection, text: String) {
+        ic.finishComposingText()
         ic.commitText(text, 1)
     }
 
