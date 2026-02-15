@@ -3,9 +3,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="#1E1E1E">
+    android:background="@color/keyboard_bg">
 
     <include layout="@layout/extra_row" />
+
+    <include layout="@layout/voice_bar" />
 
     <include layout="@layout/number_row" />
 
@@ -14,6 +16,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="#2D2D2D" />
+        android:background="@color/qwerty_bg" />
 
 </LinearLayout>

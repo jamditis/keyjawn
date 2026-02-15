@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/voice_bar"
+    android:layout_width="match_parent"
+    android:layout_height="42dp"
+    android:orientation="horizontal"
+    android:background="@color/extra_row_bg"
+    android:gravity="center_vertical"
+    android:paddingStart="8dp"
+    android:paddingEnd="4dp"
+    android:visibility="gone">
+
+    <com.keyjawn.VoiceWaveformView
+        android:id="@+id/voice_waveform"
+        android:layout_width="48dp"
+        android:layout_height="match_parent" />
+
+    <HorizontalScrollView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:scrollbars="none"
+        android:fillViewport="true">
+
+        <TextView
+            android:id="@+id/voice_text"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="@color/key_text"
+            android:textSize="14sp"
+            android:maxLines="1" />
+    </HorizontalScrollView>
+
+    <ImageButton
+        android:id="@+id/voice_stop"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="2dp"
+        android:background="@drawable/key_bg"
+        android:src="@drawable/ic_stop"
+        android:scaleType="center"
+        android:contentDescription="Stop voice input" />
+</LinearLayout>

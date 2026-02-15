@@ -1,7 +1,6 @@
 package com.keyjawn
 
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.inputmethod.InputConnection
@@ -63,7 +62,13 @@ class AltKeyPopup(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             true
         )
-        window.setBackgroundDrawable(ColorDrawable(0xFF1A1A1A.toInt()))
+        val bg = android.graphics.drawable.GradientDrawable().apply {
+            setColor(0xFF2B2B30.toInt())
+            cornerRadius = 8 * density
+            setStroke((1 * density + 0.5f).toInt(), 0xFF38383E.toInt())
+        }
+        window.setBackgroundDrawable(bg)
+        window.elevation = 8 * density
         window.isOutsideTouchable = true
         window.isTouchable = true
 

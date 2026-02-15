@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="key_bg">#3C3C3C</color>
-    <color name="key_bg_pressed">#505050</color>
-    <color name="key_text">#FFFFFF</color>
-    <color name="extra_row_bg">#181818</color>
-    <color name="qwerty_bg">#2D2D2D</color>
-    <color name="ctrl_armed">#FFB300</color>
-    <color name="ctrl_locked">#D32F2F</color>
+    <color name="keyboard_bg">#1B1B1F</color>
+    <color name="key_bg">#2B2B30</color>
+    <color name="key_bg_pressed">#3A3A40</color>
+    <color name="key_text">#E8E8EC</color>
+    <color name="extra_row_bg">#161619</color>
+    <color name="qwerty_bg">#222226</color>
+    <color name="key_special_bg">#333338</color>
+    <color name="accent">#6C9BF2</color>
+    <color name="accent_locked">#E86C5A</color>
+    <color name="divider">#38383E</color>
 </resources>

@@ -22,6 +22,12 @@ class ExtraRowManager(
 
     private var clipboardPopup: ClipboardPopup? = null
 
+    private val extraRow: View = view.findViewById(R.id.extra_row)
+    private val voiceBar: View? = view.findViewById(R.id.voice_bar)
+    private val voiceWaveform: VoiceWaveformView? = voiceBar?.findViewById(R.id.voice_waveform)
+    private val voiceText: android.widget.TextView? = voiceBar?.findViewById(R.id.voice_text)
+    private val voiceStop: View? = voiceBar?.findViewById(R.id.voice_stop)
+
     init {
         wireEsc()
         wireTab()
@@ -128,6 +134,43 @@ class ExtraRowManager(
         } else {
             micButton.setOnClickListener {
                 Toast.makeText(view.context, "Voice input not available", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        voiceStop?.setOnClickListener {
+            voiceInputHandler?.stopListening()
+        }
+
+        voiceInputHandler?.listener = object : VoiceInputListener {
+            override fun onVoiceStart() {
+                extraRow.visibility = View.GONE
+                voiceBar?.visibility = View.VISIBLE
+                voiceText?.text = ""
+                voiceWaveform?.reset()
+            }
+
+            override fun onVoiceStop() {
+                voiceBar?.visibility = View.GONE
+                extraRow.visibility = View.VISIBLE
+            }
+
+            override fun onPartialResult(text: String) {
+                voiceText?.text = text
+                (voiceText?.parent as? android.widget.HorizontalScrollView)?.post {
+                    (voiceText.parent as? android.widget.HorizontalScrollView)?.fullScroll(View.FOCUS_RIGHT)
+                }
+            }
+
+            override fun onFinalResult(text: String) {
+                voiceText?.text = text
+            }
+
+            override fun onRmsChanged(rmsdB: Float) {
+                voiceWaveform?.updateRms(rmsdB)
+            }
+
+            override fun onError() {
+                voiceText?.text = ""
             }
         }
     }

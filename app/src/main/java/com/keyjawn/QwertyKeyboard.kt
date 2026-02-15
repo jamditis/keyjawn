@@ -81,6 +81,33 @@ class QwertyKeyboard(
 
             container.addView(rowLayout)
         }
+
+        container.setOnTouchListener(SwipeGestureDetector { direction ->
+            val ic = inputConnectionProvider() ?: return@SwipeGestureDetector false
+            when (direction) {
+                SwipeGestureDetector.SwipeDirection.LEFT -> {
+                    keySender.sendKey(ic, android.view.KeyEvent.KEYCODE_DEL, ctrl = true)
+                    true
+                }
+                SwipeGestureDetector.SwipeDirection.RIGHT -> {
+                    keySender.sendChar(ic, " ")
+                    true
+                }
+                SwipeGestureDetector.SwipeDirection.UP -> {
+                    if (currentLayer != KeyboardLayouts.LAYER_SYMBOLS) {
+                        setLayer(KeyboardLayouts.LAYER_SYMBOLS)
+                    }
+                    true
+                }
+                SwipeGestureDetector.SwipeDirection.DOWN -> {
+                    if (currentLayer == KeyboardLayouts.LAYER_SYMBOLS) {
+                        shiftState = ShiftState.OFF
+                        setLayer(KeyboardLayouts.LAYER_LOWER)
+                    }
+                    true
+                }
+            }
+        })
     }
 
     private fun createKeyButton(key: Key): Button {
@@ -99,6 +126,18 @@ class QwertyKeyboard(
             typeface = Typeface.MONOSPACE
         }
 
+        val isSpecialKey = key.output is KeyOutput.Shift ||
+            key.output is KeyOutput.Backspace ||
+            key.output is KeyOutput.Enter ||
+            key.output is KeyOutput.SymSwitch ||
+            key.output is KeyOutput.AbcSwitch ||
+            key.output is KeyOutput.Space
+
+        if (isSpecialKey) {
+            button.setBackgroundResource(R.drawable.key_bg_special)
+            button.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        }
+
         if (key.output is KeyOutput.Space && isAutocorrectOn()) {
             button.text = "SPACE"
         }
@@ -107,10 +146,10 @@ class QwertyKeyboard(
             is KeyOutput.Character -> 18f
             is KeyOutput.Shift, is KeyOutput.Backspace,
             is KeyOutput.Enter, is KeyOutput.SymSwitch,
-            is KeyOutput.AbcSwitch -> 14f
-            is KeyOutput.Space -> 14f
-            is KeyOutput.Slash -> 14f
-            is KeyOutput.KeyCode -> 14f
+            is KeyOutput.AbcSwitch -> 13f
+            is KeyOutput.Space -> 13f
+            is KeyOutput.Slash -> 13f
+            is KeyOutput.KeyCode -> 13f
         }
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSize)
 
@@ -254,7 +293,7 @@ class QwertyKeyboard(
     private fun updateShiftAppearance(button: Button?) {
         button ?: return
         when (shiftState) {
-            ShiftState.OFF -> button.setBackgroundResource(R.drawable.key_bg)
+            ShiftState.OFF -> button.setBackgroundResource(R.drawable.key_bg_special)
             ShiftState.SINGLE -> button.setBackgroundResource(R.drawable.key_bg_active)
             ShiftState.CAPS_LOCK -> button.setBackgroundResource(R.drawable.key_bg_locked)
         }

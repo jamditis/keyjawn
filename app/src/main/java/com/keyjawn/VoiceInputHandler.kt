@@ -15,12 +15,23 @@ import android.view.inputmethod.InputConnection
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 
+interface VoiceInputListener {
+    fun onVoiceStart()
+    fun onVoiceStop()
+    fun onPartialResult(text: String)
+    fun onFinalResult(text: String)
+    fun onRmsChanged(rmsdB: Float)
+    fun onError()
+}
+
 class VoiceInputHandler(private val context: Context) {
 
     private var speechRecognizer: SpeechRecognizer? = null
     private var micButton: View? = null
     private var inputConnectionProvider: (() -> InputConnection?)? = null
     private var listening = false
+
+    var listener: VoiceInputListener? = null
 
     fun isAvailable(): Boolean {
         return SpeechRecognizer.isRecognitionAvailable(context)
@@ -43,7 +54,7 @@ class VoiceInputHandler(private val context: Context) {
         }
 
         listening = true
-        updateMicVisual(true)
+        listener?.onVoiceStart()
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
@@ -68,7 +79,6 @@ class VoiceInputHandler(private val context: Context) {
     fun stopListening() {
         if (!listening) return
         listening = false
-        updateMicVisual(false)
         speechRecognizer?.stopListening()
     }
 
@@ -83,35 +93,35 @@ class VoiceInputHandler(private val context: Context) {
         return object : RecognitionListener {
             override fun onResults(results: Bundle?) {
                 listening = false
-                updateMicVisual(false)
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                val text = matches?.firstOrNull() ?: return
-                inputConnectionProvider?.invoke()?.commitText(text, 1)
+                val text = matches?.firstOrNull() ?: ""
+                if (text.isNotEmpty()) {
+                    listener?.onFinalResult(text)
+                    inputConnectionProvider?.invoke()?.commitText(text, 1)
+                }
+                listener?.onVoiceStop()
             }
 
-            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onPartialResults(partialResults: Bundle?) {
+                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                val text = matches?.firstOrNull() ?: return
+                listener?.onPartialResult(text)
+            }
 
             override fun onError(error: Int) {
                 listening = false
-                updateMicVisual(false)
+                listener?.onError()
+                listener?.onVoiceStop()
             }
 
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onRmsChanged(rmsdB: Float) {
+                listener?.onRmsChanged(rmsdB)
+            }
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onEvent(eventType: Int, params: Bundle?) {}
-        }
-    }
-
-    private fun updateMicVisual(active: Boolean) {
-        micButton?.post {
-            if (active) {
-                micButton?.setBackgroundResource(R.drawable.key_bg_active)
-            } else {
-                micButton?.setBackgroundResource(R.drawable.key_bg)
-            }
         }
     }
 }
