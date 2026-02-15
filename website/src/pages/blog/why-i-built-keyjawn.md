@@ -40,17 +40,19 @@ These aren't edge cases anymore. They're the first five minutes of trying to use
 
 The keyboard has a dedicated terminal row above the QWERTY layout: `Esc`, `Tab`, `Ctrl`, arrow keys, clipboard, mic, and upload. Always visible. No long-pressing, no layer hunting.
 
-A few things worth calling out:
+**Voice input that streams.** Most of what you type into an AI agent is natural language. "Fix the auth bug in login.ts." "Refactor the dashboard component." Thumb-typing that on a phone is slow. KeyJawn streams speech-to-text in real time -- you see words appear as you say them, and you can edit the result before sending. For the 90% of CLI interaction that's just talking to an agent in plain English, this is faster than typing.
 
-**Ctrl as a three-state toggle.** Tap it once to arm it for one keypress (`Ctrl+C`). Long-press to lock it for a series of combos. Tap again to turn it off. This is simpler than Hacker's Keyboard's modifier key approach and more useful than not having Ctrl at all.
+**SCP image upload.** I SSH into Raspberry Pis from my phone constantly. When I need to share a screenshot with Claude Code -- an error message, a UI bug, a terminal output -- the normal process is: save the image, open a file manager, find an SCP client, configure the connection, transfer the file, switch back to the terminal, type the path. KeyJawn does it in one tap. Pick the photo, it SCPs to your server, and the remote file path gets typed at your cursor.
 
-**Voice input that streams.** When you're talking to an AI agent, most of what you type is natural language. "Fix the auth bug in login.ts." "Run the test suite." Speaking is faster than thumb-typing. KeyJawn streams the transcription in real time as you talk -- you see words appear as you say them.
+**It's a system keyboard, not an overlay.** This is the thing that bothered me most about existing solutions. Termius has terminal keys, but they're inside the Termius app. Browser extensions add key rows, but they float above the page and break when you switch apps or the browser redraws. Hacker's Keyboard is a system keyboard, but it's a full desktop layout crammed onto a phone screen. KeyJawn installs as an Android input method -- the terminal keys are part of the keyboard itself, not a layer on top of something else. They work in Termux, in Cockpit through Chrome, in JuiceSSH, in any app. You set it once and forget about it.
 
-**SCP image upload.** You're in a Claude Code session and you want to share a screenshot. Tap the upload button, pick the photo, KeyJawn SCPs it to your server and types the remote path at your cursor. One action instead of six.
+**Customizable for how you actually work.** I built this for my own workflow: SSHing into a Pi from a couch to run Claude Code sessions. The default key layout reflects that -- the keys I reach for most are the ones I put in the terminal row. Slash command sets are configurable per tool (Claude Code, OpenClaw, Gemini CLI). Autocorrect toggles per app so you can leave it off for terminals and on for Slack. SSH hosts are saved so you can switch between machines without retyping credentials. The point is to fit the keyboard to your workflow instead of working around the keyboard.
+
+**Ctrl as a three-state toggle.** Tap it once to arm it for one keypress (`Ctrl+C`). Long-press to lock it for a series of combos. Tap again to turn it off. Simple, and more useful than not having Ctrl at all.
 
 **Slash command picker.** Claude Code, OpenClaw, and Gemini CLI all use slash commands (`/help`, `/clear`, `/compact`, `/status`). KeyJawn gives you a quick-pick popup instead of making you type them from memory.
 
-**Autocorrect is off by default.** This is intentional. Autocorrect breaks web-based terminals because it uses `setComposingText`, which doesn't map to the key events a shell expects. You can turn it on per app -- keep it off for Termux, on for Slack.
+**Autocorrect is off by default.** Autocorrect breaks web-based terminals because it uses `setComposingText`, which doesn't map to the key events a shell expects. You can turn it on per app -- keep it off for Termux, on for Slack.
 
 ## Two versions
 
