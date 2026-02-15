@@ -7,10 +7,13 @@ A custom Android keyboard designed for using LLM CLI agents (Claude Code, Aider,
 Most mobile keyboards lack the keys you need for terminal work — arrow keys, Tab, Escape, Ctrl modifiers. KeyJawn adds a dedicated terminal key row above a clean QWERTY layout, plus LLM-specific shortcuts and a built-in image upload feature that SCPs screenshots to your server and inserts the file path at your cursor.
 ## What it does
 
-- **Terminal key row:** Esc, Tab, Ctrl (toggle modifier), arrow keys, image upload, and voice-to-text — all always visible
-- **Voice-to-text:** Mic button on the far right of the extra row (where you expect it). Tap to dictate — uses the same speech recognition engine as Gboard.
+- **Terminal key row:** Esc, Tab, Ctrl (toggle modifier), arrow keys, image upload, and voice-to-text -- all always visible
+- **Number row:** Dedicated 0-9 row above the QWERTY grid. Long-press any number to type its shifted symbol (!@#$%^&*()).
+- **Long-press alt characters:** Hold a letter key to get accented variants (a -> a, a, a, a, a, ae) or punctuation alternatives. Single-alt keys fire immediately; multi-alt keys show a popup above the pressed key.
+- **Voice-to-text:** Mic button on the far right of the extra row. Tap to dictate -- uses the same speech recognition engine as Gboard.
+- **Clipboard history:** Tracks recent clipboard entries. Tap the clipboard button in the extra row to see history and paste.
 - **LLM CLI shortcuts:** Quick-insert for `/` commands, common prompts, and slash-command prefixes used by Claude Code, Aider, and other LLM CLI tools
-- **Basic QWERTY:** Three layers (lowercase, uppercase, symbols) with no autocorrect by default — because autocorrect breaks web-based terminals
+- **Basic QWERTY:** Three layers (lowercase, uppercase, symbols) with no autocorrect by default -- because autocorrect breaks web-based terminals
 - **Autocorrect toggle:** Long-press spacebar to enable/disable per app. Off for terminals, on for chat apps.
 - **Image upload via SCP:** Tap the upload button, pick a photo, and KeyJawn SCPs it to your server and types the file path into the terminal. Useful for sharing screenshots with Claude Code.
 - **Multi-host support:** Configure multiple SSH servers and switch between them.
@@ -40,7 +43,7 @@ KeyJawn ships in two flavors:
 
 ## Status
 
-Design phase. See [design doc](docs/plans/2026-02-15-jawnkeys-keyboard-design.md) for the full specification.
+Active development. Core keyboard, terminal keys, number row, voice input, clipboard history, alt-key popups, and SCP upload are implemented. See [design doc](docs/plans/2026-02-15-jawnkeys-keyboard-design.md) for the original specification.
 
 ## Requirements
 

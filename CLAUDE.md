@@ -65,11 +65,15 @@ All source is in `com.keyjawn` — flat package, no sub-packages.
 - `QwertyKeyboard` — dynamically builds the QWERTY grid from `KeyboardLayouts` layers, handles layer switching (shift, symbols), dispatches key presses through `KeySender`.
 
 **Features:**
-- `SlashCommandRegistry` + `SlashCommandPopup` — slash command quick-insert (triggered by `/` key). Registry loads commands, popup presents them.
-- `VoiceInputHandler` — speech recognition using Android's `SpeechRecognizer`.
+- `SlashCommandRegistry` + `SlashCommandPopup` — slash command quick-insert (triggered by `/` key on symbols layer). Registry loads commands, popup presents them.
+- `VoiceInputHandler` — speech recognition using Android's `SpeechRecognizer`. Wired to mic button in extra row.
 - `UploadHandler` / `ScpUploader` — SCP image upload (full flavor only). `HostConfig` + `HostStorage` manage SSH server credentials (encrypted via AndroidX security-crypto).
+- `NumberRowManager` — wires the dedicated number row (0-9) above the QWERTY grid. Long-press types the shifted symbol (!@#$%^&*()).
+- `AltKeyMappings` — static map of long-press alternate characters keyed by primary key label. Covers accented vowels, common letters (n, c, s, y), and punctuation variants. Uppercase variants auto-derived from lowercase lookups.
+- `AltKeyPopup` — small horizontal `PopupWindow` anchored above the pressed key. Shows one button per alt character. For single-alt keys (like number row), sends directly without a popup.
+- `ClipboardHistoryManager` + `ClipboardPopup` — clipboard history tracking and paste popup. Popup has rounded corners, section header, dividers between items, and muted empty state.
 - `RepeatTouchListener` — fires repeated key events while arrow buttons are held down.
-- `AppPrefs` — per-app autocorrect toggle (long-press spacebar). Stores preferences per package name.
+- `AppPrefs` — per-app autocorrect toggle (long-press spacebar). Stores preferences per package name. Defaults to OFF.
 
 **Settings:**
 - `SettingsActivity` — host management UI for configuring SSH servers.
@@ -78,8 +82,10 @@ All source is in `com.keyjawn` — flat package, no sub-packages.
 
 - `InputConnection` is accessed via lambda providers (`() -> InputConnection?`) since the active connection changes.
 - Ctrl modifier uses a three-state machine: OFF, ARMED (one-shot), LOCKED (sticky until toggled off).
-- The `/` key on the QWERTY layout triggers the slash command popup instead of directly typing `/`. If dismissed without selection, it falls back to typing `/`.
+- The `slash` key on the symbols layer has `KeyOutput.Slash` output and triggers the slash command popup. The `/` key on lower/upper layers is `KeyOutput.Character("/")` and just types `/`. Long-pressing the `/` character key types `.` instead.
+- Long-press behavior on QWERTY keys: looks up `AltKeyMappings.getAlts(key.label)`. If one alt, sends it directly. If multiple, shows `AltKeyPopup`. Keys with existing long-press handlers (Space, Slash) are skipped because they use different `KeyOutput` subtypes.
 - Tests use Robolectric for Android framework classes and Mockito-Kotlin for mocking.
+- Some test classes have pre-existing failures (SlashCommandRegistryTest file-not-found, QwertyKeyboardTest resource-not-found). These are not regressions.
 
 ## Code style
 
