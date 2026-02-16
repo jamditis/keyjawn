@@ -36,8 +36,7 @@ object KeyboardLayouts {
         listOf(
             Key("?123", KeyOutput.SymSwitch, weight = 1.5f),
             Key(",", KeyOutput.Character(","), weight = 1f),
-            Key(" ", KeyOutput.Space, weight = 3.5f),
-            Key(".", KeyOutput.Character("."), weight = 1f),
+            Key(" ", KeyOutput.Space, weight = 4.5f),
             Key("/", KeyOutput.QuickKey),
             Key("Enter", KeyOutput.Enter, weight = 1.5f)
         )
@@ -54,8 +53,7 @@ object KeyboardLayouts {
         listOf(
             Key("?123", KeyOutput.SymSwitch, weight = 1.5f),
             Key(",", KeyOutput.Character(","), weight = 1f),
-            Key(" ", KeyOutput.Space, weight = 3.5f),
-            Key(".", KeyOutput.Character("."), weight = 1f),
+            Key(" ", KeyOutput.Space, weight = 4.5f),
             Key("/", KeyOutput.QuickKey),
             Key("Enter", KeyOutput.Enter, weight = 1.5f)
         )

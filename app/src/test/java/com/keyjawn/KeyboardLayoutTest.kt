@@ -37,9 +37,9 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `lowercase row 4 has 6 keys`() {
-        // sym, comma, space, period, quickkey, enter
-        assertEquals(6, KeyboardLayouts.lowercase[3].size)
+    fun `lowercase row 4 has 5 keys`() {
+        // sym, comma, space, quickkey, enter
+        assertEquals(5, KeyboardLayouts.lowercase[3].size)
     }
 
     @Test
@@ -58,8 +58,8 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `uppercase row 4 has 6 keys`() {
-        assertEquals(6, KeyboardLayouts.uppercase[3].size)
+    fun `uppercase row 4 has 5 keys`() {
+        assertEquals(5, KeyboardLayouts.uppercase[3].size)
     }
 
     @Test
@@ -117,16 +117,14 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `lowercase row 4 has sym, comma, space, period, quickkey, enter`() {
+    fun `lowercase row 4 has sym, comma, space, quickkey, enter`() {
         val row = KeyboardLayouts.lowercase[3]
         assertTrue(row[0].output is KeyOutput.SymSwitch)
         assertTrue(row[1].output is KeyOutput.Character)
         assertEquals(",", (row[1].output as KeyOutput.Character).char)
         assertTrue(row[2].output is KeyOutput.Space)
-        assertTrue(row[3].output is KeyOutput.Character)
-        assertEquals(".", (row[3].output as KeyOutput.Character).char)
-        assertTrue(row[4].output is KeyOutput.QuickKey)
-        assertTrue(row[5].output is KeyOutput.Enter)
+        assertTrue(row[3].output is KeyOutput.QuickKey)
+        assertTrue(row[4].output is KeyOutput.Enter)
     }
 
     @Test
@@ -146,10 +144,10 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `space key has weight 3_5`() {
+    fun `space key has weight 4_5`() {
         val spaceKey = KeyboardLayouts.lowercase[3][2]
         assertTrue(spaceKey.output is KeyOutput.Space)
-        assertEquals(3.5f, spaceKey.weight)
+        assertEquals(4.5f, spaceKey.weight)
     }
 
     @Test
@@ -161,14 +159,14 @@ class KeyboardLayoutTest {
 
     @Test
     fun `enter key has weight 1_5`() {
-        val enterKey = KeyboardLayouts.lowercase[3][5]
+        val enterKey = KeyboardLayouts.lowercase[3][4]
         assertTrue(enterKey.output is KeyOutput.Enter)
         assertEquals(1.5f, enterKey.weight)
     }
 
     @Test
     fun `quick key has weight 1`() {
-        val quickKey = KeyboardLayouts.lowercase[3][4]
+        val quickKey = KeyboardLayouts.lowercase[3][3]
         assertTrue(quickKey.output is KeyOutput.QuickKey)
         assertEquals(1f, quickKey.weight)
     }
