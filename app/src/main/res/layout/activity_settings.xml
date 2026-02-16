@@ -143,12 +143,12 @@
             android:layout_marginTop="8dp"
             android:visibility="gone" />
 
-        <!-- Upgrade -->
+        <!-- Upgrade (lite only, links to website) -->
         <Button
             android:id="@+id/upgrade_btn"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:text="Upgrade to full version ($3.99)"
+            android:text="Get full version ($4)"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="15sp"

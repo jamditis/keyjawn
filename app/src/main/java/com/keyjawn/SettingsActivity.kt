@@ -2,7 +2,9 @@ package com.keyjawn
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -22,18 +24,15 @@ class SettingsActivity : Activity() {
     private var hostListContainer: LinearLayout? = null
     private lateinit var commandSetsContainer: LinearLayout
     private var slashCommandRegistry: SlashCommandRegistry? = null
-    private lateinit var billingManager: BillingManager
     private lateinit var themeManager: ThemeManager
 
-    private val hasScpUpload: Boolean
+    private val isFull: Boolean
         get() = BuildConfig.FLAVOR == "full"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
-        billingManager = BillingManager(this)
-        billingManager.connect()
         themeManager = ThemeManager(this)
 
         commandSetsContainer = findViewById(R.id.command_sets)
@@ -44,7 +43,7 @@ class SettingsActivity : Activity() {
         setupThemePicker()
 
         val hostSection = findViewById<LinearLayout>(R.id.host_section)
-        if (hasScpUpload) {
+        if (isFull) {
             hostStorage = HostStorage(this)
             hostListContainer = findViewById(R.id.host_list)
             findViewById<Button>(R.id.add_host_btn).setOnClickListener {
@@ -63,7 +62,7 @@ class SettingsActivity : Activity() {
 
         setupCustomCommandsButton()
 
-        val flavorLabel = if (hasScpUpload) "" else " lite"
+        val flavorLabel = if (isFull) "" else " lite"
         findViewById<TextView>(R.id.version_text).text =
             "KeyJawn$flavorLabel v${BuildConfig.VERSION_NAME}"
 
@@ -85,7 +84,7 @@ class SettingsActivity : Activity() {
 
     private fun setupTooltipToggle() {
         val section = findViewById<LinearLayout>(R.id.tooltip_section)
-        if (!billingManager.isFullVersion) {
+        if (!isFull) {
             section.visibility = View.GONE
             return
         }
@@ -102,7 +101,7 @@ class SettingsActivity : Activity() {
 
     private fun setupThemePicker() {
         val themeSection = findViewById<LinearLayout>(R.id.theme_section)
-        if (!billingManager.isFullVersion) {
+        if (!isFull) {
             themeSection.visibility = View.GONE
             return
         }
@@ -286,29 +285,15 @@ class SettingsActivity : Activity() {
             .show()
     }
 
-    override fun onDestroy() {
-        billingManager.destroy()
-        super.onDestroy()
-    }
-
     private fun setupUpgradeButton() {
         val upgradeBtn = findViewById<Button>(R.id.upgrade_btn)
-        if (billingManager.isFullVersion) {
+        if (isFull) {
             upgradeBtn.visibility = View.GONE
         } else {
+            upgradeBtn.text = "Get full version ($4)"
             upgradeBtn.visibility = View.VISIBLE
             upgradeBtn.setOnClickListener {
-                billingManager.launchPurchaseFlow(this)
-            }
-            billingManager.onPurchaseStateChanged = {
-                runOnUiThread {
-                    if (billingManager.isFullVersion) {
-                        upgradeBtn.visibility = View.GONE
-                        setupThemePicker()
-                        setupCustomCommandsButton()
-                        refreshCommandSets()
-                    }
-                }
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://keyjawn.amditis.tech/pricing")))
             }
         }
     }
@@ -317,7 +302,7 @@ class SettingsActivity : Activity() {
 
     private fun setupCustomCommandsButton() {
         val addBtn = findViewById<Button>(R.id.add_command_set_btn)
-        if (billingManager.isFullVersion) {
+        if (isFull) {
             addBtn.visibility = View.VISIBLE
             addBtn.setOnClickListener { showAddCommandSetDialog() }
         } else {
@@ -330,7 +315,7 @@ class SettingsActivity : Activity() {
         val registry = slashCommandRegistry ?: return
         val sets = registry.getAvailableSets()
         val enabled = registry.getEnabledSets()
-        val paid = billingManager.isFullVersion
+        val paid = isFull
         val density = resources.displayMetrics.density
 
         sets.forEach { (id, commandSet) ->

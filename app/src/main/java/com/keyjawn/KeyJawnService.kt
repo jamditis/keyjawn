@@ -12,7 +12,6 @@ class KeyJawnService : InputMethodService() {
 
     private val keySender = KeySender()
     private lateinit var appPrefs: AppPrefs
-    private lateinit var billingManager: BillingManager
     private lateinit var themeManager: ThemeManager
     private var extraRowManager: ExtraRowManager? = null
     private var qwertyKeyboard: QwertyKeyboard? = null
@@ -28,8 +27,6 @@ class KeyJawnService : InputMethodService() {
     override fun onCreate() {
         super.onCreate()
         appPrefs = AppPrefs(this)
-        billingManager = BillingManager(this)
-        billingManager.connect()
         themeManager = ThemeManager(this)
         if (BuildConfig.FLAVOR != "full") {
             themeManager.currentTheme = KeyboardTheme.DARK
@@ -128,7 +125,6 @@ class KeyJawnService : InputMethodService() {
         voiceInputHandler?.destroy()
         uploadHandler?.destroy()
         clipboardHistoryManager?.destroy()
-        billingManager.destroy()
         pendingUploadHandler = null
         super.onDestroy()
     }
