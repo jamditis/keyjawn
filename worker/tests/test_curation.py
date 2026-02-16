@@ -263,3 +263,34 @@ def test_news_parse_feed_entry():
     assert candidate.source == "google_news"
     assert candidate.title == "New open source CLI tool released"
     assert candidate.url == "https://example.com/article"
+
+
+from worker.curation.sources.twitch import TwitchSource, CATEGORIES
+
+
+def test_twitch_categories_defined():
+    assert len(CATEGORIES) > 0
+    assert "Science & Technology" in CATEGORIES
+
+
+def test_twitch_source_init():
+    source = TwitchSource("client-id", "client-secret")
+    assert source.client_id == "client-id"
+
+
+def test_twitch_parse_clip():
+    source = TwitchSource("id", "secret")
+    raw = {
+        "id": "clip123",
+        "title": "Building a terminal tool live",
+        "url": "https://clips.twitch.tv/clip123",
+        "broadcaster_name": "devstreamer",
+        "view_count": 500,
+        "created_at": "2026-02-16T10:00:00Z",
+        "game_id": "509670",
+    }
+    candidate = source._parse_clip(raw)
+    assert candidate.source == "twitch"
+    assert candidate.title == "Building a terminal tool live"
+    assert candidate.author == "devstreamer"
+    assert candidate.metadata["view_count"] == 500
