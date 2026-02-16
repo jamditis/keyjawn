@@ -153,3 +153,4 @@ Astro static site at `website/`. Deployed to GitHub Pages at `keyjawn.amditis.te
 - Kotlin with standard Android conventions
 - No emojis in source code, logs, or UI text
 - Sentence case for all UI strings (not Title Case)
+- **No direct LLM API calls.** Never make direct API calls to LLM services (Anthropic, OpenAI, Google AI, etc.) unless Joe gives explicit permission. Use CLI tools (`claude -p`, `gemini -p`) via subprocess calls instead — these use existing subscriptions at no marginal cost.

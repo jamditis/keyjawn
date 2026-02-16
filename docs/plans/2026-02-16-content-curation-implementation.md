@@ -4,9 +4,11 @@
 
 **Goal:** Add a content curation pipeline that discovers, evaluates, and shares interesting dev tools content from YouTube, Google News/RSS, and Twitch -- biased toward open source and indie projects.
 
-**Architecture:** Three source monitors feed CurationCandidate objects into a four-stage AI evaluation pipeline (keyword filter, Haiku, Gemini CLI, Sonnet). Approved candidates post to Twitter/Bluesky via the existing action system with Telegram approval. Separate daily budget from self-promo (2 curated shares/day).
+**Architecture:** Three source monitors feed CurationCandidate objects into a two-stage evaluation: (1) local keyword filter, then (2) parallel Claude Code CLI subagents for AI evaluation. Each subagent does quick-check + deep investigation + draft writing in a single session. No API calls -- all AI runs through Claude Code CLI subscriptions. Approved candidates post to Twitter/Bluesky via the existing action system with Telegram approval. Separate daily budget from self-promo (2 curated shares/day).
 
-**Tech stack:** httpx (HTTP, already in deps), feedparser (RSS parsing, new dep), anthropic (Haiku/Sonnet, new dep), Gemini CLI (existing on officejawn), aiosqlite (existing)
+**Tech stack:** httpx (HTTP, already in deps), feedparser (RSS parsing, new dep), Claude Code CLI (subprocess, no new deps), aiosqlite (existing)
+
+**Key design decision:** NO direct Anthropic/Gemini API calls. All AI evaluation runs through CLI tools (claude -p) in subprocess calls, paid for by existing subscriptions. The worker spins up parallel Claude Code subagents for concurrent candidate evaluation.
 
 **Design doc:** docs/plans/2026-02-16-content-curation-design.md
 
@@ -31,7 +33,7 @@
 
 **Step 1: Add new dependencies to pyproject.toml**
 
-Add feedparser and anthropic to the dependencies list in pyproject.toml:
+Add feedparser to the dependencies list in pyproject.toml:
 
 ```toml
 dependencies = [
@@ -42,9 +44,10 @@ dependencies = [
     "apscheduler>=3.10.0",
     "redis>=5.0.0",
     "feedparser>=6.0.0",
-    "anthropic>=0.40.0",
 ]
 ```
+
+Note: NO anthropic SDK dependency. All AI evaluation runs through Claude Code CLI subprocesses.
 
 **Step 2: Create the curation package with models**
 
@@ -94,7 +97,7 @@ class CurationCandidate:
 
 **Step 3: Install new deps on officejawn**
 
-Run: ssh officejawn "cd /home/jamditis/projects/keyjawn/worker && venv/bin/pip install feedparser anthropic"
+Run: ssh officejawn "cd /home/jamditis/projects/keyjawn/worker && venv/bin/pip install feedparser"
 
 **Step 4: Write test for CurationCandidate model**
 
@@ -1166,291 +1169,244 @@ git commit -m "feat(curation): add Twitch Helix API source monitor"
 
 ---
 
-### Task 7: AI evaluation stages (Haiku, Gemini, Sonnet)
+### Task 7: AI evaluation via Claude Code CLI subprocesses
 
 **Files:**
 - Create: worker/curation/evaluate.py
 - Test: tests/test_curation.py
+
+**Key design decision:** NO API calls. All AI evaluation runs through `claude -p` (Claude Code CLI print mode) as async subprocesses. The worker spins up parallel subagents using `asyncio.gather()` for concurrent evaluation. This uses the existing Claude Code subscription -- zero marginal cost.
 
 **Step 1: Write failing tests**
 
 Add to tests/test_curation.py:
 ```python
 from worker.curation.evaluate import (
-    build_haiku_prompt, parse_haiku_response,
-    build_gemini_prompt, parse_gemini_response,
-    build_sonnet_prompt, parse_sonnet_response,
+    build_evaluate_prompt, parse_evaluate_response,
+    build_draft_prompt, parse_draft_response,
 )
 
 
-def test_build_haiku_prompt():
+def test_build_evaluate_prompt():
     c = CurationCandidate(
         source="youtube", url="http://test.com",
         title="Open source terminal tool",
         description="A CLI keyboard for Android developers",
         author="devuser",
     )
-    prompt = build_haiku_prompt(c)
+    prompt = build_evaluate_prompt(c)
     assert "Open source terminal tool" in prompt
     assert "CLI keyboard" in prompt
-    assert "YES or NO" in prompt
+    assert "RELEVANT:" in prompt
 
 
-def test_parse_haiku_response_yes():
-    response = "YES - This is a developer tools video about a CLI keyboard for Android."
-    result = parse_haiku_response(response)
-    assert result["pass"] is True
-    assert len(result["reasoning"]) > 0
-
-
-def test_parse_haiku_response_no():
-    response = "NO - This is a cooking tutorial, not developer tools."
-    result = parse_haiku_response(response)
-    assert result["pass"] is False
-
-
-def test_parse_haiku_response_with_oss():
-    response = "YES - Open source terminal emulator for Android. OPEN_SOURCE: yes, INDIE: yes, CORPORATE: no, CLICKBAIT: no"
-    result = parse_haiku_response(response)
-    assert result["pass"] is True
+def test_parse_evaluate_response_relevant():
+    response = """RELEVANT: yes
+REASONING: Developer tools video about a CLI keyboard for Android
+OPEN_SOURCE: yes
+INDIE: yes
+CORPORATE: no
+CLICKBAIT: no
+QUALITY: 8/10"""
+    result = parse_evaluate_response(response)
+    assert result["relevant"] is True
     assert result["is_oss"] is True
     assert result["is_indie"] is True
-    assert result["is_corporate"] is False
+    assert result["quality_score"] == 8.0
 
 
-def test_parse_gemini_response_with_score():
-    text = """This is a Rust-based terminal file manager.
-The project is open source on GitHub.
-Creator is a solo developer.
-Content is well-produced and practical.
-SCORE: 8/10"""
-    result = parse_gemini_response(text)
-    assert result["score"] == 8.0
-    assert "terminal file manager" in result["analysis"]
+def test_parse_evaluate_response_irrelevant():
+    response = """RELEVANT: no
+REASONING: This is a cooking tutorial, not developer tools
+QUALITY: 2/10"""
+    result = parse_evaluate_response(response)
+    assert result["relevant"] is False
+    assert result["quality_score"] == 2.0
 
 
-def test_parse_gemini_response_low_score():
-    text = "Generic tutorial, nothing special. SCORE: 3/10"
-    result = parse_gemini_response(text)
-    assert result["score"] == 3.0
+def test_build_draft_prompt():
+    c = CurationCandidate(
+        source="youtube", url="http://test.com",
+        title="Terminal file manager in Rust",
+        description="Building a TUI app",
+        author="devuser",
+    )
+    evaluation = {"reasoning": "Great indie dev content", "quality_score": 8.0}
+    prompt = build_draft_prompt(c, evaluation, "twitter")
+    assert "Terminal file manager" in prompt
+    assert "280" in prompt
+    assert "DECISION:" in prompt
 
 
-def test_parse_sonnet_response_share():
+def test_parse_draft_response_share():
     text = """DECISION: SHARE
 REASONING: High quality indie dev content about terminal tools
 DRAFT: Solid Rust terminal file manager from a solo dev. Open source, clean codebase. youtube.com/watch?v=abc"""
-    result = parse_sonnet_response(text)
-    assert result["pass"] is True
+    result = parse_draft_response(text)
+    assert result["share"] is True
     assert "indie" in result["reasoning"].lower()
     assert "Solid Rust" in result["draft"]
 
 
-def test_parse_sonnet_response_skip():
+def test_parse_draft_response_skip():
     text = """DECISION: SKIP
 REASONING: Corporate product launch, not relevant enough"""
-    result = parse_sonnet_response(text)
-    assert result["pass"] is False
+    result = parse_draft_response(text)
+    assert result["share"] is False
     assert result["draft"] == ""
 ```
 
-**Step 2: Implement evaluate.py**
+**Step 2: Implement evaluate.py (CLI-based, no API calls)**
 
 Create worker/curation/evaluate.py:
 ```python
-"""AI evaluation stages for the curation pipeline (stages 2-4)."""
+"""AI evaluation for the curation pipeline using Claude Code CLI.
+
+No direct API calls. All AI runs through 'claude -p' subprocess calls,
+paid for by existing Claude Code subscription. The worker spins up
+parallel subagents via asyncio.gather() for concurrent evaluation.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import logging
 import re
-from typing import Optional
 
 from worker.curation.models import CurationCandidate
 
 log = logging.getLogger(__name__)
 
-
-# --- Stage 2: Haiku quick-check ---
-
-def build_haiku_prompt(candidate: CurationCandidate) -> str:
-    """Build the prompt for Haiku stage 2 evaluation."""
-    return f"""Evaluate this content for a developer tools curation account.
-
-Title: {candidate.title}
-Author: {candidate.author}
-Description: {candidate.description[:500]}
-Source: {candidate.source}
-URL: {candidate.url}
-
-Answer these questions:
-1. Is this content about developer tools, terminal/CLI software, mobile development tools, keyboards, or related indie tech? Would a developer interested in terminal tools and mobile coding find this useful or interesting? Start your answer with YES or NO, then a one-line reason.
-
-2. Classify (answer yes/no for each):
-OPEN_SOURCE: Is this about an open source or free project?
-INDIE: Is the creator a solo dev, indie dev, or small team?
-CORPORATE: Is this a corporate product launch from a large company?
-CLICKBAIT: Is this clickbait or low-effort content?"""
+CLI_TIMEOUT = 90  # seconds per subprocess call
 
 
-def parse_haiku_response(text: str) -> dict:
-    """Parse Haiku's response into structured data."""
-    text_upper = text.upper()
-    first_word = text.strip().split()[0] if text.strip() else ""
+async def _run_claude(prompt: str, model: str = "sonnet") -> str:
+    """Run a Claude Code CLI prompt and return the response text.
 
-    passed = first_word.upper().startswith("YES")
-
-    is_oss = "OPEN_SOURCE: YES" in text_upper or "OPEN_SOURCE:YES" in text_upper
-    is_indie = "INDIE: YES" in text_upper or "INDIE:YES" in text_upper
-    is_corporate = "CORPORATE: YES" in text_upper or "CORPORATE:YES" in text_upper
-    is_clickbait = "CLICKBAIT: YES" in text_upper or "CLICKBAIT:YES" in text_upper
-
-    return {
-        "pass": passed and not is_clickbait,
-        "is_oss": is_oss,
-        "is_indie": is_indie,
-        "is_corporate": is_corporate,
-        "is_clickbait": is_clickbait,
-        "reasoning": text.strip(),
-    }
-
-
-async def run_haiku_check(candidate: CurationCandidate, api_key: str) -> dict:
-    """Run Haiku quick-check on a candidate. Returns parsed result dict."""
-    try:
-        import anthropic
-        client = anthropic.AsyncAnthropic(api_key=api_key)
-        prompt = build_haiku_prompt(candidate)
-
-        message = await client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=300,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        response_text = message.content[0].text
-        return parse_haiku_response(response_text)
-    except Exception:
-        log.exception("Haiku check failed for %s", candidate.url)
-        return {"pass": False, "reasoning": "Haiku check failed"}
-
-
-# --- Stage 3: Gemini CLI deep-dive ---
-
-def build_gemini_prompt(candidate: CurationCandidate) -> str:
-    """Build the prompt for Gemini stage 3 investigation."""
-    return f"""Research this content and evaluate it for sharing on a developer tools curation account.
-
-Title: {candidate.title}
-Author: {candidate.author}
-Source: {candidate.source}
-URL: {candidate.url}
-Description: {candidate.description[:500]}
-
-Tell me:
-1. What is it about? (2 sentences max)
-2. Is the project open source? Link to the repo if you can find one.
-3. Is the creator an indie dev, small team, or large company?
-4. Is the content good and useful, or is it hype?
-5. Would sharing this make a developer tools account look like it has good taste?
-
-End with a single line: SCORE: N/10 (where N is your quality + relevance rating)"""
-
-
-def parse_gemini_response(text: str) -> dict:
-    """Parse Gemini's response into structured data."""
-    score = 0.0
-    score_match = re.search(r"SCORE:\s*(\d+(?:\.\d+)?)\s*/\s*10", text, re.IGNORECASE)
-    if score_match:
-        score = float(score_match.group(1))
-
-    return {
-        "score": score,
-        "analysis": text.strip(),
-    }
-
-
-async def run_gemini_check(candidate: CurationCandidate) -> dict:
-    """Run Gemini CLI deep-dive on a candidate. Returns parsed result dict."""
-    prompt = build_gemini_prompt(candidate)
-
+    Uses 'claude -p' (print mode) for non-interactive one-shot prompts.
+    No API key needed -- uses the CLI's own auth/subscription.
+    """
     try:
         process = await asyncio.create_subprocess_exec(
-            "gemini", "-p", prompt, "--output-format", "text",
+            "claude", "-p", prompt, "--model", model,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await asyncio.wait_for(
-            process.communicate(), timeout=60
+            process.communicate(), timeout=CLI_TIMEOUT
         )
     except asyncio.TimeoutError:
-        log.warning("Gemini CLI timed out for %s", candidate.url)
-        return {"score": 0.0, "analysis": "Gemini timed out"}
+        log.warning("claude CLI timed out after %ds", CLI_TIMEOUT)
+        return ""
     except FileNotFoundError:
-        log.error("Gemini CLI not found")
-        return {"score": 0.0, "analysis": "Gemini CLI not found"}
+        log.error("claude CLI not found")
+        return ""
     except Exception:
-        log.exception("Gemini check failed for %s", candidate.url)
-        return {"score": 0.0, "analysis": "Gemini check failed"}
+        log.exception("claude CLI failed")
+        return ""
 
     if process.returncode != 0:
-        log.warning("Gemini CLI returned %d for %s", process.returncode, candidate.url)
-        return {"score": 0.0, "analysis": f"Gemini error: {stderr.decode()[:200]}"}
+        log.warning("claude CLI returned %d: %s", process.returncode, stderr.decode()[:200])
+        return ""
 
-    text = stdout.decode().strip()
-    return parse_gemini_response(text)
+    return stdout.decode().strip()
 
 
-# --- Stage 4: Sonnet final judgment + draft ---
+# --- Evaluation prompt (quick-check + investigation in one call) ---
 
-def build_sonnet_prompt(
+def build_evaluate_prompt(candidate: CurationCandidate) -> str:
+    """Build a single evaluation prompt that covers relevance + quality."""
+    return f"""Evaluate this content for a developer tools curation account that shares interesting CLI tools, terminal projects, and indie developer work.
+
+Title: {candidate.title}
+Author: {candidate.author}
+Description: {candidate.description[:500]}
+Source: {candidate.source}
+URL: {candidate.url}
+
+Answer each line exactly in this format:
+RELEVANT: yes or no
+REASONING: one-line explanation
+OPEN_SOURCE: yes or no or unknown
+INDIE: yes or no or unknown (is the creator a solo/indie dev or small team?)
+CORPORATE: yes or no (is this a large company product launch?)
+CLICKBAIT: yes or no
+QUALITY: N/10 (overall quality and relevance score)"""
+
+
+def parse_evaluate_response(text: str) -> dict:
+    """Parse the evaluation response into structured data."""
+    text_upper = text.upper()
+
+    def _check(key: str) -> bool:
+        pattern = rf"{key}:\s*(YES)"
+        return bool(re.search(pattern, text_upper))
+
+    def _extract_score() -> float:
+        match = re.search(r"QUALITY:\s*(\d+(?:\.\d+)?)\s*/\s*10", text_upper)
+        return float(match.group(1)) if match else 0.0
+
+    reasoning = ""
+    for line in text.strip().split("\n"):
+        if line.upper().startswith("REASONING:"):
+            reasoning = line.split(":", 1)[1].strip()
+            break
+
+    return {
+        "relevant": _check("RELEVANT"),
+        "reasoning": reasoning,
+        "is_oss": _check("OPEN_SOURCE"),
+        "is_indie": _check("INDIE"),
+        "is_corporate": _check("CORPORATE"),
+        "is_clickbait": _check("CLICKBAIT"),
+        "quality_score": _extract_score(),
+        "raw": text.strip(),
+    }
+
+
+# --- Draft prompt (final judgment + post writing) ---
+
+def build_draft_prompt(
     candidate: CurationCandidate,
-    haiku_result: dict,
-    gemini_result: dict,
+    evaluation: dict,
     platform: str = "twitter",
 ) -> str:
-    """Build the prompt for Sonnet stage 4 final judgment."""
+    """Build the draft writing prompt."""
     from worker.content import PLATFORM_LIMITS
     char_limit = PLATFORM_LIMITS.get(platform, 280)
 
-    return f"""You are drafting a social media post for a developer tools curation account (@KeyJawn).
+    return f"""You are drafting a social media post for @KeyJawn, a developer tools curation account.
 
-This account shares interesting dev tools, terminal projects, and indie developer work. The voice is developer-to-developer: short sentences, no hype, no exclamation marks, no hashtag spam, no emoji strings.
+Voice: developer-to-developer. Short sentences. No hype. No exclamation marks. No hashtag spam. No emoji strings. Contractions are fine.
 
-Content to evaluate:
+Content to share:
 Title: {candidate.title}
 Author: {candidate.author}
 Source: {candidate.source}
 URL: {candidate.url}
 
-Previous evaluation:
-- Haiku assessment: {haiku_result.get('reasoning', 'N/A')[:300]}
-- Gemini analysis: {gemini_result.get('analysis', 'N/A')[:500]}
-- Gemini score: {gemini_result.get('score', 0)}/10
+Evaluation: {evaluation.get('reasoning', '')}
+Quality: {evaluation.get('quality_score', 0)}/10
 
-Decision: Should we share this? Answer SHARE or SKIP on the first line, with a brief reason.
+Should we share this? Answer on the first line.
 
-If SHARE: Write a {platform} post (max {char_limit} chars) that:
-- Adds a brief take or context (not just a repost)
-- Credits the creator when appropriate
-- Puts the link at the end
-- Uses the voice rules above (no hype, dev-to-dev, short)
+If yes, write a {platform} post (max {char_limit} chars) that adds a brief take or context, credits the creator, and puts the link at the end.
 
-Format your response as:
+Format:
 DECISION: SHARE or SKIP
-REASONING: [why]
+REASONING: [one line why]
 DRAFT: [post text, only if SHARE]"""
 
 
-def parse_sonnet_response(text: str) -> dict:
-    """Parse Sonnet's response into structured data."""
+def parse_draft_response(text: str) -> dict:
+    """Parse the draft response."""
     lines = text.strip().split("\n")
 
     decision = "skip"
     reasoning = ""
-    draft = ""
-
     in_draft = False
     draft_lines = []
+
     for line in lines:
         upper = line.upper().strip()
         if upper.startswith("DECISION:"):
@@ -1466,51 +1422,95 @@ def parse_sonnet_response(text: str) -> dict:
         elif in_draft:
             draft_lines.append(line)
 
-    if draft_lines:
-        draft = "\n".join(draft_lines).strip()
+    draft = "\n".join(draft_lines).strip() if draft_lines else ""
 
     return {
-        "pass": decision == "share",
+        "share": decision == "share",
         "reasoning": reasoning,
         "draft": draft,
     }
 
 
-async def run_sonnet_check(
-    candidate: CurationCandidate,
-    haiku_result: dict,
-    gemini_result: dict,
-    api_key: str,
-    platform: str = "twitter",
+async def evaluate_candidate(
+    candidate: CurationCandidate, platform: str = "twitter"
 ) -> dict:
-    """Run Sonnet final judgment on a candidate. Returns parsed result dict."""
-    try:
-        import anthropic
-        client = anthropic.AsyncAnthropic(api_key=api_key)
-        prompt = build_sonnet_prompt(candidate, haiku_result, gemini_result, platform)
+    """Full evaluation of a single candidate using Claude Code CLI.
 
-        message = await client.messages.create(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=500,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        response_text = message.content[0].text
-        return parse_sonnet_response(response_text)
-    except Exception:
-        log.exception("Sonnet check failed for %s", candidate.url)
-        return {"pass": False, "reasoning": "Sonnet check failed", "draft": ""}
+    Runs two sequential claude -p calls:
+    1. Evaluate: relevance, quality, OSS/indie classification
+    2. Draft: final share/skip decision + post text (only if eval passes)
+
+    Returns a dict with all evaluation results.
+    """
+    # Step 1: Evaluate
+    eval_prompt = build_evaluate_prompt(candidate)
+    eval_text = await _run_claude(eval_prompt, model="haiku")
+    if not eval_text:
+        return {"relevant": False, "reasoning": "CLI evaluation failed"}
+
+    evaluation = parse_evaluate_response(eval_text)
+
+    # Early exit if not relevant or low quality
+    if not evaluation["relevant"] or evaluation["is_clickbait"]:
+        return evaluation
+    if evaluation["quality_score"] < 6.0:
+        return evaluation
+
+    # Step 2: Draft post (only for candidates that pass evaluation)
+    draft_prompt = build_draft_prompt(candidate, evaluation, platform)
+    draft_text = await _run_claude(draft_prompt, model="sonnet")
+    if not draft_text:
+        evaluation["share"] = False
+        return evaluation
+
+    draft_result = parse_draft_response(draft_text)
+    evaluation.update(draft_result)
+    return evaluation
+
+
+async def evaluate_batch(
+    candidates: list[CurationCandidate],
+    platform: str = "twitter",
+    max_parallel: int = 5,
+) -> list[tuple[CurationCandidate, dict]]:
+    """Evaluate multiple candidates in parallel using Claude Code CLI subagents.
+
+    Spins up to max_parallel concurrent subprocess evaluations.
+    Returns list of (candidate, result) tuples for candidates that pass.
+    """
+    semaphore = asyncio.Semaphore(max_parallel)
+
+    async def _eval_one(c: CurationCandidate) -> tuple[CurationCandidate, dict]:
+        async with semaphore:
+            result = await evaluate_candidate(c, platform)
+            return (c, result)
+
+    tasks = [_eval_one(c) for c in candidates]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    approved = []
+    for r in results:
+        if isinstance(r, Exception):
+            log.error("Evaluation error: %s", r)
+            continue
+        candidate, result = r
+        if result.get("share") and result.get("draft"):
+            approved.append((candidate, result))
+
+    log.info("Batch evaluation: %d/%d approved", len(approved), len(candidates))
+    return approved
 ```
 
 **Step 3: Run tests**
 
-Run: ssh officejawn "cd /home/jamditis/projects/keyjawn/worker && venv/bin/python -m pytest tests/test_curation.py -v -k 'haiku or gemini or sonnet'"
+Run: ssh officejawn "cd /home/jamditis/projects/keyjawn/worker && venv/bin/python -m pytest tests/test_curation.py -v -k 'evaluate or draft'"
 Expected: All PASSED
 
 **Step 4: Commit**
 
 ```bash
 git add worker/curation/evaluate.py tests/test_curation.py
-git commit -m "feat(curation): add AI evaluation stages (Haiku, Gemini, Sonnet)"
+git commit -m "feat(curation): add CLI-based AI evaluation with parallel subagents"
 ```
 
 ---
@@ -1521,6 +1521,8 @@ git commit -m "feat(curation): add AI evaluation stages (Haiku, Gemini, Sonnet)"
 - Create: worker/curation/pipeline.py
 - Test: tests/test_curation.py
 
+**Key design:** The pipeline has two stages: (1) local keyword filter, then (2) parallel CLI-based AI evaluation via evaluate_batch() from Task 7. No API calls.
+
 **Step 1: Write failing test**
 
 Add to tests/test_curation.py:
@@ -1529,7 +1531,7 @@ from worker.curation.pipeline import CurationPipeline
 
 
 def test_pipeline_keyword_filter():
-    pipeline = CurationPipeline(anthropic_key="test", db=None)
+    pipeline = CurationPipeline(db=None)
 
     good = CurationCandidate(
         source="youtube", url="http://good.com", author="dev",
@@ -1552,7 +1554,13 @@ def test_pipeline_keyword_filter():
 
 Create worker/curation/pipeline.py:
 ```python
-"""Four-stage evaluation pipeline for curation candidates."""
+"""Two-stage evaluation pipeline for curation candidates.
+
+Stage 1: Local keyword scoring (instant, no API calls)
+Stage 2: Parallel CLI-based AI evaluation via Claude Code subprocess calls
+
+No direct LLM API calls. All AI runs through 'claude -p' in evaluate.py.
+"""
 
 from __future__ import annotations
 
@@ -1560,11 +1568,7 @@ import logging
 from typing import Optional
 
 from worker.curation.boost import BOOST_SCORE, is_boosted
-from worker.curation.evaluate import (
-    run_gemini_check,
-    run_haiku_check,
-    run_sonnet_check,
-)
+from worker.curation.evaluate import evaluate_batch
 from worker.curation.keywords import score_keywords
 from worker.curation.models import CurationCandidate
 from worker.db import Database
@@ -1572,13 +1576,12 @@ from worker.db import Database
 log = logging.getLogger(__name__)
 
 KEYWORD_THRESHOLD = 0.3
-GEMINI_THRESHOLD = 7.0
 
 
 class CurationPipeline:
-    def __init__(self, anthropic_key: str, db: Optional[Database] = None):
-        self.anthropic_key = anthropic_key
+    def __init__(self, db: Optional[Database] = None, max_parallel: int = 5):
         self.db = db
+        self.max_parallel = max_parallel
 
     def _keyword_filter(self, candidates: list[CurationCandidate]) -> list[CurationCandidate]:
         """Stage 1: Local keyword scoring. Drop candidates below threshold."""
@@ -1595,93 +1598,47 @@ class CurationPipeline:
                  len(passed), len(candidates), KEYWORD_THRESHOLD)
         return passed
 
-    async def _haiku_filter(self, candidates: list[CurationCandidate]) -> list[CurationCandidate]:
-        """Stage 2: Haiku quick-check. Drop candidates that fail."""
-        passed = []
-        for c in candidates:
-            result = await run_haiku_check(c, self.anthropic_key)
-            c.haiku_pass = result.get("pass", False)
-            c.haiku_reasoning = result.get("reasoning", "")
-
-            if result.get("is_oss"):
-                c.keyword_score = min(c.keyword_score + 0.25, 1.0)
-            if result.get("is_indie"):
-                c.keyword_score = min(c.keyword_score + 0.20, 1.0)
-            if result.get("is_corporate"):
-                c.keyword_score = max(c.keyword_score - 0.15, 0.0)
-
-            if c.haiku_pass:
-                passed.append(c)
-
-        log.info("Haiku filter: %d/%d passed", len(passed), len(candidates))
-        return passed
-
-    async def _gemini_evaluate(self, candidates: list[CurationCandidate]) -> list[CurationCandidate]:
-        """Stage 3: Gemini deep-dive. Score and filter by quality threshold."""
-        passed = []
-        for c in candidates:
-            result = await run_gemini_check(c)
-            c.gemini_score = result.get("score", 0.0)
-            c.gemini_analysis = result.get("analysis", "")
-
-            if c.gemini_score >= GEMINI_THRESHOLD:
-                passed.append(c)
-
-        log.info("Gemini evaluate: %d/%d passed (threshold %.0f/10)",
-                 len(passed), len(candidates), GEMINI_THRESHOLD)
-        return passed
-
-    async def _sonnet_judge(
-        self, candidates: list[CurationCandidate], platform: str = "twitter"
-    ) -> list[CurationCandidate]:
-        """Stage 4: Sonnet judgment + draft post. Final filter."""
-        passed = []
-        for c in candidates:
-            result = await run_sonnet_check(
-                c, {"reasoning": c.haiku_reasoning},
-                {"analysis": c.gemini_analysis, "score": c.gemini_score},
-                self.anthropic_key, platform,
-            )
-            c.sonnet_pass = result.get("pass", False)
-            c.sonnet_draft = result.get("draft", "")
-            c.sonnet_reasoning = result.get("reasoning", "")
-
-            c.final_score = round(
-                (c.keyword_score * 0.3) + ((c.gemini_score / 10.0) * 0.7),
-                2,
-            )
-
-            if c.sonnet_pass and c.sonnet_draft:
-                passed.append(c)
-
-        log.info("Sonnet judge: %d/%d passed", len(passed), len(candidates))
-        return passed
-
     async def evaluate(
         self, candidates: list[CurationCandidate], platform: str = "twitter"
     ) -> list[CurationCandidate]:
-        """Run all four pipeline stages. Returns approved candidates with drafts."""
+        """Run keyword filter then parallel CLI-based AI evaluation."""
         log.info("Pipeline starting with %d candidates", len(candidates))
 
-        stage1 = self._keyword_filter(candidates)
-        if not stage1:
+        # Stage 1: keyword filter (local, instant)
+        filtered = self._keyword_filter(candidates)
+        if not filtered:
             return []
 
-        stage2 = await self._haiku_filter(stage1[:100])
-        if not stage2:
-            return []
+        # Stage 2: parallel Claude Code CLI evaluation (top 20 by keyword score)
+        filtered.sort(key=lambda c: c.keyword_score, reverse=True)
+        to_evaluate = filtered[:20]
 
-        stage3 = await self._gemini_evaluate(stage2[:20])
-        if not stage3:
-            return []
+        approved_pairs = await evaluate_batch(
+            to_evaluate, platform=platform, max_parallel=self.max_parallel
+        )
 
-        stage4 = await self._sonnet_judge(stage3[:5], platform)
-        stage4.sort(key=lambda c: c.final_score, reverse=True)
+        # Update candidate fields from evaluation results
+        approved = []
+        for candidate, result in approved_pairs:
+            candidate.haiku_pass = result.get("relevant", False)
+            candidate.haiku_reasoning = result.get("reasoning", "")
+            candidate.sonnet_pass = result.get("share", False)
+            candidate.sonnet_draft = result.get("draft", "")
+            candidate.sonnet_reasoning = result.get("reasoning", "")
+            candidate.gemini_score = result.get("quality_score", 0.0)
+            candidate.final_score = round(
+                (candidate.keyword_score * 0.3)
+                + ((result.get("quality_score", 0.0) / 10.0) * 0.7),
+                2,
+            )
+            approved.append(candidate)
 
-        log.info("Pipeline complete: %d candidates approved", len(stage4))
+        approved.sort(key=lambda c: c.final_score, reverse=True)
+        log.info("Pipeline complete: %d candidates approved", len(approved))
 
+        # Persist evaluation results to DB
         if self.db:
-            for c in stage4:
+            for c in approved:
                 db_id = c.metadata.get("db_id", "")
                 if db_id:
                     await self.db.update_curation_evaluation(
@@ -1690,7 +1647,6 @@ class CurationPipeline:
                         haiku_pass=c.haiku_pass,
                         haiku_reasoning=c.haiku_reasoning,
                         gemini_score=c.gemini_score,
-                        gemini_analysis=c.gemini_analysis,
                         sonnet_pass=c.sonnet_pass,
                         sonnet_draft=c.sonnet_draft,
                         sonnet_reasoning=c.sonnet_reasoning,
@@ -1698,7 +1654,7 @@ class CurationPipeline:
                         status="approved",
                     )
 
-        return stage4
+        return approved
 ```
 
 **Step 3: Run tests**
@@ -1710,7 +1666,7 @@ Expected: All PASSED
 
 ```bash
 git add worker/curation/pipeline.py tests/test_curation.py
-git commit -m "feat(curation): add four-stage evaluation pipeline orchestrator"
+git commit -m "feat(curation): add two-stage evaluation pipeline (keyword + parallel CLI)"
 ```
 
 ---
@@ -1755,12 +1711,14 @@ class CurationConfig:
     youtube_api_key: str = ""
     twitch_client_id: str = ""
     twitch_client_secret: str = ""
-    anthropic_api_key: str = ""
     google_alert_urls: tuple = ()
     max_curated_shares_per_day: int = 2
+    max_parallel_evaluations: int = 5
     scan_interval_hours: int = 6
     twitch_scan_interval_hours: int = 8
 ```
+
+Note: NO anthropic_api_key field. AI evaluation runs through Claude Code CLI subprocesses (see evaluate.py).
 
 Add to Config dataclass: `curation: CurationConfig = field(default_factory=CurationConfig)`
 
@@ -1777,15 +1735,11 @@ Update from_pass() to load curation keys (with try/except for missing keys):
         except subprocess.CalledProcessError:
             twitch_id = ""
             twitch_secret = ""
-        try:
-            anthropic_key = _pass_get("claude/api/anthropic")
-        except subprocess.CalledProcessError:
-            anthropic_key = ""
 ```
 
-Add to cls() return: `curation=CurationConfig(youtube_api_key=yt_key, twitch_client_id=twitch_id, twitch_client_secret=twitch_secret, anthropic_api_key=anthropic_key)`
+Add to cls() return: `curation=CurationConfig(youtube_api_key=yt_key, twitch_client_id=twitch_id, twitch_client_secret=twitch_secret)`
 
-Update for_testing(): `curation=CurationConfig(anthropic_api_key="test-anthropic-key")`
+Update for_testing(): `curation=CurationConfig()`
 
 **Step 3: Implement curation monitor**
 
@@ -1818,15 +1772,15 @@ class CurationMonitor:
         self.youtube: Optional[YouTubeSource] = None
         self.news: Optional[NewsSource] = None
         self.twitch: Optional[TwitchSource] = None
-        self.pipeline: Optional[CurationPipeline] = None
 
         if config.youtube_api_key:
             self.youtube = YouTubeSource(config.youtube_api_key)
         self.news = NewsSource(list(config.google_alert_urls))
         if config.twitch_client_id and config.twitch_client_secret:
             self.twitch = TwitchSource(config.twitch_client_id, config.twitch_client_secret)
-        if config.anthropic_api_key:
-            self.pipeline = CurationPipeline(config.anthropic_api_key, db)
+        self.pipeline = CurationPipeline(
+            db=db, max_parallel=config.max_parallel_evaluations
+        )
 
     async def scan_sources(self, include_twitch: bool = False) -> list[CurationCandidate]:
         """Scan all configured sources and return candidates."""
@@ -1876,10 +1830,6 @@ class CurationMonitor:
 
     async def run_evaluation(self, platform: str = "twitter") -> list[CurationCandidate]:
         """Evaluate all new candidates through the pipeline."""
-        if not self.pipeline:
-            log.warning("No Anthropic API key configured, skipping evaluation")
-            return []
-
         new_rows = await self.db.get_new_curations(limit=50)
         candidates = []
         for row in new_rows:
@@ -2141,15 +2091,11 @@ Go to dev.twitch.tv/console:
 2. Get Client ID and Client Secret
 3. Store: pass insert -m claude/api/twitch (client_id line 1, client_secret line 2)
 
-**Step 3: Verify Anthropic API key exists**
-
-Run: pass show claude/api/anthropic | head -c 10
-
-**Step 4: Copy keys to officejawn**
+**Step 3: Copy keys to officejawn**
 
 Store the new keys in officejawn pass store.
 
-**Step 5: Integration test**
+**Step 4: Integration test**
 
 Run curation-scan on officejawn:
 ```bash
@@ -2163,13 +2109,13 @@ Verify:
 - Keyword filter drops irrelevant content
 - Pipeline logs show progression through stages
 
-**Step 6: Restart worker**
+**Step 5: Restart worker**
 
 ```bash
 ssh officejawn "sudo systemctl restart keyjawn-worker"
 ```
 
-**Step 7: Final commit and push**
+**Step 6: Final commit and push**
 
 ```bash
 git add -A
