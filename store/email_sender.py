@@ -1,45 +1,166 @@
 import os
 import logging
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 log = logging.getLogger("keyjawn-store")
-FROM_EMAIL = "KeyJawn <support@keyjawn.amditis.tech>"
+
+FROM_EMAIL = "jamditis@gmail.com"
+FROM_NAME = "KeyJawn"
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
+GITHUB_RELEASES = "https://github.com/jamditis/keyjawn/releases"
+
+
+def _get_latest_version() -> str:
+    """Get the latest release version from the DB, or fall back to 'latest'."""
+    try:
+        from db import get_db
+        conn = get_db()
+        row = conn.execute(
+            "SELECT version FROM releases ORDER BY released_at DESC LIMIT 1"
+        ).fetchone()
+        conn.close()
+        if row:
+            return row["version"]
+    except Exception:
+        pass
+    return "latest"
+
+
+def _apk_url(version: str) -> str:
+    if version == "latest":
+        return f"{GITHUB_RELEASES}/latest"
+    return f"{GITHUB_RELEASES}/download/v{version}/app-full-release.apk"
+
+
+def _send_email(to: str, subject: str, html: str):
+    msg = MIMEMultipart("alternative")
+    msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
+            smtp.starttls()
+            smtp.login(FROM_EMAIL, GMAIL_APP_PASSWORD)
+            smtp.sendmail(FROM_EMAIL, [to, FROM_EMAIL], msg.as_string())
+        log.info(f"Email sent to {to}")
+    except Exception as e:
+        log.error(f"Failed to send email to {to}: {e}")
+
+
+def _download_email_html(version: str) -> str:
+    url = _apk_url(version)
+    return f"""\
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0; padding:0; background:#f4f4f7; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7; padding:32px 0;">
+    <tr><td align="center">
+      <table width="540" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; overflow:hidden;">
+
+        <!-- header -->
+        <tr><td style="background:#1B1B1F; padding:24px 32px;">
+          <span style="color:#6cf2a8; font-size:22px; font-weight:700; letter-spacing:0.5px;">KeyJawn</span>
+          <span style="color:#6E6E78; font-size:14px; float:right; line-height:30px;">full version</span>
+        </td></tr>
+
+        <!-- body -->
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 16px; font-size:16px; color:#1a1a1a; line-height:1.5;">
+            Thanks for the purchase. Here's your download link:
+          </p>
+
+          <!-- download button -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+            <tr><td align="center">
+              <a href="{url}"
+                 style="display:inline-block; background:#6cf2a8; color:#0a0a0f; text-decoration:none;
+                        font-size:16px; font-weight:600; padding:14px 32px; border-radius:6px;">
+                Download KeyJawn v{version}
+              </a>
+            </td></tr>
+          </table>
+
+          <p style="margin:0 0 8px; font-size:14px; color:#555; line-height:1.5;">
+            <strong>To install:</strong> Open the APK on your Android device, or use
+            <code style="background:#f0f0f3; padding:2px 5px; border-radius:3px; font-size:13px;">adb install app-full-release.apk</code>
+          </p>
+
+          <p style="margin:16px 0 0; font-size:14px; color:#555; line-height:1.5;">
+            Future updates will be posted to
+            <a href="{GITHUB_RELEASES}" style="color:#6cf2a8; text-decoration:none;">the releases page</a>.
+            Bookmark it to stay current.
+          </p>
+        </td></tr>
+
+        <!-- footer -->
+        <tr><td style="padding:20px 32px; border-top:1px solid #eee;">
+          <p style="margin:0; font-size:12px; color:#999; line-height:1.5;">
+            Questions? Reply to this email.
+            <br>KeyJawn -- a keyboard for people who use the terminal from their phone.
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+
+def _ticket_email_html(ticket_id: int) -> str:
+    return f"""\
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0; padding:0; background:#f4f4f7; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7; padding:32px 0;">
+    <tr><td align="center">
+      <table width="540" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; overflow:hidden;">
+
+        <tr><td style="background:#1B1B1F; padding:24px 32px;">
+          <span style="color:#6cf2a8; font-size:22px; font-weight:700; letter-spacing:0.5px;">KeyJawn</span>
+          <span style="color:#6E6E78; font-size:14px; float:right; line-height:30px;">support</span>
+        </td></tr>
+
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 16px; font-size:16px; color:#1a1a1a; line-height:1.5;">
+            Got your support request (ticket #{ticket_id}). Looking into it.
+          </p>
+          <p style="margin:0; font-size:14px; color:#555; line-height:1.5;">
+            Reply to this email with any additional details.
+          </p>
+        </td></tr>
+
+        <tr><td style="padding:20px 32px; border-top:1px solid #eee;">
+          <p style="margin:0; font-size:12px; color:#999; line-height:1.5;">
+            KeyJawn support -- we'll get back to you soon.
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
 
 
 def send_download_email(to_email: str):
-    try:
-        import resend
-        resend.api_key = os.environ.get("RESEND_API_KEY", "")
-        resend.Emails.send({
-            "from": FROM_EMAIL,
-            "to": [to_email],
-            "bcc": ["jamditis@gmail.com"],
-            "subject": "KeyJawn full version -- your download link",
-            "html": f"""
-                <p>Thanks for buying KeyJawn.</p>
-                <p>Download the latest full version here:<br>
-                <a href="https://keyjawn.amditis.tech/download">keyjawn.amditis.tech/download</a></p>
-                <p>Enter <strong>{to_email}</strong> on the download page to get the APK.</p>
-                <p>For updates, just visit the same page -- it always has the latest version.</p>
-                <p>-- KeyJawn</p>
-            """
-        })
-    except Exception as e:
-        log.error(f"Failed to send download email to {to_email}: {e}")
+    version = _get_latest_version()
+    _send_email(
+        to_email,
+        f"KeyJawn v{version} -- your download link",
+        _download_email_html(version),
+    )
 
 
 def send_ticket_confirmation(to_email: str, subject: str, ticket_id: int):
-    try:
-        import resend
-        resend.api_key = os.environ.get("RESEND_API_KEY", "")
-        resend.Emails.send({
-            "from": FROM_EMAIL,
-            "to": [to_email],
-            "bcc": ["jamditis@gmail.com"],
-            "subject": f"Re: {subject} [#{ticket_id}]",
-            "html": f"""
-                <p>Got your support request (ticket #{ticket_id}). Looking into it.</p>
-                <p>-- KeyJawn support</p>
-            """
-        })
-    except Exception as e:
-        log.error(f"Failed to send ticket confirmation to {to_email}: {e}")
+    _send_email(
+        to_email,
+        f"Re: {subject} [#{ticket_id}]",
+        _ticket_email_html(ticket_id),
+    )
