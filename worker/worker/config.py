@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from dataclasses import dataclass, field
 
@@ -93,7 +94,7 @@ class Config:
             ),
             telegram=TelegramConfig(
                 bot_token=telegram_token,
-                chat_id="",  # set from env or pass
+                chat_id=os.environ.get("TELEGRAM_CHAT_ID", "743339387"),
             ),
             redis=RedisConfig(
                 password=redis_password,
