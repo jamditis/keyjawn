@@ -10,7 +10,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section">
     <div class="container">
       <h1 class="page-title">Features</h1>
-      <p class="page-intro">Everything the keyboard does, section by section. The lite version includes the core keyboard features. The full version adds voice, clipboard, SCP, slash commands, and swipe gestures.</p>
+      <p class="page-intro">Everything the keyboard does, section by section. The free version includes voice input, clipboard history, slash commands, and swipe gestures. The full version adds SCP upload, color themes, clipboard pinning, and custom slash commands.</p>
     </div>
   </section>
 
@@ -87,7 +87,7 @@ import KeyCap from '../components/KeyCap.astro';
         <h2>Voice input</h2>
         <p>Tap the mic in the extra row. A waveform animation shows audio level while you speak. Text appears at your cursor as the speech recognizer processes it -- streaming partial results, not waiting for you to finish.</p>
         <p>When 90% of what you type into an AI agent is natural language, speaking is faster than typing on a phone keyboard. Tap stop or the mic again to finish.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only. Requires microphone permission.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Requires microphone permission.</p>
       </div>
       <div class="feature-visual">
         <div class="voice-demo">
@@ -112,8 +112,8 @@ import KeyCap from '../components/KeyCap.astro';
     <div class="container feature-row">
       <div class="feature-content">
         <h2>Clipboard history</h2>
-        <p>Tap the clipboard button in the extra row to see your recent clipboard history. Tap any entry to paste it at your cursor. No more switching apps to re-copy something you already copied.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
+        <p>Tap the clipboard button in the extra row to see your recent clipboard history (up to 30 items). Tap any entry to paste it at your cursor. No more switching apps to re-copy something you already copied.</p>
+        <p>The full version adds pinning -- long-lived clipboard items that persist across sessions and stay at the top of the list.</p>
       </div>
       <div class="feature-visual">
         <div class="clipboard-demo">
@@ -154,7 +154,6 @@ import KeyCap from '../components/KeyCap.astro';
         <h2>Slash commands</h2>
         <p>On the symbols layer, the <code>/</code> key opens a command picker instead of typing a literal slash. Select a command to insert it. Dismiss without selecting to type <code>/</code> normally.</p>
         <p>Built for the slash command patterns every LLM CLI uses: <code>/help</code>, <code>/clear</code>, <code>/compact</code>, and others.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
       </div>
       <div class="feature-visual">
         <div class="slash-demo card">
@@ -235,7 +234,6 @@ import KeyCap from '../components/KeyCap.astro';
           <li><strong>Swipe up</strong> -- switch to symbols layer</li>
           <li><strong>Swipe down</strong> -- switch to letters layer</li>
         </ul>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
       </div>
       <div class="feature-visual">
         <div class="swipe-demo">
@@ -309,7 +307,6 @@ import KeyCap from '../components/KeyCap.astro';
         <h2>Per-app autocorrect</h2>
         <p>Off by default -- because autocorrect in a terminal is a disaster. Long-press the spacebar to toggle autocorrect per app. When enabled, the spacebar label changes to show you it's active.</p>
         <p>Turn it on for Slack, leave it off for Termux. KeyJawn remembers the setting for each app.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
       </div>
       <div class="feature-visual">
         <div class="autocorrect-demo card">
