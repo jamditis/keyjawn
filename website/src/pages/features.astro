@@ -9,7 +9,7 @@ import KeyCap from '../components/KeyCap.astro';
 >
   <section class="section">
     <div class="container">
-      <h1 class="page-title"><span class="prompt">man keyjawn</span></h1>
+      <h1 class="page-title">Features</h1>
       <p class="page-intro">Everything the keyboard does, section by section. The lite version includes the core keyboard features. The full version adds voice, clipboard, SCP, slash commands, and swipe gestures.</p>
     </div>
   </section>
@@ -18,7 +18,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="terminal-keys">
     <div class="container feature-row">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --terminal-keys</h2>
+        <h2>Terminal keys</h2>
         <p>A dedicated row above the QWERTY layout with the keys terminals need: <KeyCap label="Esc" />, <KeyCap label="Tab" />, <KeyCap label="Ctrl" />, and arrow keys <KeyCap label="<" /> <KeyCap label=">" />.</p>
         <p>Always visible. No toggling layers or long-pressing to find them. <KeyCap label="Ctrl" /> uses a three-state toggle: tap once to arm it for one keypress, long-press to lock it on, tap again to turn it off. Hold arrow keys to repeat.</p>
       </div>
@@ -38,7 +38,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="number-row">
     <div class="container feature-row reverse">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --number-row</h2>
+        <h2>Number row</h2>
         <p>A dedicated 0-9 row above the QWERTY keys. Long-press any number for its shifted symbol. Small hint labels on each key show you what you'll get.</p>
         <p>No switching layers to type a number. No memorizing which symbol lives where. Every key shows both values up front.</p>
       </div>
@@ -63,7 +63,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="alt-keys">
     <div class="container feature-row">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --alt-keys</h2>
+        <h2>Alt characters</h2>
         <p>Long-press any letter for accented characters and symbol variants. Keys with a single alt character fire immediately. Keys with multiple options show a popup where you slide to pick.</p>
         <p>Examples: long-press <KeyCap label="a" /> for accented variants, <KeyCap label="n" /> for the tilde variant, <KeyCap label="e" /> for accented forms.</p>
       </div>
@@ -84,7 +84,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="voice">
     <div class="container feature-row reverse">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --voice</h2>
+        <h2>Voice input</h2>
         <p>Tap the mic in the extra row. A waveform animation shows audio level while you speak. Text appears at your cursor as the speech recognizer processes it -- streaming partial results, not waiting for you to finish.</p>
         <p>When 90% of what you type into an AI agent is natural language, speaking is faster than typing on a phone keyboard. Tap stop or the mic again to finish.</p>
         <p class="text-muted" style="font-size: 0.85rem;">Full version only. Requires microphone permission.</p>
@@ -111,7 +111,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="clipboard">
     <div class="container feature-row">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --clipboard</h2>
+        <h2>Clipboard history</h2>
         <p>Tap the clipboard button in the extra row to see your recent clipboard history. Tap any entry to paste it at your cursor. No more switching apps to re-copy something you already copied.</p>
         <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
       </div>
@@ -129,7 +129,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="scp-upload">
     <div class="container feature-row reverse">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --scp-upload</h2>
+        <h2>SCP upload</h2>
         <p>Configure your SSH hosts in settings. Tap the upload button in the extra row. Pick a photo from your gallery. KeyJawn SCPs it to your server and types the remote file path at your cursor.</p>
         <p>Useful for sharing screenshots with Claude Code without leaving the terminal. One tap to upload, path auto-inserted.</p>
         <p class="text-muted" style="font-size: 0.85rem;">Full version only. Credentials stored with AndroidX EncryptedSharedPreferences.</p>
@@ -151,7 +151,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="slash-commands">
     <div class="container feature-row">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --slash-commands</h2>
+        <h2>Slash commands</h2>
         <p>On the symbols layer, the <code>/</code> key opens a command picker instead of typing a literal slash. Select a command to insert it. Dismiss without selecting to type <code>/</code> normally.</p>
         <p>Built for the slash command patterns every LLM CLI uses: <code>/help</code>, <code>/clear</code>, <code>/compact</code>, and others.</p>
         <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
@@ -172,7 +172,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="themes">
     <div class="container feature-row reverse">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --themes</h2>
+        <h2>Color themes</h2>
         <p>Four color themes to match your setup: Dark (the default), Light for outdoor use, OLED black for true-black displays, and Terminal green for the classic look.</p>
         <p>Themes apply to every element -- keys, backgrounds, hints, accent colors. Pick one in settings and the keyboard changes on the next open.</p>
         <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
@@ -204,7 +204,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="custom-commands">
     <div class="container feature-row">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --custom-commands</h2>
+        <h2>Custom slash commands</h2>
         <p>Create your own slash command sets alongside the built-in ones. Add commands for tools you use, group them by project, toggle sets on and off.</p>
         <p>Built-in sets cover Claude Code, OpenClaw, and Gemini CLI patterns. Custom sets let you add whatever commands your workflow needs.</p>
         <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
@@ -227,7 +227,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="swipe">
     <div class="container feature-row reverse">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --swipe</h2>
+        <h2>Swipe gestures</h2>
         <p>Swipe across the keyboard area for quick actions:</p>
         <ul>
           <li><strong>Swipe left</strong> -- delete word</li>
@@ -264,7 +264,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="quick-key">
     <div class="container feature-row">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --quick-key</h2>
+        <h2>Quick key</h2>
         <p>The bottom-right key (next to the spacebar) is configurable. Long-press it to pick from <code>/</code>, <code>.</code>, <code>,</code>, <code>?</code>, <code>!</code>, and more. It remembers your choice.</p>
         <p>Set it to whatever character you type most often. Default is <code>/</code> for terminal users.</p>
       </div>
@@ -284,7 +284,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="color-coded-keys">
     <div class="container feature-row reverse">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --colors</h2>
+        <h2>Color-coded keys</h2>
         <p>Each function key in the extra row has a distinct background color. At a glance, you can tell Esc from Tab from Ctrl from the arrow cluster. No reading labels in the heat of a terminal session.</p>
         <p>Arrow keys share one color. Clipboard, upload, and mic each get their own. Ctrl stays neutral until armed or locked, then shifts to active/locked colors.</p>
       </div>
@@ -306,7 +306,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="autocorrect">
     <div class="container feature-row">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --autocorrect</h2>
+        <h2>Per-app autocorrect</h2>
         <p>Off by default -- because autocorrect in a terminal is a disaster. Long-press the spacebar to toggle autocorrect per app. When enabled, the spacebar label changes to show you it's active.</p>
         <p>Turn it on for Slack, leave it off for Termux. KeyJawn remembers the setting for each app.</p>
         <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
@@ -334,7 +334,7 @@ import KeyCap from '../components/KeyCap.astro';
   <section class="section feature-section" id="shift">
     <div class="container feature-row reverse">
       <div class="feature-content">
-        <h2 class="prompt">keyjawn --shift</h2>
+        <h2>Shift and caps lock</h2>
         <p>Single-tap <KeyCap label="Shift" /> for one uppercase letter -- it auto-returns to lowercase after. Double-tap for caps lock. The shift key changes appearance to show you which state you're in.</p>
       </div>
       <div class="feature-visual">

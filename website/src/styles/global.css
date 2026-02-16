@@ -166,16 +166,7 @@ li::marker {
   border-top: 1px solid var(--border);
 }
 
-/* Section headings with terminal prompt */
-.prompt {
-  font-family: var(--font-mono);
-  color: var(--accent);
-}
-
-.prompt::before {
-  content: '$ ';
-  color: var(--text-muted);
-}
+/* Section headings */
 
 /* Cards */
 .card {

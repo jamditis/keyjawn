@@ -10,7 +10,7 @@ const { title, description, icon } = Astro.props;
 
 <div class="feature-card card">
   {icon && <div class="feature-icon">{icon}</div>}
-  <h3 class="feature-title"><span class="prompt-prefix">$</span> {title}</h3>
+  <h3 class="feature-title">{title}</h3>
   <p class="feature-desc">{description}</p>
   <slot />
 </div>
@@ -42,11 +42,6 @@ const { title, description, icon } = Astro.props;
     font-size: 1rem;
     font-weight: 500;
     color: #e0e0e8;
-  }
-
-  .prompt-prefix {
-    color: var(--text-muted);
-    font-weight: 400;
   }
 
   .feature-desc {
