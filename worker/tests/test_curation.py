@@ -236,3 +236,30 @@ def test_youtube_parse_results():
     assert candidates[0].title == "Cool CLI tool"
     assert candidates[0].author == "DevChannel"
     assert "abc123" in candidates[0].url
+
+
+from unittest.mock import MagicMock
+from worker.curation.sources.news import NewsSource, RSS_FEEDS, GOOGLE_ALERT_TOPICS
+
+
+def test_news_rss_feeds_defined():
+    assert len(RSS_FEEDS) > 0
+
+
+def test_news_google_alert_topics_defined():
+    assert len(GOOGLE_ALERT_TOPICS) > 0
+
+
+def test_news_parse_feed_entry():
+    source = NewsSource()
+    entry = MagicMock()
+    entry.title = "New open source CLI tool released"
+    entry.link = "https://example.com/article"
+    entry.summary = "A new terminal tool for developers"
+    entry.published_parsed = None
+    entry.author = "TechBlog"
+
+    candidate = source._parse_entry(entry, "test_feed")
+    assert candidate.source == "google_news"
+    assert candidate.title == "New open source CLI tool released"
+    assert candidate.url == "https://example.com/article"
