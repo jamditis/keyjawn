@@ -100,6 +100,27 @@ class ExtraRowManagerTest {
     }
 
     @Test
+    fun `slot 0 defaults to ESC behavior`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = AppPrefs(context)
+        assertEquals("keycode:KEYCODE_ESCAPE", prefs.getExtraSlot(0))
+    }
+
+    @Test
+    fun `slot 1 defaults to Tab behavior`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = AppPrefs(context)
+        assertEquals("keycode:KEYCODE_TAB", prefs.getExtraSlot(1))
+    }
+
+    @Test
+    fun `slot 2 defaults to Ctrl`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = AppPrefs(context)
+        assertEquals("ctrl", prefs.getExtraSlot(2))
+    }
+
+    @Test
     fun `tab click sends KEYCODE_TAB`() {
         val context = RuntimeEnvironment.getApplication()
         val view = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null)

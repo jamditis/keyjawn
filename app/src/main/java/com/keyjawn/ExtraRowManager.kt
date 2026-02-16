@@ -51,10 +51,10 @@ class ExtraRowManager(
     private var tooltipDismissRunnable: Runnable? = null
 
     init {
-        wireEsc()
-        wireTab()
+        wireSlot(0, R.id.key_esc)
+        wireSlot(1, R.id.key_tab)
         wireClipboard()
-        wireCtrl()
+        wireSlot(2, R.id.key_ctrl)
         wireArrow(R.id.key_left, KeyEvent.KEYCODE_DPAD_LEFT)
         wireArrow(R.id.key_down, KeyEvent.KEYCODE_DPAD_DOWN)
         wireArrow(R.id.key_up, KeyEvent.KEYCODE_DPAD_UP)
@@ -108,18 +108,51 @@ class ExtraRowManager(
 
     fun consumeCtrl(): Boolean = ctrlState.consume()
 
-    private fun wireEsc() {
-        view.findViewById<Button>(R.id.key_esc).setOnClickListener {
-            val ic = inputConnectionProvider() ?: return@setOnClickListener
-            keySender.sendKey(ic, KeyEvent.KEYCODE_ESCAPE)
+    fun wireSlot(slotIndex: Int, buttonId: Int) {
+        val button = view.findViewById<Button>(buttonId)
+        val defaults = arrayOf("keycode:KEYCODE_ESCAPE", "keycode:KEYCODE_TAB", "ctrl")
+        val config = appPrefs?.getExtraSlot(slotIndex)
+            ?: defaults.getOrElse(slotIndex) { return }
+
+        // Clear existing listeners
+        button.setOnClickListener(null)
+        button.setOnLongClickListener(null)
+
+        when {
+            config == "ctrl" -> {
+                button.text = "Ctrl"
+                button.setOnClickListener { ctrlState.tap() }
+                button.setOnLongClickListener { ctrlState.longPress(); true }
+            }
+            config.startsWith("keycode:") -> {
+                val keyCodeName = config.removePrefix("keycode:")
+                val keyCode = try {
+                    android.view.KeyEvent::class.java.getField(keyCodeName).getInt(null)
+                } catch (_: Exception) {
+                    android.view.KeyEvent.KEYCODE_ESCAPE
+                }
+                button.text = AppPrefs.getExtraSlotLabel(config)
+                button.setOnClickListener {
+                    val ic = inputConnectionProvider() ?: return@setOnClickListener
+                    keySender.sendKey(ic, keyCode)
+                }
+            }
+            config.startsWith("text:") -> {
+                val text = config.removePrefix("text:")
+                button.text = text
+                button.setOnClickListener {
+                    val ic = inputConnectionProvider() ?: return@setOnClickListener
+                    keySender.sendText(ic, text)
+                }
+            }
         }
     }
 
-    private fun wireTab() {
-        view.findViewById<Button>(R.id.key_tab).setOnClickListener {
-            val ic = inputConnectionProvider() ?: return@setOnClickListener
-            keySender.sendKey(ic, KeyEvent.KEYCODE_TAB)
-        }
+    fun rewireSlots() {
+        wireSlot(0, R.id.key_esc)
+        wireSlot(1, R.id.key_tab)
+        wireSlot(2, R.id.key_ctrl)
+        applyThemeColors()
     }
 
     private fun wireClipboard() {
@@ -172,16 +205,6 @@ class ExtraRowManager(
             }
             clipButton.setOnClickListener { pasteFromSystem() }
             clipButton.setOnLongClickListener { pasteFromSystem(); true }
-        }
-    }
-
-    private fun wireCtrl() {
-        ctrlButton.setOnClickListener {
-            ctrlState.tap()
-        }
-        ctrlButton.setOnLongClickListener {
-            ctrlState.longPress()
-            true
         }
     }
 
