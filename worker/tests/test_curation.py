@@ -1,6 +1,7 @@
 from worker.curation.models import CurationCandidate
 from worker.curation.keywords import score_keywords, POSITIVE_SIGNALS, NEGATIVE_SIGNALS
 from worker.curation.boost import BOOST_CHANNELS, is_boosted
+from worker.curation.sources.youtube import YouTubeSource, SEARCH_TERMS
 
 
 def test_curation_candidate_defaults():
@@ -204,3 +205,34 @@ def test_boost_list_unknown_channel():
 
 def test_boost_list_case_insensitive():
     assert is_boosted("youtube", "fireship")
+
+
+def test_youtube_search_terms_defined():
+    assert len(SEARCH_TERMS) > 0
+    assert any("terminal" in t or "CLI" in t or "keyboard" in t for t in SEARCH_TERMS)
+
+
+def test_youtube_source_init():
+    source = YouTubeSource("test-api-key")
+    assert source.api_key == "test-api-key"
+
+
+def test_youtube_parse_results():
+    source = YouTubeSource("test-key")
+    raw_items = [
+        {
+            "id": {"videoId": "abc123"},
+            "snippet": {
+                "title": "Cool CLI tool",
+                "description": "A terminal emulator for Android",
+                "channelTitle": "DevChannel",
+                "publishedAt": "2026-02-16T12:00:00Z",
+            },
+        },
+    ]
+    candidates = source._parse_search_results(raw_items)
+    assert len(candidates) == 1
+    assert candidates[0].source == "youtube"
+    assert candidates[0].title == "Cool CLI tool"
+    assert candidates[0].author == "DevChannel"
+    assert "abc123" in candidates[0].url
