@@ -60,6 +60,13 @@ class ThemeManager(context: Context) {
         KeyboardTheme.TERMINAL -> 0xFF1A3A1A.toInt()
     }
 
+    fun quickKeyBg(): Int = when (currentTheme) {
+        KeyboardTheme.DARK -> 0xFF2A3A4A.toInt()
+        KeyboardTheme.LIGHT -> 0xFFC0D0E0.toInt()
+        KeyboardTheme.OLED -> 0xFF1A2A3A.toInt()
+        KeyboardTheme.TERMINAL -> 0xFF1A3A2A.toInt()
+    }
+
     fun accent(): Int = when (currentTheme) {
         KeyboardTheme.DARK -> 0xFF6C9BF2.toInt()
         KeyboardTheme.LIGHT -> 0xFF2563EB.toInt()

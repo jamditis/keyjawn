@@ -7,15 +7,71 @@
 
     <include layout="@layout/extra_row" />
 
+    <TextView
+        android:id="@+id/tooltip_bar"
+        android:layout_width="match_parent"
+        android:layout_height="42dp"
+        android:background="@color/extra_row_bg"
+        android:gravity="center"
+        android:textColor="#CCCCCC"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
     <include layout="@layout/voice_bar" />
 
-    <include layout="@layout/number_row" />
-
-    <LinearLayout
-        android:id="@+id/qwerty_container"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@color/qwerty_bg" />
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:id="@+id/keyboard_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <include layout="@layout/number_row" />
+
+            <LinearLayout
+                android:id="@+id/qwerty_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/qwerty_bg" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/clipboard_panel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:background="@color/keyboard_bg"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/clipboard_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp" />
+        </ScrollView>
+
+        <ScrollView
+            android:id="@+id/menu_panel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:background="@color/keyboard_bg"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/menu_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp" />
+        </ScrollView>
+    </FrameLayout>
 
 </LinearLayout>

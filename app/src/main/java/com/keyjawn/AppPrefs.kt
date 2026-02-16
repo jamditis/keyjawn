@@ -29,6 +29,14 @@ class AppPrefs(context: Context) {
         prefs.edit().putString("quick_key", char).apply()
     }
 
+    fun isTooltipsEnabled(): Boolean {
+        return prefs.getBoolean("tooltips_enabled", true)
+    }
+
+    fun setTooltipsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("tooltips_enabled", enabled).apply()
+    }
+
     fun isHapticEnabled(): Boolean {
         return prefs.getBoolean("haptic_enabled", true)
     }

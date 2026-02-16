@@ -11,7 +11,6 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 
 enum class ShiftState {
     OFF,
@@ -153,8 +152,11 @@ class QwertyKeyboard(
             key.output is KeyOutput.QuickKey
 
         if (isSpecialKey) {
+            val bg = if (key.output is KeyOutput.QuickKey) {
+                tm?.quickKeyBg() ?: tm?.keySpecialBg()
+            } else null
             if (tm != null) {
-                button.background = tm.createKeyDrawable(tm.keySpecialBg())
+                button.background = tm.createKeyDrawable(bg ?: tm.keySpecialBg())
             } else {
                 button.setBackgroundResource(R.drawable.key_bg_special)
             }
@@ -200,7 +202,7 @@ class QwertyKeyboard(
             button.setOnLongClickListener {
                 val enabled = appPrefs?.toggleAutocorrect(currentPackage) ?: false
                 val state = if (enabled) "on" else "off"
-                Toast.makeText(container.context, "Autocorrect $state", Toast.LENGTH_SHORT).show()
+                extraRowManager.showTooltip("Autocorrect $state")
                 render()
                 true
             }

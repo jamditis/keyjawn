@@ -1,10 +1,16 @@
 package com.keyjawn
 
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.InputConnection
 import android.widget.Button
-import android.widget.Toast
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
 
 class ExtraRowManager(
     private val view: View,
@@ -14,20 +20,35 @@ class ExtraRowManager(
     private val uploadHandler: UploadHandler? = null,
     private val onUploadTap: (() -> Unit)? = null,
     private val clipboardHistoryManager: ClipboardHistoryManager? = null,
-    private val themeManager: ThemeManager? = null
+    private val themeManager: ThemeManager? = null,
+    private val isPaidUser: Boolean = false,
+    private val clipboardPanelView: ScrollView? = null,
+    private val clipboardListView: LinearLayout? = null,
+    private val menuPanelView: ScrollView? = null,
+    private val menuListView: LinearLayout? = null,
+    private val appPrefs: AppPrefs? = null,
+    private val isFullFlavor: Boolean = false,
+    private val onOpenSettings: (() -> Unit)? = null,
+    private val onThemeChanged: (() -> Unit)? = null,
+    private val currentPackageProvider: (() -> String)? = null
 ) {
 
     val ctrlState = CtrlState()
 
     private val ctrlButton: Button = view.findViewById(R.id.key_ctrl)
 
-    private var clipboardPopup: ClipboardPopup? = null
+    private var clipboardPanel: ClipboardPanel? = null
+    private var menuPanel: MenuPanel? = null
 
     private val extraRow: View = view.findViewById(R.id.extra_row)
+    private val tooltipBar: TextView? = view.findViewById(R.id.tooltip_bar)
     private val voiceBar: View? = view.findViewById(R.id.voice_bar)
     private val voiceWaveform: VoiceWaveformView? = voiceBar?.findViewById(R.id.voice_waveform)
-    private val voiceText: android.widget.TextView? = voiceBar?.findViewById(R.id.voice_text)
+    private val voiceText: TextView? = voiceBar?.findViewById(R.id.voice_text)
     private val voiceStop: View? = voiceBar?.findViewById(R.id.voice_stop)
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var tooltipDismissRunnable: Runnable? = null
 
     init {
         wireEsc()
@@ -44,6 +65,21 @@ class ExtraRowManager(
         applyThemeColors()
 
         ctrlState.onStateChanged = { mode -> updateCtrlAppearance(mode) }
+    }
+
+    fun showTooltip(message: String, durationMs: Long = 1500L) {
+        val bar = tooltipBar ?: return
+        if (!AppPrefs(view.context).isTooltipsEnabled()) return
+        tooltipDismissRunnable?.let { handler.removeCallbacks(it) }
+        bar.text = message
+        extraRow.visibility = View.GONE
+        bar.visibility = View.VISIBLE
+        val dismiss = Runnable {
+            bar.visibility = View.GONE
+            extraRow.visibility = View.VISIBLE
+        }
+        tooltipDismissRunnable = dismiss
+        handler.postDelayed(dismiss, durationMs)
     }
 
     private fun applyThemeColors() {
@@ -63,6 +99,9 @@ class ExtraRowManager(
         for (id in listOf(R.id.key_esc, R.id.key_tab, R.id.key_left, R.id.key_down, R.id.key_up, R.id.key_right)) {
             (view.findViewById<View>(id) as? Button)?.setTextColor(tm.keyText())
         }
+        // Theme the tooltip bar
+        tooltipBar?.setBackgroundColor(tm.extraRowBg())
+        tooltipBar?.setTextColor(tm.keyText())
     }
 
     fun isCtrlActive(): Boolean = ctrlState.isActive()
@@ -85,24 +124,54 @@ class ExtraRowManager(
 
     private fun wireClipboard() {
         val clipButton = view.findViewById<View>(R.id.key_clipboard)
-        if (clipboardHistoryManager != null) {
-            clipButton.setOnClickListener {
-                val popup = ClipboardPopup(clipboardHistoryManager) { text ->
-                    val ic = inputConnectionProvider() ?: return@ClipboardPopup
+        if (clipboardHistoryManager != null && clipboardPanelView != null && clipboardListView != null) {
+            val panel = ClipboardPanel(
+                clipboardHistoryManager, isPaidUser,
+                clipboardPanelView, clipboardListView,
+                themeManager,
+                onItemSelected = { text ->
+                    val ic = inputConnectionProvider() ?: return@ClipboardPanel
                     clipboardHistoryManager.pasteItem(ic, text)
+                },
+                onShowTooltip = { msg -> showTooltip(msg) }
+            )
+            clipboardPanel = panel
+            clipButton.setOnClickListener {
+                if (panel.isShowing()) {
+                    panel.hide()
+                } else {
+                    menuPanel?.hide()
+                    panel.show()
                 }
-                clipboardPopup = popup
-                popup.show(view)
             }
             clipButton.setOnLongClickListener {
                 val ic = inputConnectionProvider() ?: return@setOnLongClickListener true
                 if (!clipboardHistoryManager.paste(ic)) {
-                    Toast.makeText(view.context, "Clipboard empty", Toast.LENGTH_SHORT).show()
+                    showTooltip("Clipboard empty")
                 }
                 true
             }
         } else {
-            wirePlaceholder(R.id.key_clipboard, "Clipboard not available")
+            // Fallback: simple system paste (no history tracking)
+            val pasteFromSystem = {
+                val ic = inputConnectionProvider()
+                if (ic != null) {
+                    val cm = view.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clip = cm.primaryClip
+                    if (clip != null && clip.itemCount > 0) {
+                        val text = clip.getItemAt(0).coerceToText(view.context)
+                        if (text.isNotEmpty()) {
+                            ic.commitText(text, 1)
+                        } else {
+                            showTooltip("Clipboard empty")
+                        }
+                    } else {
+                        showTooltip("Clipboard empty")
+                    }
+                }
+            }
+            clipButton.setOnClickListener { pasteFromSystem() }
+            clipButton.setOnLongClickListener { pasteFromSystem(); true }
         }
     }
 
@@ -129,14 +198,34 @@ class ExtraRowManager(
 
     private fun wireUpload() {
         val uploadButton = view.findViewById<View>(R.id.key_upload)
-        if (uploadHandler != null && uploadHandler.isAvailable && onUploadTap != null) {
+        if (menuPanelView != null && menuListView != null && themeManager != null && appPrefs != null) {
+            val mp = MenuPanel(
+                panel = menuPanelView,
+                list = menuListView,
+                themeManager = themeManager,
+                appPrefs = appPrefs,
+                isFullFlavor = isFullFlavor,
+                onUploadTap = onUploadTap,
+                onOpenSettings = { onOpenSettings?.invoke() },
+                onThemeChanged = { onThemeChanged?.invoke() },
+                onShowTooltip = { msg -> showTooltip(msg) },
+                currentPackageProvider = currentPackageProvider ?: { "unknown" }
+            )
+            menuPanel = mp
+            uploadButton.setOnClickListener {
+                if (mp.isShowing()) {
+                    mp.hide()
+                } else {
+                    clipboardPanel?.hide()
+                    mp.show()
+                }
+            }
+        } else if (uploadHandler != null && uploadHandler.isAvailable && onUploadTap != null) {
             uploadButton.setOnClickListener { onUploadTap.invoke() }
             uploadButton.setOnLongClickListener {
-                Toast.makeText(view.context, "Configure hosts in KeyJawn settings", Toast.LENGTH_SHORT).show()
+                showTooltip("Configure hosts in KeyJawn settings")
                 true
             }
-        } else if (uploadHandler != null && !uploadHandler.isAvailable) {
-            wirePlaceholder(R.id.key_upload, "SCP upload available in full version")
         } else {
             wirePlaceholder(R.id.key_upload, "Upload not yet configured")
         }
@@ -155,7 +244,7 @@ class ExtraRowManager(
             }
         } else {
             micButton.setOnClickListener {
-                Toast.makeText(view.context, "Voice input not available", Toast.LENGTH_SHORT).show()
+                showTooltip("Voice input not available")
             }
         }
 
@@ -163,8 +252,13 @@ class ExtraRowManager(
             voiceInputHandler?.stopListening()
         }
 
+        voiceInputHandler?.onPermissionNeeded = { msg -> showTooltip(msg, 2500L) }
+
         voiceInputHandler?.listener = object : VoiceInputListener {
             override fun onVoiceStart() {
+                // Dismiss tooltip if showing
+                tooltipDismissRunnable?.let { handler.removeCallbacks(it) }
+                tooltipBar?.visibility = View.GONE
                 extraRow.visibility = View.GONE
                 voiceBar?.visibility = View.VISIBLE
                 voiceText?.text = ""
@@ -199,7 +293,7 @@ class ExtraRowManager(
 
     private fun wirePlaceholder(buttonId: Int, message: String) {
         view.findViewById<View>(buttonId).setOnClickListener {
-            Toast.makeText(view.context, message, Toast.LENGTH_SHORT).show()
+            showTooltip(message)
         }
     }
 

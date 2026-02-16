@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.LinearLayout
+import android.widget.ScrollView
 
 class KeyJawnService : InputMethodService() {
 
@@ -30,7 +31,7 @@ class KeyJawnService : InputMethodService() {
         billingManager = BillingManager(this)
         billingManager.connect()
         themeManager = ThemeManager(this)
-        if (!billingManager.isFullVersion) {
+        if (BuildConfig.FLAVOR != "full") {
             themeManager.currentTheme = KeyboardTheme.DARK
         }
         slashCommandRegistry = SlashCommandRegistry(this)
@@ -38,8 +39,8 @@ class KeyJawnService : InputMethodService() {
 
     override fun onCreateInputView(): View {
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
-        val paid = billingManager.isFullVersion
         val tm = themeManager
+        val isFullFlavor = BuildConfig.FLAVOR == "full"
 
         // Apply theme colors to layout backgrounds
         view.setBackgroundColor(tm.keyboardBg())
@@ -47,10 +48,10 @@ class KeyJawnService : InputMethodService() {
         view.findViewById<View>(R.id.number_row)?.setBackgroundColor(tm.extraRowBg())
         view.findViewById<LinearLayout>(R.id.qwerty_container)?.setBackgroundColor(tm.qwertyBg())
 
-        val voice = if (paid) VoiceInputHandler(this) else null
+        val voice = VoiceInputHandler(this)
         voiceInputHandler = voice
 
-        val upload = if (paid) {
+        val upload = if (isFullFlavor) {
             UploadHandler(this).also {
                 it.setInputConnectionProvider { currentInputConnection }
                 pendingUploadHandler = it
@@ -58,15 +59,37 @@ class KeyJawnService : InputMethodService() {
         } else null
         uploadHandler = upload
 
-        val clipManager = if (paid) ClipboardHistoryManager(this) else null
+        val clipManager = ClipboardHistoryManager(this)
         clipboardHistoryManager = clipManager
+
+        val clipPanel = view.findViewById<ScrollView>(R.id.clipboard_panel)
+        val clipList = view.findViewById<LinearLayout>(R.id.clipboard_list)
+        clipPanel?.setBackgroundColor(tm.keyboardBg())
+
+        val menuPanel = view.findViewById<ScrollView>(R.id.menu_panel)
+        val menuList = view.findViewById<LinearLayout>(R.id.menu_list)
+        menuPanel?.setBackgroundColor(tm.keyboardBg())
 
         val erm = ExtraRowManager(
             view, keySender, { currentInputConnection }, voice,
             uploadHandler = upload,
-            onUploadTap = if (paid) {{ launchPhotoPicker() }} else null,
+            onUploadTap = if (isFullFlavor) {{ launchPhotoPicker() }} else null,
             clipboardHistoryManager = clipManager,
-            themeManager = tm
+            themeManager = tm,
+            isPaidUser = isFullFlavor,
+            clipboardPanelView = clipPanel,
+            clipboardListView = clipList,
+            menuPanelView = menuPanel,
+            menuListView = menuList,
+            appPrefs = appPrefs,
+            isFullFlavor = isFullFlavor,
+            onOpenSettings = {
+                val intent = Intent(this, SettingsActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+            },
+            onThemeChanged = { setInputView(onCreateInputView()) },
+            currentPackageProvider = { qwertyKeyboard?.currentPackage ?: "unknown" }
         )
         extraRowManager = erm
 
@@ -74,7 +97,7 @@ class KeyJawnService : InputMethodService() {
 
         val container = view.findViewById<LinearLayout>(R.id.qwerty_container)
         val registry = slashCommandRegistry
-        val slashPopup = if (paid && registry != null) {
+        val slashPopup = if (registry != null) {
             SlashCommandPopup(
                 registry = registry,
                 onCommandSelected = { command ->

@@ -12,7 +12,6 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.View
 import android.view.inputmethod.InputConnection
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 
 interface VoiceInputListener {
@@ -32,6 +31,7 @@ class VoiceInputHandler(private val context: Context) {
     private var listening = false
 
     var listener: VoiceInputListener? = null
+    var onPermissionNeeded: ((String) -> Unit)? = null
 
     fun isAvailable(): Boolean {
         return SpeechRecognizer.isRecognitionAvailable(context)
@@ -48,7 +48,7 @@ class VoiceInputHandler(private val context: Context) {
         if (!isAvailable() || listening) return
 
         if (!hasRecordAudioPermission()) {
-            Toast.makeText(context, "Mic permission required. Opening settings.", Toast.LENGTH_LONG).show()
+            onPermissionNeeded?.invoke("Mic permission required. Opening settings.")
             openAppSettings()
             return
         }

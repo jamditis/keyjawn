@@ -40,6 +40,7 @@ class SettingsActivity : Activity() {
 
         setupUpgradeButton()
         setupHapticToggle()
+        setupTooltipToggle()
         setupThemePicker()
 
         val hostSection = findViewById<LinearLayout>(R.id.host_section)
@@ -77,6 +78,23 @@ class SettingsActivity : Activity() {
         toggle.isChecked = appPrefs.isHapticEnabled()
         toggle.setOnCheckedChangeListener { _, isChecked ->
             appPrefs.setHapticEnabled(isChecked)
+        }
+    }
+
+    // -- Tooltip toggle (paid only) --
+
+    private fun setupTooltipToggle() {
+        val section = findViewById<LinearLayout>(R.id.tooltip_section)
+        if (!billingManager.isFullVersion) {
+            section.visibility = View.GONE
+            return
+        }
+        section.visibility = View.VISIBLE
+        val appPrefs = AppPrefs(this)
+        val toggle = findViewById<CheckBox>(R.id.tooltip_toggle)
+        toggle.isChecked = appPrefs.isTooltipsEnabled()
+        toggle.setOnCheckedChangeListener { _, isChecked ->
+            appPrefs.setTooltipsEnabled(isChecked)
         }
     }
 
@@ -329,7 +347,7 @@ class SettingsActivity : Activity() {
                 text = "${commandSet.label} (${commandSet.commands.size})"
                 setTextColor(0xFFDDDDDD.toInt())
                 isChecked = id in enabled
-                isEnabled = paid
+                isEnabled = paid || !registry.isCustomSet(id)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 setOnCheckedChangeListener { _, checked ->
                     registry.setEnabled(id, checked)
