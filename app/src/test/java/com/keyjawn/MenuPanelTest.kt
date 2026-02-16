@@ -3,6 +3,7 @@ package com.keyjawn
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.*
@@ -46,7 +47,8 @@ class MenuPanelTest {
             onOpenSettings = {},
             onThemeChanged = {},
             onShowTooltip = { tooltipMessages.add(it) },
-            currentPackageProvider = { "com.test.app" }
+            currentPackageProvider = { "com.test.app" },
+            onExtraRowChanged = {}
         )
     }
 
@@ -110,7 +112,8 @@ class MenuPanelTest {
             onOpenSettings = {},
             onThemeChanged = {},
             onShowTooltip = { tooltipMessages.add(it) },
-            currentPackageProvider = { "com.test.app" }
+            currentPackageProvider = { "com.test.app" },
+            onExtraRowChanged = {}
         )
         litePanel.show()
 
@@ -129,5 +132,41 @@ class MenuPanelTest {
             }
         }
         assertTrue("Should show upgrade tooltip for full-only features in lite", foundUpgradeTooltip)
+    }
+
+    @Test
+    fun `menu shows key mapping section when full flavor`() {
+        menuPanel.show()
+        var foundKeyMapping = false
+        for (i in 0 until list.childCount) {
+            val child = list.getChildAt(i)
+            if (child is TextView && child.text.toString() == "Key mapping") {
+                foundKeyMapping = true
+                break
+            }
+        }
+        assertTrue("Should have key mapping section header", foundKeyMapping)
+    }
+
+    @Test
+    fun `key mapping section has 4 rows`() {
+        menuPanel.show()
+        var inSection = false
+        var rowCount = 0
+        for (i in 0 until list.childCount) {
+            val child = list.getChildAt(i)
+            if (child is TextView && child.text.toString() == "Key mapping") {
+                inSection = true
+                continue
+            }
+            if (inSection) {
+                if (child is LinearLayout) {
+                    rowCount++
+                } else if (child is TextView && rowCount > 0) {
+                    break
+                }
+            }
+        }
+        assertEquals("Should have 4 key mapping rows (3 slots + quick key)", 4, rowCount)
     }
 }

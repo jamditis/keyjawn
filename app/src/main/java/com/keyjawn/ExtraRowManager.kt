@@ -232,7 +232,8 @@ class ExtraRowManager(
                 onOpenSettings = { onOpenSettings?.invoke() },
                 onThemeChanged = { onThemeChanged?.invoke() },
                 onShowTooltip = { msg -> showTooltip(msg) },
-                currentPackageProvider = currentPackageProvider ?: { "unknown" }
+                currentPackageProvider = currentPackageProvider ?: { "unknown" },
+                onExtraRowChanged = { rewireSlots() }
             )
             menuPanel = mp
             uploadButton.setOnClickListener {
