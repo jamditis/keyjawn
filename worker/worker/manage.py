@@ -295,6 +295,78 @@ async def weekly_report(config):
     await db.close()
 
 
+async def curation_scan(config):
+    """Run a one-shot curation scan and evaluation."""
+    from worker.curation.monitor import CurationMonitor
+    from worker.db import Database
+
+    db = Database(config.db_path)
+    await db.init()
+
+    monitor = CurationMonitor(config.curation, db)
+
+    log.info("scanning sources...")
+    candidates = await monitor.scan_sources(include_twitch=True)
+    log.info("found %d candidates", len(candidates))
+
+    stored = await monitor.store_candidates(candidates)
+    log.info("stored %d new (deduped from %d)", stored, len(candidates))
+
+    log.info("running evaluation pipeline...")
+    approved = await monitor.run_evaluation()
+    log.info("approved %d candidates", len(approved))
+
+    for c in approved:
+        log.info(
+            "  [%.2f] %s | %s | %s",
+            c.final_score,
+            c.source,
+            c.title[:60],
+            c.sonnet_draft[:80] if c.sonnet_draft else "(no draft)",
+        )
+
+    await db.close()
+
+
+async def curation_status(config):
+    """Show curation pipeline status."""
+    from worker.db import Database
+
+    db = Database(config.db_path)
+    await db.init()
+
+    # Count by status
+    cursor = await db._db.execute(
+        "SELECT status, COUNT(*) as cnt FROM curation_candidates GROUP BY status ORDER BY cnt DESC"
+    )
+    rows = await cursor.fetchall()
+    log.info("=== Curation status ===")
+    total = sum(dict(r)["cnt"] for r in rows)
+    log.info("total candidates: %d", total)
+    for r in rows:
+        d = dict(r)
+        log.info("  %s: %d", d["status"], d["cnt"])
+
+    # Today's budget
+    curation_today = await db.get_daily_curation_count()
+    budget = config.curation.max_curated_shares_per_day
+    log.info("today: %d/%d curated shares posted", curation_today, budget)
+
+    # Recent approved
+    approved = await db.get_approved_curations(limit=5)
+    if approved:
+        log.info("pending approved:")
+        for a in approved:
+            log.info(
+                "  [%.2f] %s | %s",
+                a.get("final_score", 0),
+                a["source"],
+                a["title"][:60],
+            )
+
+    await db.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description="keyjawn-worker management commands")
     sub = parser.add_subparsers(dest="command")
@@ -303,6 +375,8 @@ def main():
     sub.add_parser("generate-calendar", help="Generate this week's content calendar")
     sub.add_parser("status", help="Show worker DB status")
     sub.add_parser("weekly-report", help="Generate weekly metrics report")
+    sub.add_parser("curation-scan", help="Run one-shot curation scan and evaluation")
+    sub.add_parser("curation-status", help="Show curation pipeline status")
 
     args = parser.parse_args()
 
@@ -323,6 +397,10 @@ def main():
         asyncio.run(show_status(config))
     elif args.command == "weekly-report":
         asyncio.run(weekly_report(config))
+    elif args.command == "curation-scan":
+        asyncio.run(curation_scan(config))
+    elif args.command == "curation-status":
+        asyncio.run(curation_status(config))
 
 
 if __name__ == "__main__":

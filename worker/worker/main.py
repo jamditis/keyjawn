@@ -46,6 +46,22 @@ async def main():
         id="action_session",
     )
 
+    # Curation scan: YouTube + News every 6 hours
+    scheduler.add_job(
+        runner.run_curation_scan,
+        "interval",
+        hours=config.curation.scan_interval_hours,
+        id="curation_scan",
+    )
+
+    # Curation scan with Twitch: every 8 hours
+    scheduler.add_job(
+        lambda: runner.run_curation_scan(include_twitch=True),
+        "interval",
+        hours=config.curation.twitch_scan_interval_hours,
+        id="curation_scan_twitch",
+    )
+
     scheduler.start()
 
     # Start Redis listener for approval decisions
