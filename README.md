@@ -13,9 +13,9 @@ A custom Android keyboard designed for using LLM CLI agents (Claude Code, OpenCl
 
 ## Install
 
-**Google Play** (recommended): Search for "KeyJawn" or use the link above. Free download with optional $3.99 in-app purchase for premium features.
+**Free version**: Download the lite APK from [GitHub releases](https://github.com/jamditis/keyjawn/releases). Includes voice input, clipboard history, slash commands, swipe gestures, and per-app autocorrect.
 
-**GitHub releases**: Download the APK from [releases](https://github.com/jamditis/keyjawn/releases). The lite flavor (`com.keyjawn.lite`) is a standalone sideload build with no billing or network features.
+**Full version ($4)**: Buy on [the website](https://keyjawn.amditis.tech) via Stripe. After purchase, you'll get an email with a private download link (expires in 7 days). New versions are emailed automatically.
 
 After installing:
 1. Go to **Settings > System > Languages & input > On-screen keyboard**
@@ -24,27 +24,31 @@ After installing:
 
 ## Features
 
-### Free (included with download)
+### Free (lite APK)
 
 - QWERTY keyboard with three layers (lowercase, uppercase, symbols)
 - Terminal key row: Esc, Tab, Ctrl (three-state toggle), arrow keys
 - Number row with shift-symbol hints (long-press for shifted symbols)
 - Alt character popups on long-press (accented letters, punctuation variants)
+- Voice input with streaming transcription
+- Clipboard history (30 items)
+- Slash command shortcuts (built-in sets)
+- Swipe gestures (delete word, space, layer switching)
+- Per-app autocorrect toggle (long-press spacebar)
 - Configurable quick key (bottom row, defaults to `/`)
 - Color-coded extra row keys for quick identification
 - Shift / caps lock with visual state indicator
-- Per-app autocorrect toggle (long-press spacebar)
 
-### Premium ($3.99 one-time unlock)
+### Full version ($4 one-time purchase)
 
-- Voice input with streaming transcription
-- Clipboard history manager
+Everything in free, plus:
 - SCP image upload to remote SSH servers
 - Multi-host SSH management with encrypted credentials (AES-256)
-- Slash command shortcuts for LLM CLIs
 - Custom slash command sets
 - Keyboard color themes (Dark, Light, OLED black, Terminal)
-- Swipe gestures (delete word, space, layer switching)
+- Menu panel with inline settings
+- Clipboard pinning (persistent across sessions)
+- Tooltip toggle
 
 ## Who it's for
 
@@ -55,14 +59,16 @@ Anyone who SSHs into a server from their phone to use a CLI-based AI assistant. 
 
 ## Versions
 
-| | Play Store | Lite (sideload) |
+| | Full | Lite |
 |---|---|---|
 | Package | `com.keyjawn` | `com.keyjawn.lite` |
-| Free features | All | All |
-| Premium unlock | $3.99 in-app purchase | Not available |
-| SCP upload | Yes (premium) | No |
+| Price | $4 (website) | Free |
+| SCP upload | Yes | No |
+| Color themes | Yes | No |
+| Clipboard pinning | Yes | No |
+| Custom slash commands | Yes | No |
 | Permissions | INTERNET, READ_MEDIA_IMAGES, RECORD_AUDIO | RECORD_AUDIO only |
-| Distribution | Google Play | GitHub releases |
+| Distribution | Email after purchase | GitHub releases |
 
 ## Build
 
