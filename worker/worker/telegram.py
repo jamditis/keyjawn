@@ -44,6 +44,31 @@ def build_approval_keyboard(action_id: str) -> list[list[dict]]:
     ]
 
 
+def format_curation_message(
+    action_id: str,
+    source: str,
+    title: str,
+    score: float,
+    reasoning: str,
+    draft: str,
+    platform: str,
+) -> str:
+    """Format a curation share approval message."""
+    lines = [
+        "<b>[CURATE] Share recommendation</b>",
+        "",
+        f"<b>Source:</b> {_escape_html(source)}",
+        f"<b>Title:</b> {_escape_html(title)}",
+        f"<b>Score:</b> {score:.2f}",
+        "",
+        f"<b>AI reasoning:</b> {_escape_html(reasoning)}",
+        "",
+        f"<b>Draft post ({platform}):</b>",
+        f"<pre>{_escape_html(draft)}</pre>",
+    ]
+    return "\n".join(lines)
+
+
 def parse_callback_data(data: str) -> dict:
     """Parse a 'kw:action:id' callback string into its parts."""
     _, action, action_id = data.split(":", 2)

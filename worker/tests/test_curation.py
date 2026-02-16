@@ -369,3 +369,46 @@ REASONING: Corporate product launch, not relevant enough"""
     result = parse_draft_response(text)
     assert result["share"] is False
     assert result["draft"] == ""
+
+
+from worker.curation.pipeline import CurationPipeline
+
+
+def test_pipeline_keyword_filter():
+    pipeline = CurationPipeline(db=None)
+
+    good = CurationCandidate(
+        source="youtube", url="http://good.com", author="dev",
+        title="Open source terminal keyboard for Android",
+        description="CLI tool for mobile devs",
+    )
+    bad = CurationCandidate(
+        source="youtube", url="http://bad.com", author="dev",
+        title="Best photo filters",
+        description="Instagram editing app",
+    )
+
+    passed = pipeline._keyword_filter([good, bad])
+    assert len(passed) == 1
+    assert passed[0].url == "http://good.com"
+    assert passed[0].keyword_score >= 0.3
+
+
+from worker.telegram import format_curation_message
+
+
+def test_format_curation_message():
+    msg = format_curation_message(
+        action_id="abc123",
+        source="YouTube - Dreams of Code",
+        title="Building a terminal file manager in Rust",
+        score=0.87,
+        reasoning="Open source Rust CLI tool, solo dev, well-produced",
+        draft="Solid walkthrough of building a terminal file manager in Rust.",
+        platform="twitter",
+    )
+    assert "[CURATE]" in msg
+    assert "Dreams of Code" in msg
+    assert "0.87" in msg
+    assert "terminal file manager" in msg
+    assert "Draft" in msg
