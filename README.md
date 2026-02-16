@@ -1,6 +1,6 @@
 # KeyJawn: Custom mobile keyboard for LLM CLI usage
 
-![KeyJawn branding graphic](https://i.imgur.com/wAieWl6.png)
+![KeyJawn branding graphic](https://i.imgur.com/c6z2Gl0.jpeg)
 
 [![Build](https://github.com/jamditis/keyjawn/actions/workflows/build.yml/badge.svg)](https://github.com/jamditis/keyjawn/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-6cf2a8?style=flat)](LICENSE)
