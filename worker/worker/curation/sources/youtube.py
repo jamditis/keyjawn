@@ -14,18 +14,24 @@ log = logging.getLogger(__name__)
 
 API_BASE = "https://www.googleapis.com/youtube/v3"
 
+# Each search.list call costs 100 YouTube API quota units.
+# Free tier: 10,000 units/day. At 4 scans/day we budget ~2,400 units/scan.
+# 7 terms × 3 results = 7 calls × 100 = 700 units/scan = 2,800/day.
+#
+# Most searches use videoDuration=short to target Shorts and quick demos
+# (more shareable on Twitter/Bluesky). A couple use no duration filter
+# to catch longer tutorials and reviews worth linking.
+
 SEARCH_TERMS = [
-    "terminal keyboard android",
-    "mobile CLI tools",
-    "SSH mobile app",
-    "developer keyboard android",
-    "indie dev tools",
-    "open source android tools",
-    "coding on phone",
-    "terminal emulator mobile",
-    "command line mobile",
-    "neovim mobile",
-    "tmux phone",
+    # Shorts-focused (videoDuration=short)
+    {"q": "terminal CLI tools", "short": True},
+    {"q": "open source android dev", "short": True},
+    {"q": "coding on phone terminal", "short": True},
+    {"q": "indie dev tools demo", "short": True},
+    {"q": "SSH keyboard mobile", "short": True},
+    # Any duration (catch longer tutorials worth linking)
+    {"q": "terminal keyboard android", "short": False},
+    {"q": "CLI tool walkthrough open source", "short": False},
 ]
 
 
@@ -66,7 +72,9 @@ class YouTubeSource:
             ))
         return candidates
 
-    async def search(self, query: str, max_results: int = 10) -> list[CurationCandidate]:
+    async def search(
+        self, query: str, max_results: int = 3, short_only: bool = False,
+    ) -> list[CurationCandidate]:
         """Search YouTube for videos matching a query."""
         cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
         params = {
@@ -78,6 +86,8 @@ class YouTubeSource:
             "key": self.api_key,
             "publishedAfter": cutoff,
         }
+        if short_only:
+            params["videoDuration"] = "short"
 
         try:
             async with httpx.AsyncClient() as client:
@@ -97,7 +107,9 @@ class YouTubeSource:
         all_candidates = []
 
         for term in SEARCH_TERMS:
-            results = await self.search(term, max_results=5)
+            results = await self.search(
+                term["q"], max_results=3, short_only=term.get("short", False),
+            )
             for c in results:
                 if c.url not in seen_urls:
                     seen_urls.add(c.url)

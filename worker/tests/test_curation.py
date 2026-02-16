@@ -209,7 +209,9 @@ def test_boost_list_case_insensitive():
 
 def test_youtube_search_terms_defined():
     assert len(SEARCH_TERMS) > 0
-    assert any("terminal" in t or "CLI" in t or "keyboard" in t for t in SEARCH_TERMS)
+    for t in SEARCH_TERMS:
+        assert "q" in t and "short" in t
+    assert any("terminal" in t["q"] or "CLI" in t["q"] or "keyboard" in t["q"] for t in SEARCH_TERMS)
 
 
 def test_youtube_source_init():
