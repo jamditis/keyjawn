@@ -33,6 +33,7 @@ class WorkerRunner:
         self.monitor: Monitor = None
         self.picker: ActionPicker = None
         self.approvals: ApprovalManager = None
+        self.curation_monitor = None
         self._redis_sub: aioredis.Redis = None
 
     async def start(self):
@@ -58,6 +59,9 @@ class WorkerRunner:
             decode_responses=True,
         )
 
+        from worker.curation.monitor import CurationMonitor
+        self.curation_monitor = CurationMonitor(self.config.curation, self.db)
+
         logger.info("keyjawn-worker started")
 
     async def stop(self):
@@ -75,6 +79,16 @@ class WorkerRunner:
             self.twitter, self.bluesky, self.producthunt
         )
         logger.info("monitor scan done: %d new findings queued", queued)
+
+    async def run_curation_scan(self, include_twitch: bool = False):
+        """Run one curation scan + evaluation cycle."""
+        if not self.curation_monitor:
+            return
+        logger.info("starting curation scan")
+        approved = await self.curation_monitor.scan_and_evaluate(
+            include_twitch=include_twitch
+        )
+        logger.info("curation scan done: %d new candidates approved", approved)
 
     async def run_action_session(self):
         """Run one action session (evening window)."""
@@ -164,13 +178,33 @@ class WorkerRunner:
             finding_id=action.get("finding_id"),
         )
 
-        decision = await self.approvals.request_approval(
-            action_id=action_id,
-            action_type=action["action_type"],
-            platform=action["platform"],
-            draft=content,
-            context=action.get("content") if action["source"] == "finding" else None,
-        )
+        # Use curation-specific message format for curated shares
+        if action["action_type"] == "curated_share":
+            from worker.telegram import format_curation_message
+            decision = await self.approvals.request_approval(
+                action_id=action_id,
+                action_type=action["action_type"],
+                platform=action["platform"],
+                draft=content,
+                context=None,
+                message_override=format_curation_message(
+                    action_id=action_id,
+                    source=f"{action.get('curation_source', '')} - {action.get('curation_title', '')}",
+                    title=action.get("curation_title", ""),
+                    score=action.get("curation_score", 0.0),
+                    reasoning=action.get("curation_reasoning", ""),
+                    draft=content,
+                    platform=action["platform"],
+                ),
+            )
+        else:
+            decision = await self.approvals.request_approval(
+                action_id=action_id,
+                action_type=action["action_type"],
+                platform=action["platform"],
+                draft=content,
+                context=action.get("content") if action["source"] == "finding" else None,
+            )
 
         if decision == "approve":
             post_url = await self._post_to_platform(

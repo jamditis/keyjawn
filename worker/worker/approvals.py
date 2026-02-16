@@ -35,12 +35,14 @@ class ApprovalManager:
         platform: str,
         draft: str,
         context: str | None = None,
+        message_override: str | None = None,
     ) -> str:
         """Send a Telegram approval prompt and wait for a decision.
 
         Returns the decision string (approve/deny/backlog/rethink).
         If Telegram isn't configured, auto-approves.
         On timeout, returns "backlog".
+        If message_override is provided, use it instead of format_escalation_message.
         """
         token = self.config.telegram.bot_token
         chat_id = self.config.telegram.chat_id
@@ -49,13 +51,16 @@ class ApprovalManager:
             log.warning("Telegram not configured, auto-approving action %s", action_id)
             return "approve"
 
-        text = format_escalation_message(
-            action_id=action_id,
-            action_type=action_type,
-            platform=platform,
-            context=context,
-            draft=draft,
-        )
+        if message_override:
+            text = message_override
+        else:
+            text = format_escalation_message(
+                action_id=action_id,
+                action_type=action_type,
+                platform=platform,
+                context=context,
+                draft=draft,
+            )
         keyboard = build_approval_keyboard(action_id)
 
         url = f"https://api.telegram.org/bot{token}/sendMessage"

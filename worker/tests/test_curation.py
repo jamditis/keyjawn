@@ -394,6 +394,16 @@ def test_pipeline_keyword_filter():
     assert passed[0].keyword_score >= 0.3
 
 
+from worker.executor import ActionPicker, EscalationTier
+
+
+def test_curation_share_needs_approval():
+    tier = ActionPicker.get_escalation_tier("curated_share", "twitter")
+    assert tier == EscalationTier.BUTTONS
+    tier = ActionPicker.get_escalation_tier("curated_share", "bluesky")
+    assert tier == EscalationTier.BUTTONS
+
+
 from worker.config import CurationConfig
 
 

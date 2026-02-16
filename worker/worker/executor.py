@@ -26,6 +26,10 @@ class ActionPicker:
         action_type: str, platform: str
     ) -> EscalationTier:
         """Determine whether an action is auto-approved or needs buttons."""
+        # Curated shares always need approval
+        if action_type == "curated_share":
+            return EscalationTier.BUTTONS
+
         # Reddit and HN/dev.to always need approval (draft-only)
         if platform in ("reddit", "hn", "devto"):
             return EscalationTier.BUTTONS
@@ -97,6 +101,30 @@ class ActionPicker:
                     "tier": self.get_escalation_tier(
                         "reply", finding["platform"]
                     ),
+                })
+
+        # 3. Fill curation slots from approved curations (separate budget)
+        curation_remaining = self.config.curation.max_curated_shares_per_day
+        curation_today = await self.db.get_daily_curation_count()
+        curation_remaining -= curation_today
+
+        if curation_remaining > 0:
+            curations = await self.db.get_approved_curations(
+                limit=curation_remaining
+            )
+            for curation in curations:
+                actions.append({
+                    "source": "curation",
+                    "curation_id": curation["id"],
+                    "action_type": "curated_share",
+                    "platform": "twitter",
+                    "content": curation["sonnet_draft"] or curation["title"],
+                    "curation_url": curation["url"],
+                    "curation_title": curation["title"],
+                    "curation_source": curation["source"],
+                    "curation_score": curation["final_score"],
+                    "curation_reasoning": curation["sonnet_reasoning"] or "",
+                    "tier": self.get_escalation_tier("curated_share", "twitter"),
                 })
 
         return actions[:remaining]
