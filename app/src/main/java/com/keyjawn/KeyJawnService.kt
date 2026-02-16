@@ -137,6 +137,15 @@ class KeyJawnService : InputMethodService() {
         qwertyKeyboard?.updatePackage(packageName)
     }
 
+    override fun onWindowHidden() {
+        super.onWindowHidden()
+        // Close overlay panels when the keyboard is hidden by the system.
+        // Terminal apps (Termius, Termux) aggressively hide the IME when focus
+        // shifts to the picker overlay. Closing panels here ensures the keyboard
+        // returns to a clean state when re-shown.
+        extraRowManager?.dismissPanels()
+    }
+
     override fun onDestroy() {
         voiceInputHandler?.destroy()
         uploadHandler?.destroy()

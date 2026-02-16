@@ -46,7 +46,10 @@
             android:layout_height="match_parent"
             android:fillViewport="true"
             android:background="@color/keyboard_bg"
-            android:visibility="gone">
+            android:visibility="gone"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:descendantFocusability="blocksDescendants">
 
             <LinearLayout
                 android:id="@+id/clipboard_list"
@@ -63,7 +66,10 @@
             android:layout_height="match_parent"
             android:fillViewport="true"
             android:background="@color/keyboard_bg"
-            android:visibility="gone">
+            android:visibility="gone"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:descendantFocusability="blocksDescendants">
 
             <LinearLayout
                 android:id="@+id/menu_list"

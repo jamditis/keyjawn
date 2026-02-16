@@ -161,6 +161,11 @@ class ExtraRowManager(
         }
     }
 
+    fun dismissPanels() {
+        menuPanel?.hide()
+        clipboardPanel?.hide()
+    }
+
     fun rewireSlots() {
         wireSlot(0, R.id.key_esc)
         wireSlot(1, R.id.key_tab)
