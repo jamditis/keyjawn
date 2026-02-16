@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<h1>Users</h1>
+
+<form class="search-bar" method="get" action="/admin/users">
+    <input type="search" name="q" value="{{ query }}" placeholder="Search by email...">
+    <button type="submit">Search</button>
+</form>
+
+<table>
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Stripe customer</th>
+            <th>Amount</th>
+            <th>Downloads</th>
+            <th>Purchased</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.email }}</td>
+            <td class="timestamp">{{ user.stripe_customer_id or '-' }}</td>
+            <td>${{ "%.2f"|format(user.amount_cents / 100) }}</td>
+            <td>{{ user.download_count }}</td>
+            <td class="timestamp">{{ user.purchased_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="color: var(--text-muted); text-align: center;">No users found</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

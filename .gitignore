@@ -18,3 +18,10 @@ local.properties
 keyjawn-site-*.png
 *.jks
 *.keystore
+
+# Store service
+__pycache__/
+*.pyc
+store/keyjawn-store.db
+store/venv/
+store/gunicorn.ctl

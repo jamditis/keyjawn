@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin{% endblock %} - keyjawn-store</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x2328;</text></svg>">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="/admin" class="brand">keyjawn-store</a>
+            <a href="/admin" class="{{ 'active' if active_page == 'dashboard' }}">Dashboard</a>
+            <a href="/admin/users" class="{{ 'active' if active_page == 'users' }}">Users</a>
+            <a href="/admin/tickets" class="{{ 'active' if active_page == 'tickets' }}">Tickets</a>
+            <a href="/admin/releases" class="{{ 'active' if active_page == 'releases' }}">Releases</a>
+        </div>
+    </nav>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

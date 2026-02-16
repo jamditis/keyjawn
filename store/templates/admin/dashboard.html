@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="stats">
+    <div class="stat-item">
+        <div class="number">{{ stats.total_users }}</div>
+        <div class="label">Paid users</div>
+    </div>
+    <div class="stat-item">
+        <div class="number">${{ "%.2f"|format(stats.total_revenue / 100) }}</div>
+        <div class="label">Revenue</div>
+    </div>
+    <div class="stat-item">
+        <div class="number">{{ stats.total_downloads }}</div>
+        <div class="label">Downloads</div>
+    </div>
+    <div class="stat-item">
+        <div class="number">{{ stats.open_tickets }}</div>
+        <div class="label">Open tickets</div>
+    </div>
+</div>
+
+<h2 style="font-size: 1.1rem; margin-bottom: 1rem;">Recent purchases</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Amount</th>
+            <th>Downloads</th>
+            <th>Purchased</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in recent %}
+        <tr>
+            <td>{{ user.email }}</td>
+            <td>${{ "%.2f"|format(user.amount_cents / 100) }}</td>
+            <td>{{ user.download_count }}</td>
+            <td class="timestamp">{{ user.purchased_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="color: var(--text-muted); text-align: center;">No purchases yet</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
