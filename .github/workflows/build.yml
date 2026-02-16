@@ -40,6 +40,12 @@ jobs:
         continue-on-error: false
         run: ./gradlew testLiteDebugUnitTest
 
+      - name: Run lint (full flavor)
+        run: ./gradlew lintFullDebug
+
+      - name: Run lint (lite flavor)
+        run: ./gradlew lintLiteDebug
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
