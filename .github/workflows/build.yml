@@ -117,9 +117,51 @@ jobs:
           name: keyjawn-full-release
           path: app/build/outputs/apk/full/release/*.apk
 
+      - name: Generate release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          PREV_TAG=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || echo "")
+
+          # Get auto-generated notes from GitHub API
+          if [ -n "$PREV_TAG" ]; then
+            AUTO_NOTES=$(gh api repos/${{ github.repository }}/releases/generate-notes \
+              -f tag_name="$TAG" -f previous_tag_name="$PREV_TAG" \
+              --jq '.body' 2>/dev/null || echo "")
+          else
+            AUTO_NOTES=""
+          fi
+
+          cat > release-body.md << 'HEADER'
+          ![KeyJawn branding graphic](https://i.imgur.com/c6z2Gl0.jpeg)
+
+          [![Build](https://github.com/jamditis/keyjawn/actions/workflows/build.yml/badge.svg)](https://github.com/jamditis/keyjawn/actions/workflows/build.yml)
+
+          ## Changes
+          HEADER
+          # Strip leading whitespace from heredoc
+          sed -i 's/^          //' release-body.md
+
+          if [ -n "$AUTO_NOTES" ]; then
+            echo "$AUTO_NOTES" >> release-body.md
+          fi
+
+          cat >> release-body.md << 'FOOTER'
+
+          ## Downloads
+
+          | File | Description |
+          |------|-------------|
+          | `app-lite-release.apk` | Free version (GitHub) |
+          | Full version | Available via [keyjawn.amditis.tech](https://keyjawn.amditis.tech/pricing) |
+          FOOTER
+          sed -i 's/^          //' release-body.md
+
       - name: Create GitHub release (lite APK only)
         uses: softprops/action-gh-release@v2
         with:
           files: |
             app/build/outputs/apk/lite/release/*.apk
-          generate_release_notes: true
+          body_path: release-body.md
