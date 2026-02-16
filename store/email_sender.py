@@ -12,6 +12,8 @@ FROM_EMAIL = "jamditis@gmail.com"
 FROM_NAME = "KeyJawn"
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
 
+PHYSICAL_ADDRESS = "55 Park Ave, Bloomfield, NJ 07003"
+
 
 def _get_latest_version() -> str:
     """Get the latest release version from the DB, or fall back to 'latest'."""
@@ -38,6 +40,33 @@ def _apk_url(version: str) -> str:
     return f"{GITHUB_RELEASES}/tag/v{version}"
 
 
+def _unsubscribe_url(email: str) -> str:
+    """Generate an unsubscribe URL for the given email."""
+    try:
+        from routes.unsubscribe import make_unsubscribe_url
+        return make_unsubscribe_url(email)
+    except Exception:
+        return "https://keyjawn-store.amditis.tech/unsubscribe"
+
+
+def _canspam_footer(email: str) -> str:
+    """CAN-SPAM compliant footer with physical address and unsubscribe link."""
+    unsub_url = _unsubscribe_url(email)
+    return f"""
+        <tr><td style="padding:20px 32px; border-top:1px solid #eee;">
+          <p style="margin:0 0 8px; font-size:12px; color:#999; line-height:1.5;">
+            KeyJawn -- a keyboard for people who use the terminal from their phone.
+          </p>
+          <p style="margin:0 0 8px; font-size:11px; color:#bbb; line-height:1.4;">
+            {PHYSICAL_ADDRESS}
+          </p>
+          <p style="margin:0; font-size:11px; color:#bbb; line-height:1.4;">
+            <a href="{unsub_url}" style="color:#999; text-decoration:underline;">Unsubscribe</a>
+            from update emails. You can still download your purchased version anytime.
+          </p>
+        </td></tr>"""
+
+
 def _send_email(to: str, subject: str, html: str):
     msg = MIMEMultipart("alternative")
     msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
@@ -55,7 +84,7 @@ def _send_email(to: str, subject: str, html: str):
         log.error(f"Failed to send email to {to}: {e}")
 
 
-def _download_email_html(version: str) -> str:
+def _download_email_html(version: str, to_email: str) -> str:
     url = _apk_url(version)
     return f"""\
 <!DOCTYPE html>
@@ -100,13 +129,7 @@ def _download_email_html(version: str) -> str:
           </p>
         </td></tr>
 
-        <!-- footer -->
-        <tr><td style="padding:20px 32px; border-top:1px solid #eee;">
-          <p style="margin:0; font-size:12px; color:#999; line-height:1.5;">
-            Questions? Reply to this email.
-            <br>KeyJawn -- a keyboard for people who use the terminal from their phone.
-          </p>
-        </td></tr>
+        {_canspam_footer(to_email)}
 
       </table>
     </td></tr>
@@ -115,7 +138,7 @@ def _download_email_html(version: str) -> str:
 </html>"""
 
 
-def _ticket_email_html(ticket_id: int) -> str:
+def _ticket_email_html(ticket_id: int, to_email: str) -> str:
     return f"""\
 <!DOCTYPE html>
 <html>
@@ -139,11 +162,7 @@ def _ticket_email_html(ticket_id: int) -> str:
           </p>
         </td></tr>
 
-        <tr><td style="padding:20px 32px; border-top:1px solid #eee;">
-          <p style="margin:0; font-size:12px; color:#999; line-height:1.5;">
-            KeyJawn support -- we'll get back to you soon.
-          </p>
-        </td></tr>
+        {_canspam_footer(to_email)}
 
       </table>
     </td></tr>
@@ -152,16 +171,7 @@ def _ticket_email_html(ticket_id: int) -> str:
 </html>"""
 
 
-def send_download_email(to_email: str):
-    version = _get_latest_version()
-    _send_email(
-        to_email,
-        f"KeyJawn v{version} -- your download link",
-        _download_email_html(version),
-    )
-
-
-def _update_email_html(version: str, changelog: str = "") -> str:
+def _update_email_html(version: str, changelog: str = "", to_email: str = "") -> str:
     url = _apk_url(version)
     changes_html = ""
     if changelog:
@@ -220,13 +230,7 @@ def _update_email_html(version: str, changelog: str = "") -> str:
           </p>
         </td></tr>
 
-        <!-- footer -->
-        <tr><td style="padding:20px 32px; border-top:1px solid #eee;">
-          <p style="margin:0; font-size:12px; color:#999; line-height:1.5;">
-            You're receiving this because you purchased KeyJawn.
-            <br>KeyJawn -- a keyboard for people who use the terminal from their phone.
-          </p>
-        </td></tr>
+        {_canspam_footer(to_email)}
 
       </table>
     </td></tr>
@@ -235,12 +239,21 @@ def _update_email_html(version: str, changelog: str = "") -> str:
 </html>"""
 
 
+def send_download_email(to_email: str):
+    version = _get_latest_version()
+    _send_email(
+        to_email,
+        f"KeyJawn v{version} -- your download link",
+        _download_email_html(version, to_email),
+    )
+
+
 def send_update_email(to_email: str, version: str, changelog: str = ""):
     """Send an update notification to an existing purchaser."""
     _send_email(
         to_email,
         f"KeyJawn v{version} -- what's new",
-        _update_email_html(version, changelog),
+        _update_email_html(version, changelog, to_email),
     )
 
 
@@ -248,5 +261,5 @@ def send_ticket_confirmation(to_email: str, subject: str, ticket_id: int):
     _send_email(
         to_email,
         f"Re: {subject} [#{ticket_id}]",
-        _ticket_email_html(ticket_id),
+        _ticket_email_html(ticket_id, to_email),
     )

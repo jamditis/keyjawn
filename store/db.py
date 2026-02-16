@@ -62,4 +62,9 @@ def init_db():
         conn.execute("ALTER TABLE releases ADD COLUMN changelog TEXT")
     except sqlite3.OperationalError:
         pass  # column already exists
+    # Add unsubscribed column if missing (existing DBs)
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN unsubscribed INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # column already exists
     conn.close()
