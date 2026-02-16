@@ -75,6 +75,16 @@ android {
         jvmTarget = "17"
     }
 
+    lint {
+        abortOnError = true
+        warningsAsErrors = false
+        checkDependencies = false
+        fatal += "NewApi"
+        fatal += "MissingPermission"
+        warning += "HardcodedText"
+        baseline = file("lint-baseline.xml")
+    }
+
     testOptions {
         unitTests {
             isIncludeAndroidResources = true

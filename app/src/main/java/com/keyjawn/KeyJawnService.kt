@@ -1,12 +1,18 @@
 package com.keyjawn
 
+import android.content.Context
 import android.content.Intent
 import android.inputmethodservice.InputMethodService
+import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
+import android.view.WindowInsets
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class KeyJawnService : InputMethodService() {
 
@@ -111,6 +117,27 @@ class KeyJawnService : InputMethodService() {
         val qwerty = QwertyKeyboard(container, keySender, erm, { currentInputConnection }, appPrefs, slashPopup, tm)
         qwerty.setLayer(KeyboardLayouts.LAYER_LOWER)
         qwertyKeyboard = qwerty
+
+        // Bottom padding for gesture nav bar + breathing room above gesture indicator
+        val extraPad = (32 * resources.displayMetrics.density + 0.5f).toInt()
+        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+            val navBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, navBottom + extraPad)
+            insets
+        }
+        view.requestApplyInsets()
+
+        // Fallback for IME windows where insets listener may not fire
+        view.post {
+            if (view.paddingBottom == 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                val navBottom = wm.currentWindowMetrics.windowInsets
+                    .getInsetsIgnoringVisibility(WindowInsets.Type.navigationBars()).bottom
+                if (navBottom > 0) {
+                    view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, navBottom + extraPad)
+                }
+            }
+        }
 
         return view
     }
