@@ -4,12 +4,13 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+from r2 import generate_signed_url, GITHUB_RELEASES
+
 log = logging.getLogger("keyjawn-store")
 
 FROM_EMAIL = "jamditis@gmail.com"
 FROM_NAME = "KeyJawn"
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
-GITHUB_RELEASES = "https://github.com/jamditis/keyjawn/releases"
 
 
 def _get_latest_version() -> str:
@@ -29,9 +30,12 @@ def _get_latest_version() -> str:
 
 
 def _apk_url(version: str) -> str:
-    if version == "latest":
-        return f"{GITHUB_RELEASES}/latest"
-    return f"{GITHUB_RELEASES}/download/v{version}/app-full-release.apk"
+    """Generate a presigned R2 download URL for the full APK."""
+    r2_key = f"keyjawn/releases/v{version}/app-full-release.apk"
+    url = generate_signed_url(r2_key)
+    if url:
+        return url
+    return f"{GITHUB_RELEASES}/tag/v{version}"
 
 
 def _send_email(to: str, subject: str, html: str):
@@ -91,9 +95,8 @@ def _download_email_html(version: str) -> str:
           </p>
 
           <p style="margin:16px 0 0; font-size:14px; color:#555; line-height:1.5;">
-            Future updates will be posted to
-            <a href="{GITHUB_RELEASES}" style="color:#6cf2a8; text-decoration:none;">the releases page</a>.
-            Bookmark it to stay current.
+            This link expires in 7 days. When new versions are released,
+            you'll get an email with a fresh download link.
           </p>
         </td></tr>
 
@@ -154,6 +157,15 @@ def send_download_email(to_email: str):
     _send_email(
         to_email,
         f"KeyJawn v{version} -- your download link",
+        _download_email_html(version),
+    )
+
+
+def send_update_email(to_email: str, version: str):
+    """Send an update notification to an existing purchaser."""
+    _send_email(
+        to_email,
+        f"KeyJawn v{version} is available",
         _download_email_html(version),
     )
 

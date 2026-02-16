@@ -2,10 +2,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 from db import get_db
+from r2 import generate_signed_url, GITHUB_RELEASES
 
 router = APIRouter()
-
-GITHUB_RELEASES = "https://github.com/jamditis/keyjawn/releases"
 
 
 class DownloadRequest(BaseModel):
@@ -39,9 +38,13 @@ async def download(req: DownloadRequest):
         conn.close()
         raise HTTPException(503, "No releases available yet.")
 
-    # Build GitHub Releases URL for the specific version tag
     version = release["version"]
-    url = f"{GITHUB_RELEASES}/tag/v{version}"
+    r2_key = release["r2_key"]
+
+    # Generate presigned R2 URL, fall back to GitHub releases
+    url = generate_signed_url(r2_key)
+    if not url:
+        url = f"{GITHUB_RELEASES}/tag/v{version}"
 
     # Log download
     conn.execute("""

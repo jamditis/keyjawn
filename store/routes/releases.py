@@ -1,9 +1,13 @@
 import os
+import logging
 from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
 from db import get_db
+from email_sender import send_update_email
+from telegram import send_telegram_alert
 
+log = logging.getLogger("keyjawn-store")
 router = APIRouter()
 
 
@@ -35,3 +39,31 @@ async def register_release(req: ReleaseRequest, authorization: Optional[str] = H
     conn.commit()
     conn.close()
     return {"version": req.version, "status": "registered"}
+
+
+@router.post("/api/releases/{version}/notify")
+async def notify_purchasers(version: str, authorization: Optional[str] = Header(None)):
+    """Send update emails to all purchasers for a new release."""
+    require_admin(authorization)
+
+    conn = get_db()
+    release = conn.execute("SELECT * FROM releases WHERE version = ?", (version,)).fetchone()
+    if not release:
+        conn.close()
+        raise HTTPException(404, f"Release {version} not found")
+
+    users = conn.execute("SELECT email FROM users").fetchall()
+    conn.close()
+
+    sent = 0
+    failed = 0
+    for user in users:
+        try:
+            send_update_email(user["email"], version)
+            sent += 1
+        except Exception as e:
+            log.error(f"Failed to notify {user['email']}: {e}")
+            failed += 1
+
+    send_telegram_alert(f"KeyJawn v{version} update emails: {sent} sent, {failed} failed")
+    return {"version": version, "sent": sent, "failed": failed}
