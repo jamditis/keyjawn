@@ -70,4 +70,79 @@ class AppPrefsTest {
         appPrefs.toggleAutocorrect("com.example.app")
         assertFalse(appPrefs.isAutocorrectEnabled("com.example.app"))
     }
+
+    @Test
+    fun `sanitizeCustomText strips control characters`() {
+        assertEquals("hello", AppPrefs.sanitizeCustomText("he\u0000llo"))
+        assertEquals("ab", AppPrefs.sanitizeCustomText("a\u0001b"))
+    }
+
+    @Test
+    fun `sanitizeCustomText preserves tab`() {
+        assertEquals("a\tb", AppPrefs.sanitizeCustomText("a\tb"))
+    }
+
+    @Test
+    fun `sanitizeCustomText truncates to 8 chars`() {
+        assertEquals("12345678", AppPrefs.sanitizeCustomText("123456789"))
+    }
+
+    @Test
+    fun `sanitizeCustomText returns empty for blank input`() {
+        assertEquals("", AppPrefs.sanitizeCustomText(""))
+        assertEquals("", AppPrefs.sanitizeCustomText("\u0000\u0001"))
+    }
+
+    @Test
+    fun `sanitizeCustomText preserves normal text`() {
+        assertEquals("hello", AppPrefs.sanitizeCustomText("hello"))
+        assertEquals("|~`\\", AppPrefs.sanitizeCustomText("|~`\\"))
+    }
+
+    @Test
+    fun `expanded quick key options include terminal chars`() {
+        val options = AppPrefs.QUICK_KEY_OPTIONS
+        assertTrue(options.contains("|"))
+        assertTrue(options.contains("~"))
+        assertTrue(options.contains("`"))
+        assertTrue(options.contains("\\"))
+        assertTrue(options.contains("@"))
+        assertTrue(options.contains("#"))
+    }
+
+    @Test
+    fun `extra slot defaults`() {
+        assertEquals("keycode:KEYCODE_ESCAPE", appPrefs.getExtraSlot(0))
+        assertEquals("keycode:KEYCODE_TAB", appPrefs.getExtraSlot(1))
+        assertEquals("ctrl", appPrefs.getExtraSlot(2))
+    }
+
+    @Test
+    fun `set and get extra slot`() {
+        appPrefs.setExtraSlot(0, "keycode:KEYCODE_MOVE_HOME")
+        assertEquals("keycode:KEYCODE_MOVE_HOME", appPrefs.getExtraSlot(0))
+    }
+
+    @Test
+    fun `set extra slot with custom text sanitizes input`() {
+        appPrefs.setExtraSlot(1, "text:he\u0000llo")
+        assertEquals("text:hello", appPrefs.getExtraSlot(1))
+    }
+
+    @Test
+    fun `set custom quick key sanitizes input`() {
+        appPrefs.setQuickKey("text:\u0000|")
+        assertEquals("text:|", appPrefs.getQuickKey())
+    }
+
+    @Test
+    fun `getExtraSlotLabel returns readable name`() {
+        assertEquals("ESC", AppPrefs.getExtraSlotLabel("keycode:KEYCODE_ESCAPE"))
+        assertEquals("Tab", AppPrefs.getExtraSlotLabel("keycode:KEYCODE_TAB"))
+        assertEquals("Ctrl", AppPrefs.getExtraSlotLabel("ctrl"))
+        assertEquals("Home", AppPrefs.getExtraSlotLabel("keycode:KEYCODE_MOVE_HOME"))
+        assertEquals("End", AppPrefs.getExtraSlotLabel("keycode:KEYCODE_MOVE_END"))
+        assertEquals("|", AppPrefs.getExtraSlotLabel("text:|"))
+        assertEquals("hello", AppPrefs.getExtraSlotLabel("text:hello"))
+    }
 }
