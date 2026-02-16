@@ -211,7 +211,8 @@ class QwertyKeyboard(
 
         if (key.output is KeyOutput.QuickKey) {
             val currentQuickKey = appPrefs?.getQuickKey() ?: "/"
-            button.text = currentQuickKey
+            val displayKey = if (currentQuickKey.startsWith("text:")) currentQuickKey.removePrefix("text:") else currentQuickKey
+            button.text = displayKey
             quickKeyButton = button
             button.setOnLongClickListener {
                 val options = AppPrefs.QUICK_KEY_OPTIONS
@@ -347,7 +348,8 @@ class QwertyKeyboard(
             }
             is KeyOutput.QuickKey -> {
                 val quickChar = appPrefs?.getQuickKey() ?: "/"
-                keySender.sendChar(ic, quickChar)
+                val text = if (quickChar.startsWith("text:")) quickChar.removePrefix("text:") else quickChar
+                keySender.sendChar(ic, text)
             }
             is KeyOutput.KeyCode -> {
                 keySender.sendKey(ic, key.output.code)
