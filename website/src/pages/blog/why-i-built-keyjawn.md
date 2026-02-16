@@ -14,13 +14,13 @@ The phone keyboards they're using weren't built for this.
 
 ## What's out there
 
-There are two existing approaches to typing in a terminal on Android, and neither one fits the way people use the CLI now.
+The existing options fall into two categories, and none of them were designed for AI CLI workflows.
 
-**[Hacker's Keyboard](https://github.com/klausw/hackerskeyboard)** is a full five-row keyboard with Ctrl, Alt, Esc, arrow keys, and an F-key row. It's been around since 2010 and it's solid at what it does. But it was designed for people running vim and emacs on a phone -- traditional power users who wanted a desktop keyboard layout crammed onto a touchscreen. The app hasn't been updated in years, the keys are small because it's trying to fit everything at once, and it doesn't have any of the features that matter for AI CLI workflows: voice input, slash command shortcuts, image upload.
+**Terminal keyboards** like [Hacker's Keyboard](https://github.com/klausw/hackerskeyboard), [Unexpected Keyboard](https://github.com/Julow/Unexpected-Keyboard), and [BeHe Keyboard](https://f-droid.org/en/packages/com.vlath.keyboard/) give you Ctrl, Alt, Esc, and arrow keys as a system keyboard. They're built for traditional terminal power users -- vim, emacs, sysadmin work. They handle key events well but none of them have voice input, slash command shortcuts, or image upload. Hacker's Keyboard hasn't been updated in years. Unexpected Keyboard is actively maintained and well-designed for what it does, but it's targeting a different workflow.
 
-**[Termius](https://termius.com/)** takes the opposite approach. It's a full SSH client with its own built-in terminal, connection manager, and key toolbar. It's a good product if you want a dedicated app for SSH sessions. But it is its own app. If you use Cockpit in a browser, or Termux, or any other terminal tool, the Termius keyboard doesn't help you. You'd need to do all your terminal work inside Termius specifically.
+**SSH clients** like [Termius](https://termius.com/), [ConnectBot](https://connectbot.org/), and [JuiceSSH](https://juicessh.com/) include their own terminal key toolbars. They work well inside their own apps, but the keys only exist inside those apps. If you use Cockpit in a browser, or Termux, or any other terminal tool, those toolbars don't help you. Termux has its own configurable [extra keys row](https://wiki.termux.com/wiki/Touch_Keyboard), which is useful if Termux is your only terminal app -- but it doesn't carry over to other apps either.
 
-KeyJawn is neither of those things. It's a system keyboard -- it replaces Gboard, not your SSH client. You install it, enable it in Android settings, and it works in every app. Termux, Cockpit in Chrome, JuiceSSH, a web terminal, whatever. The terminal keys are always there.
+KeyJawn is a system keyboard. It replaces Gboard, not your SSH client. You install it, enable it in Android settings, and the terminal keys work in every app. But the real difference is what it was built for: talking to AI agents via the CLI, where most of your input is natural language and the tools you use have slash commands, not vim keybindings.
 
 ## The actual problem
 
