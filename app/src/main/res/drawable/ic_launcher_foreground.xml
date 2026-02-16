@@ -1,0 +1,54 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Keyboard body (centered in safe zone 18-90) -->
+    <path
+        android:pathData="M24,34 L84,34 Q88,34 88,38 L88,74 Q88,78 84,78 L24,78 Q20,78 20,74 L20,38 Q20,34 24,34 Z"
+        android:fillColor="#1e1e2a"
+        android:strokeColor="#2a2a3a"
+        android:strokeWidth="1"/>
+
+    <!-- Top row keys -->
+    <path android:pathData="M26,38 L36,38 Q37,38 37,39 L37,46 Q37,47 36,47 L26,47 Q25,47 25,46 L25,39 Q25,38 26,38 Z"
+        android:fillColor="#2B2B30" android:strokeColor="#3a3a4a" android:strokeWidth="0.5"/>
+    <path android:pathData="M40,38 L50,38 Q51,38 51,39 L51,46 Q51,47 50,47 L40,47 Q39,47 39,46 L39,39 Q39,38 40,38 Z"
+        android:fillColor="#2B2B30" android:strokeColor="#3a3a4a" android:strokeWidth="0.5"/>
+    <path android:pathData="M54,38 L64,38 Q65,38 65,39 L65,46 Q65,47 64,47 L54,47 Q53,47 53,46 L53,39 Q53,38 54,38 Z"
+        android:fillColor="#2B2B30" android:strokeColor="#3a3a4a" android:strokeWidth="0.5"/>
+    <!-- Green accent key -->
+    <path android:pathData="M68,38 L82,38 Q83,38 83,39 L83,46 Q83,47 82,47 L68,47 Q67,47 67,46 L67,39 Q67,38 68,38 Z"
+        android:fillColor="#2a4a35" android:strokeColor="#3a6a4a" android:strokeWidth="0.5"/>
+
+    <!-- Middle row keys -->
+    <path android:pathData="M26,50 L34,50 Q35,50 35,51 L35,58 Q35,59 34,59 L26,59 Q25,59 25,58 L25,51 Q25,50 26,50 Z"
+        android:fillColor="#2B2B30" android:strokeColor="#3a3a4a" android:strokeWidth="0.5"/>
+    <path android:pathData="M38,50 L46,50 Q47,50 47,51 L47,58 Q47,59 46,59 L38,59 Q37,59 37,58 L37,51 Q37,50 38,50 Z"
+        android:fillColor="#2B2B30" android:strokeColor="#3a3a4a" android:strokeWidth="0.5"/>
+    <path android:pathData="M50,50 L58,50 Q59,50 59,51 L59,58 Q59,59 58,59 L50,59 Q49,59 49,58 L49,51 Q49,50 50,50 Z"
+        android:fillColor="#2B2B30" android:strokeColor="#3a3a4a" android:strokeWidth="0.5"/>
+    <path android:pathData="M62,50 L82,50 Q83,50 83,51 L83,58 Q83,59 82,59 L62,59 Q61,59 61,58 L61,51 Q61,50 62,50 Z"
+        android:fillColor="#2B2B30" android:strokeColor="#3a3a4a" android:strokeWidth="0.5"/>
+
+    <!-- Bottom row -->
+    <path android:pathData="M26,62 L32,62 Q33,62 33,63 L33,72 Q33,73 32,73 L26,73 Q25,73 25,72 L25,63 Q25,62 26,62 Z"
+        android:fillColor="#4A2525" android:strokeColor="#6a3535" android:strokeWidth="0.5"/>
+    <path android:pathData="M36,62 L72,62 Q73,62 73,63 L73,72 Q73,73 72,73 L36,73 Q35,73 35,72 L35,63 Q35,62 36,62 Z"
+        android:fillColor="#333338" android:strokeColor="#3a3a4a" android:strokeWidth="0.5"/>
+    <path android:pathData="M76,62 L82,62 Q83,62 83,63 L83,72 Q83,73 82,73 L76,73 Q75,73 75,72 L75,63 Q75,62 76,62 Z"
+        android:fillColor="#253050" android:strokeColor="#354a70" android:strokeWidth="0.5"/>
+
+    <!-- "KJ" text on the green key -->
+    <path
+        android:pathData="M71,41 L71,45 M71,42.5 L74,45 M74,41 L71.5,43.5"
+        android:strokeColor="#6cf2a8"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000"/>
+    <path
+        android:pathData="M76,41 L78,41 L78,43.5 Q78,45 76,45"
+        android:strokeColor="#6cf2a8"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000"/>
+</vector>
