@@ -50,7 +50,7 @@ import Base from '../layouts/Base.astro';
 
         <section class="privacy-section">
           <h2>Purchases</h2>
-          <p>In-app purchases are handled by Google Play. KeyJawn only stores a boolean flag indicating whether the full version has been purchased. No payment information is accessed or stored by the app.</p>
+          <p>Purchases are handled by Stripe via the KeyJawn website. The app checks a local flag to determine whether the full version is unlocked. No payment information is accessed or stored by the app.</p>
         </section>
 
         <section class="privacy-section">
@@ -71,8 +71,8 @@ import Base from '../layouts/Base.astro';
               </tr>
               <tr>
                 <td><code>INTERNET</code></td>
-                <td>SCP file upload, billing</td>
-                <td>Only during upload or purchase flow</td>
+                <td>SCP file upload</td>
+                <td>Only during upload</td>
               </tr>
               <tr>
                 <td><code>READ_MEDIA_IMAGES</code></td>

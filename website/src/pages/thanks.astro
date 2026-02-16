@@ -1,0 +1,76 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Thanks for buying KeyJawn"
+  description="Your purchase is confirmed. Check your email for the download link."
+>
+  <section class="section">
+    <div class="container thanks-layout">
+      <h1 class="page-title"><span class="prompt">echo "thanks"</span></h1>
+
+      <div class="thanks-content">
+        <p class="thanks-lead">Your purchase is confirmed.</p>
+        <p>Check your email for a download link to the full version APK. If it doesn't arrive in a few minutes, check your spam folder or contact <a href="mailto:jamditis@gmail.com">jamditis@gmail.com</a>.</p>
+
+        <div class="thanks-steps">
+          <h2>Install steps</h2>
+          <ol>
+            <li>Download the APK from the link in your email</li>
+            <li>Open the file on your Android device (or use <code>adb install keyjawn-full.apk</code>)</li>
+            <li>Go to Settings > System > Languages & input > On-screen keyboard</li>
+            <li>Enable KeyJawn and set it as your default keyboard</li>
+          </ol>
+        </div>
+
+        <div class="thanks-actions">
+          <a href="/" class="btn btn-secondary">Back to home</a>
+          <a href="/manual" class="btn btn-secondary">Read the manual</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .thanks-layout {
+    max-width: 640px;
+  }
+
+  .page-title {
+    margin-bottom: var(--space-md);
+  }
+
+  .thanks-lead {
+    font-size: 1.2rem;
+    color: var(--accent);
+    margin-bottom: var(--space-sm);
+  }
+
+  .thanks-content p {
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .thanks-steps {
+    margin-top: var(--space-lg);
+  }
+
+  .thanks-steps h2 {
+    font-size: 1.1rem;
+    margin-bottom: var(--space-sm);
+  }
+
+  .thanks-steps ol {
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+
+  .thanks-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    margin-top: var(--space-lg);
+  }
+</style>
