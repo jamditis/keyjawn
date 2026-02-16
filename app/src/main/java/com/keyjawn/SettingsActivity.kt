@@ -29,11 +29,16 @@ class SettingsActivity : Activity() {
     private val isFull: Boolean
         get() = BuildConfig.FLAVOR == "full"
 
+    private val density: Float
+        get() = resources.displayMetrics.density
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
         themeManager = ThemeManager(this)
+
+        applyThemeColors()
 
         commandSetsContainer = findViewById(R.id.command_sets)
 
@@ -47,6 +52,7 @@ class SettingsActivity : Activity() {
         if (isFull) {
             hostStorage = HostStorage(this)
             hostListContainer = findViewById(R.id.host_list)
+            styleAccentButton(findViewById(R.id.add_host_btn))
             findViewById<Button>(R.id.add_host_btn).setOnClickListener {
                 showAddHostDialog()
             }
@@ -64,10 +70,74 @@ class SettingsActivity : Activity() {
         setupCustomCommandsButton()
 
         val flavorLabel = if (isFull) "" else " lite"
-        findViewById<TextView>(R.id.version_text).text =
-            "KeyJawn$flavorLabel v${BuildConfig.VERSION_NAME}"
+        val versionText = findViewById<TextView>(R.id.version_text)
+        versionText.text = "KeyJawn$flavorLabel v${BuildConfig.VERSION_NAME}"
+        versionText.setTextColor(themeManager.keyHint())
 
         refreshCommandSets()
+    }
+
+    // -- Theme application --
+
+    private fun applyThemeColors() {
+        val tm = themeManager
+
+        // Root background
+        findViewById<View>(R.id.settings_root).setBackgroundColor(tm.keyboardBg())
+
+        // Title
+        findViewById<TextView>(R.id.settings_title).setTextColor(tm.keyText())
+
+        // Section headers
+        for (id in listOf(R.id.toggles_header, R.id.theme_header, R.id.key_mapping_header,
+            R.id.host_header, R.id.commands_header)) {
+            findViewById<TextView>(id).setTextColor(tm.keyHint())
+        }
+
+        // Toggle labels
+        findViewById<TextView>(R.id.haptic_label).setTextColor(tm.keyText())
+        findViewById<TextView>(R.id.tooltip_label).setTextColor(tm.keyText())
+
+        // Card backgrounds
+        for (id in listOf(R.id.toggles_card, R.id.theme_card, R.id.key_mapping_card,
+            R.id.host_card, R.id.commands_card)) {
+            applyCardBackground(findViewById(id))
+        }
+
+        // Dividers
+        for (id in listOf(R.id.divider_1, R.id.divider_2, R.id.divider_3, R.id.divider_4)) {
+            findViewById<View>(id).setBackgroundColor(tm.divider())
+        }
+    }
+
+    private fun applyCardBackground(view: View) {
+        val bg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 8 * density
+            setColor(themeManager.keyBg())
+        }
+        view.background = bg
+    }
+
+    private fun styleAccentButton(button: Button) {
+        val bg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 8 * density
+            setColor(themeManager.accent())
+        }
+        button.background = bg
+        button.setTextColor(0xFFFFFFFF.toInt())
+    }
+
+    private fun styleOutlineButton(button: Button) {
+        val bg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 6 * density
+            setColor(0x00000000)
+            setStroke((1 * density + 0.5f).toInt(), themeManager.accent())
+        }
+        button.background = bg
+        button.setTextColor(themeManager.accent())
     }
 
     // -- Haptic toggle --
@@ -111,7 +181,6 @@ class SettingsActivity : Activity() {
         val picker = findViewById<LinearLayout>(R.id.theme_picker)
         picker.removeAllViews()
 
-        val density = resources.displayMetrics.density
         val selected = themeManager.currentTheme
 
         for (theme in themeManager.getAvailableThemes()) {
@@ -134,7 +203,7 @@ class SettingsActivity : Activity() {
                     cornerRadius = 8 * density
                     setColor(bgColor)
                     if (theme == selected) {
-                        setStroke((2 * density).toInt(), 0xFF6C9BF2.toInt())
+                        setStroke((2 * density).toInt(), themeManager.accent())
                     }
                 }
                 background = bg
@@ -169,6 +238,8 @@ class SettingsActivity : Activity() {
             swatch.setOnClickListener {
                 themeManager.currentTheme = theme
                 Toast.makeText(this, "Theme applied on next keyboard open", Toast.LENGTH_SHORT).show()
+                // Re-apply theme colors to settings page too
+                applyThemeColors()
                 setupThemePicker()
             }
 
@@ -195,7 +266,6 @@ class SettingsActivity : Activity() {
     private fun refreshKeyMapping(listContainer: LinearLayout) {
         listContainer.removeAllViews()
         val appPrefs = AppPrefs(this)
-        val density = resources.displayMetrics.density
 
         for (slot in 0..2) {
             val slotLabel = when (slot) {
@@ -227,28 +297,27 @@ class SettingsActivity : Activity() {
         isQuickKey: Boolean = false,
         onSelect: (String) -> Unit
     ) {
-        val density = resources.displayMetrics.density
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (48 * density).toInt()
+                (52 * density).toInt()
             )
         }
 
         val labelView = TextView(this).apply {
             text = label
-            textSize = 14f
-            setTextColor(0xFFBBBBBB.toInt())
+            textSize = 15f
+            setTextColor(themeManager.keyText())
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         row.addView(labelView)
 
         val valueView = TextView(this).apply {
             text = currentValue
-            textSize = 14f
-            setTextColor(0xFF6C9BF2.toInt())
+            textSize = 15f
+            setTextColor(themeManager.accent())
             setPadding((8 * density).toInt(), 0, (8 * density).toInt(), 0)
         }
         row.addView(valueView)
@@ -266,6 +335,7 @@ class SettingsActivity : Activity() {
             minHeight = 0
             minimumHeight = 0
         }
+        styleOutlineButton(changeBtn)
 
         changeBtn.setOnClickListener {
             if (isQuickKey) {
@@ -350,7 +420,9 @@ class SettingsActivity : Activity() {
             val deleteBtn = itemView.findViewById<ImageButton>(R.id.host_delete)
 
             nameText.text = host.displayName()
+            nameText.setTextColor(themeManager.keyText())
             detailText.text = "${host.username}@${host.hostname}:${host.port}"
+            detailText.setTextColor(themeManager.keyHint())
             radio.isChecked = index == activeIndex
 
             radio.setOnClickListener {
@@ -445,6 +517,12 @@ class SettingsActivity : Activity() {
         } else {
             upgradeBtn.text = "Get full version ($4)"
             upgradeBtn.visibility = View.VISIBLE
+            val bg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 8 * density
+                setColor(0xFF2E7D32.toInt())
+            }
+            upgradeBtn.background = bg
             upgradeBtn.setOnClickListener {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://keyjawn.amditis.tech/pricing")))
             }
@@ -457,6 +535,7 @@ class SettingsActivity : Activity() {
         val addBtn = findViewById<Button>(R.id.add_command_set_btn)
         if (isFull) {
             addBtn.visibility = View.VISIBLE
+            styleAccentButton(addBtn)
             addBtn.setOnClickListener { showAddCommandSetDialog() }
         } else {
             addBtn.visibility = View.GONE
@@ -469,7 +548,6 @@ class SettingsActivity : Activity() {
         val sets = registry.getAvailableSets()
         val enabled = registry.getEnabledSets()
         val paid = isFull
-        val density = resources.displayMetrics.density
 
         sets.forEach { (id, commandSet) ->
             val row = LinearLayout(this).apply {
@@ -483,7 +561,7 @@ class SettingsActivity : Activity() {
 
             val checkbox = CheckBox(this).apply {
                 text = "${commandSet.label} (${commandSet.commands.size})"
-                setTextColor(0xFFDDDDDD.toInt())
+                setTextColor(themeManager.keyText())
                 isChecked = id in enabled
                 isEnabled = paid || !registry.isCustomSet(id)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -508,12 +586,13 @@ class SettingsActivity : Activity() {
                     minimumHeight = 0
                     setOnClickListener { showAddCommandDialog(id) }
                 }
+                styleOutlineButton(addCmdBtn)
                 row.addView(addCmdBtn)
 
                 val deleteBtn = Button(this).apply {
                     text = "X"
                     textSize = 14f
-                    setTextColor(0xFFCC4444.toInt())
+                    setTextColor(themeManager.accentLocked())
                     val size = (36 * density).toInt()
                     layoutParams = LinearLayout.LayoutParams(size, size).apply {
                         marginStart = (4 * density).toInt()
@@ -535,12 +614,19 @@ class SettingsActivity : Activity() {
                             .show()
                     }
                 }
+                val deleteBg = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 6 * density
+                    setColor(0x00000000)
+                    setStroke((1 * density + 0.5f).toInt(), themeManager.accentLocked())
+                }
+                deleteBtn.background = deleteBg
                 row.addView(deleteBtn)
             }
 
             commandSetsContainer.addView(row)
 
-            // Show individual commands for custom sets (expandable)
+            // Show individual commands for custom sets
             if (paid && registry.isCustomSet(id)) {
                 for (command in commandSet.commands) {
                     val cmdRow = LinearLayout(this).apply {
@@ -551,7 +637,7 @@ class SettingsActivity : Activity() {
                     }
                     val cmdLabel = TextView(this).apply {
                         text = command
-                        setTextColor(0xFFAAAAAA.toInt())
+                        setTextColor(themeManager.keyHint())
                         textSize = 13f
                         layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                     }
@@ -560,7 +646,7 @@ class SettingsActivity : Activity() {
                     val removeCmdBtn = Button(this).apply {
                         text = "x"
                         textSize = 12f
-                        setTextColor(0xFF999999.toInt())
+                        setTextColor(themeManager.keyHint())
                         val size = (28 * density).toInt()
                         layoutParams = LinearLayout.LayoutParams(size, size)
                         setPadding(0, 0, 0, 0)

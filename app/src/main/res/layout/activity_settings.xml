@@ -1,66 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/settings_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#121212">
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="20dp">
 
-        <!-- Haptic feedback -->
+        <!-- Title -->
+        <TextView
+            android:id="@+id/settings_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="KeyJawn settings"
+            android:textSize="18sp"
+            android:textAllCaps="false"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Toggles section -->
+        <TextView
+            android:id="@+id/toggles_header"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Toggles"
+            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:layout_marginBottom="8dp" />
+
         <LinearLayout
+            android:id="@+id/toggles_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
+            android:orientation="vertical"
+            android:padding="12dp">
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Haptic feedback"
-                android:textColor="#BBBBBB"
-                android:textSize="14sp"
-                android:textAllCaps="false" />
+            <!-- Haptic feedback -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-            <CheckBox
-                android:id="@+id/haptic_toggle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                <TextView
+                    android:id="@+id/haptic_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Haptic feedback"
+                    android:textSize="15sp"
+                    android:textAllCaps="false" />
+
+                <CheckBox
+                    android:id="@+id/haptic_toggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- Tooltip hints -->
+            <LinearLayout
+                android:id="@+id/tooltip_section"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tooltip_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Show tooltip hints"
+                    android:textSize="15sp"
+                    android:textAllCaps="false" />
+
+                <CheckBox
+                    android:id="@+id/tooltip_toggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
 
         </LinearLayout>
 
-        <!-- Tooltip hints (premium toggle) -->
-        <LinearLayout
-            android:id="@+id/tooltip_section"
+        <!-- Divider -->
+        <View
+            android:id="@+id/divider_1"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone">
+            android:layout_height="1dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp" />
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Show tooltip hints"
-                android:textColor="#BBBBBB"
-                android:textSize="14sp"
-                android:textAllCaps="false" />
-
-            <CheckBox
-                android:id="@+id/tooltip_toggle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-
-        </LinearLayout>
-
-        <!-- Theme section (premium only) -->
+        <!-- Theme section -->
         <LinearLayout
             android:id="@+id/theme_section"
             android:layout_width="match_parent"
@@ -69,50 +102,78 @@
             android:visibility="gone">
 
             <TextView
+                android:id="@+id/theme_header"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Theme"
-                android:textColor="#BBBBBB"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textAllCaps="false"
                 android:layout_marginBottom="8dp" />
 
             <LinearLayout
-                android:id="@+id/theme_picker"
+                android:id="@+id/theme_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp" />
+                android:orientation="vertical"
+                android:padding="12dp">
 
+                <LinearLayout
+                    android:id="@+id/theme_picker"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:id="@+id/divider_2"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="24dp" />
         </LinearLayout>
 
-        <!-- Key mapping section (full flavor only) -->
+        <!-- Key mapping section -->
         <LinearLayout
             android:id="@+id/key_mapping_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginBottom="16dp"
             android:visibility="gone">
 
             <TextView
+                android:id="@+id/key_mapping_header"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Key mapping"
-                android:textColor="#BBBBBB"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textAllCaps="false"
                 android:layout_marginBottom="8dp" />
 
             <LinearLayout
-                android:id="@+id/key_mapping_list"
+                android:id="@+id/key_mapping_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:orientation="vertical"
+                android:padding="12dp">
 
+                <LinearLayout
+                    android:id="@+id/key_mapping_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:id="@+id/divider_3"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="24dp" />
         </LinearLayout>
 
-        <!-- Hosts section (full flavor only) -->
+        <!-- SSH hosts section -->
         <LinearLayout
             android:id="@+id/host_section"
             android:layout_width="match_parent"
@@ -120,56 +181,79 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/host_header"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="SSH hosts"
-                android:textColor="#BBBBBB"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textAllCaps="false"
                 android:layout_marginBottom="8dp" />
 
             <LinearLayout
-                android:id="@+id/host_list"
+                android:id="@+id/host_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <LinearLayout
+                    android:id="@+id/host_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <Button
+                    android:id="@+id/add_host_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Add host"
+                    android:textAllCaps="false"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:id="@+id/divider_4"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="24dp" />
+        </LinearLayout>
+
+        <!-- Slash commands section -->
+        <TextView
+            android:id="@+id/commands_header"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Slash command sets"
+            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/commands_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <LinearLayout
+                android:id="@+id/command_sets"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
 
             <Button
-                android:id="@+id/add_host_btn"
+                android:id="@+id/add_command_set_btn"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:text="Add host"
+                android:text="Add command set"
                 android:textAllCaps="false"
-                android:layout_marginTop="8dp" />
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
         </LinearLayout>
 
-        <!-- Slash commands section -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Slash command sets"
-            android:textColor="#BBBBBB"
-            android:textSize="14sp"
-            android:textAllCaps="false"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:id="@+id/command_sets"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-
-        <Button
-            android:id="@+id/add_command_set_btn"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Add command set"
-            android:textAllCaps="false"
-            android:layout_marginTop="8dp"
-            android:visibility="gone" />
-
-        <!-- Upgrade (lite only, links to website) -->
+        <!-- Upgrade (lite only) -->
         <Button
             android:id="@+id/upgrade_btn"
             android:layout_width="match_parent"
@@ -178,16 +262,14 @@
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="15sp"
-            android:backgroundTint="#2E7D32"
             android:layout_marginTop="24dp"
             android:visibility="gone" />
 
-        <!-- About -->
+        <!-- Version -->
         <TextView
             android:id="@+id/version_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#666666"
             android:textSize="12sp"
             android:layout_marginTop="32dp"
             android:layout_gravity="center_horizontal" />

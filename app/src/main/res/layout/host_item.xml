@@ -23,14 +23,12 @@
             android:id="@+id/host_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
             android:textSize="16sp" />
 
         <TextView
             android:id="@+id/host_detail"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#888888"
             android:textSize="12sp" />
     </LinearLayout>
 

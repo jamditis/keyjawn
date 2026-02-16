@@ -65,6 +65,15 @@ class AppPrefs(context: Context) {
         prefs.edit().putBoolean("haptic_enabled", enabled).apply()
     }
 
+    /** Bottom padding in dp (0-64). Default 0 — no extra padding. */
+    fun getBottomPadding(): Int {
+        return prefs.getInt("bottom_padding_dp", 0).coerceIn(0, 64)
+    }
+
+    fun setBottomPadding(dp: Int) {
+        prefs.edit().putInt("bottom_padding_dp", dp.coerceIn(0, 64)).apply()
+    }
+
     companion object {
         val QUICK_KEY_OPTIONS = listOf(
             "/", ".", ",", "?", "!", "\u2014", "'", "\"", ":", ";",

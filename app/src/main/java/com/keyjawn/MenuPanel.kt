@@ -6,6 +6,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.TextView
 
 class MenuPanel(
@@ -18,7 +19,8 @@ class MenuPanel(
     private val onOpenSettings: () -> Unit,
     private val onThemeChanged: () -> Unit,
     private val onShowTooltip: (String) -> Unit,
-    private val currentPackageProvider: () -> String
+    private val currentPackageProvider: () -> String,
+    private val onBottomPaddingChanged: () -> Unit = {}
 ) {
 
     private val context: Context get() = panel.context
@@ -111,6 +113,12 @@ class MenuPanel(
 
         addSectionHeader("Appearance")
         addThemeRow()
+
+        addSectionHeader("Layout")
+        addSliderRow("Bottom padding", 0, 64, appPrefs.getBottomPadding()) { value ->
+            appPrefs.setBottomPadding(value)
+            onBottomPaddingChanged()
+        }
 
         addSectionHeader("Toggles")
         addToggleRow("Haptic feedback", fullOnly = false,
@@ -225,6 +233,57 @@ class MenuPanel(
                 onToggle()
             }
         }
+
+        list.addView(row)
+        addDivider()
+    }
+
+    private fun addSliderRow(label: String, min: Int, max: Int, current: Int, onChange: (Int) -> Unit) {
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)
+            )
+            setPadding(dp(14), 0, dp(14), 0)
+        }
+
+        val text = TextView(context).apply {
+            this.text = label
+            textSize = 15f
+            setTextColor(themeManager.keyText())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        row.addView(text)
+
+        val valueLabel = TextView(context).apply {
+            this.text = "${current}dp"
+            textSize = 13f
+            setTextColor(themeManager.keyHint())
+            setPadding(dp(8), 0, 0, 0)
+        }
+
+        val seekBar = SeekBar(context).apply {
+            this.max = max - min
+            progress = current - min
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = dp(10)
+                marginEnd = dp(6)
+            }
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                    val value = progress + min
+                    valueLabel.text = "${value}dp"
+                    if (fromUser) onChange(value)
+                }
+                override fun onStartTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {}
+            })
+        }
+        row.addView(seekBar)
+        row.addView(valueLabel)
 
         list.addView(row)
         addDivider()

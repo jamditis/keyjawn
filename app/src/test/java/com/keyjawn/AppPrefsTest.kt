@@ -136,6 +136,36 @@ class AppPrefsTest {
     }
 
     @Test
+    fun `bottom padding defaults to 0`() {
+        assertEquals(0, appPrefs.getBottomPadding())
+    }
+
+    @Test
+    fun `set and get bottom padding`() {
+        appPrefs.setBottomPadding(24)
+        assertEquals(24, appPrefs.getBottomPadding())
+    }
+
+    @Test
+    fun `bottom padding clamps to max 64`() {
+        appPrefs.setBottomPadding(100)
+        assertEquals(64, appPrefs.getBottomPadding())
+    }
+
+    @Test
+    fun `bottom padding clamps to min 0`() {
+        appPrefs.setBottomPadding(-5)
+        assertEquals(0, appPrefs.getBottomPadding())
+    }
+
+    @Test
+    fun `bottom padding persists across reads`() {
+        appPrefs.setBottomPadding(32)
+        assertEquals(32, appPrefs.getBottomPadding())
+        assertEquals(32, appPrefs.getBottomPadding())
+    }
+
+    @Test
     fun `getExtraSlotLabel returns readable name`() {
         assertEquals("ESC", AppPrefs.getExtraSlotLabel("keycode:KEYCODE_ESCAPE"))
         assertEquals("Tab", AppPrefs.getExtraSlotLabel("keycode:KEYCODE_TAB"))

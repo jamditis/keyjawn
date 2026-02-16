@@ -51,6 +51,7 @@ class ExtraRowManager(
     private var tooltipDismissRunnable: Runnable? = null
 
     var onQuickKeyChanged: ((String) -> Unit)? = null
+    var onBottomPaddingChanged: (() -> Unit)? = null
 
     init {
         wireSlot(0, R.id.key_esc)
@@ -258,7 +259,8 @@ class ExtraRowManager(
                 onOpenSettings = { onOpenSettings?.invoke() },
                 onThemeChanged = { onThemeChanged?.invoke() },
                 onShowTooltip = { msg -> showTooltip(msg) },
-                currentPackageProvider = currentPackageProvider ?: { "unknown" }
+                currentPackageProvider = currentPackageProvider ?: { "unknown" },
+                onBottomPaddingChanged = { onBottomPaddingChanged?.invoke() }
             )
             menuPanel = mp
             uploadButton.setOnClickListener {

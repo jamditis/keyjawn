@@ -16,6 +16,19 @@ import Base from '../layouts/Base.astro';
   <section class="section">
     <div class="container changelog">
 
+      <article class="release" id="v1.2.0">
+        <div class="release-header">
+          <h2 class="release-version">v1.2.0</h2>
+          <time class="release-date" datetime="2026-02-16">February 16, 2026</time>
+        </div>
+        <ul class="release-changes">
+          <li><strong>Adjustable bottom padding</strong> -- a slider in the menu panel (0-64dp) lets you position the keyboard for your phone's navigation setup. Replaces the hardcoded gesture nav padding that pushed the keyboard up for everyone.</li>
+          <li><strong>Theme-aware settings page</strong> -- the settings activity now follows your chosen keyboard theme. Section cards with rounded backgrounds, dividers between groups, styled buttons, and consistent typography replace the flat dark layout.</li>
+          <li><strong>Expanded test coverage</strong> -- 17 new unit tests covering bottom padding preferences, settings layout structure, and theme application. Total: 262 tests.</li>
+        </ul>
+        <a href="https://github.com/jamditis/keyjawn/releases/tag/v1.2.0" class="release-link">Full release notes</a>
+      </article>
+
       <article class="release" id="v1.1.0">
         <div class="release-header">
           <h2 class="release-version">v1.1.0</h2>
