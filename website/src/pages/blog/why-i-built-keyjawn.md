@@ -44,7 +44,7 @@ The keyboard has a dedicated terminal row above the QWERTY layout: `Esc`, `Tab`,
 
 **SCP image upload.** I SSH into Raspberry Pis from my phone constantly. When I need to share a screenshot with Claude Code -- an error message, a UI bug, a terminal output -- the normal process is: save the image, open a file manager, find an SCP client, configure the connection, transfer the file, switch back to the terminal, type the path. KeyJawn does it in one tap. Pick the photo, it SCPs to your server, and the remote file path gets typed at your cursor.
 
-**It's a system keyboard, not an overlay.** This is the thing that bothered me most about existing solutions. Termius has terminal keys, but they're inside the Termius app. Browser extensions add key rows, but they float above the page and break when you switch apps or the browser redraws. Hacker's Keyboard is a system keyboard, but it's a full desktop layout crammed onto a phone screen. KeyJawn installs as an Android input method -- the terminal keys are part of the keyboard itself, not a layer on top of something else. They work in Termux, in Cockpit through Chrome, in JuiceSSH, in any app. You set it once and forget about it.
+**A system keyboard that works everywhere.** Termius has terminal keys, but they're inside the Termius app. Browser extensions add key rows, but they float above the page and break when you switch apps or the browser redraws. Hacker's Keyboard is a system keyboard, but it's a full desktop layout crammed onto a phone screen. KeyJawn installs as an Android input method -- the terminal keys are part of the keyboard itself. They work in Termux, in Cockpit through Chrome, in JuiceSSH, in any app. You set it once and forget about it.
 
 **Customizable for how you actually work.** I built this for my own workflow: SSHing into a Pi from a couch to run Claude Code sessions. The default key layout reflects that -- the keys I reach for most are the ones I put in the terminal row. Slash command sets are configurable per tool (Claude Code, OpenClaw, Gemini CLI). Autocorrect toggles per app so you can leave it off for terminals and on for Slack. SSH hosts are saved so you can switch between machines without retyping credentials. The point is to fit the keyboard to your workflow instead of working around the keyboard.
 
@@ -58,11 +58,11 @@ The keyboard has a dedicated terminal row above the QWERTY layout: `Esc`, `Tab`,
 
 ## Two versions
 
-**KeyJawn Lite** is free. Full QWERTY keyboard with the terminal key row, number row, alt character popups, and shift/caps lock. No permissions required. No network access.
+**KeyJawn Lite** is free. Full QWERTY keyboard with the terminal key row, number row, alt character popups, voice input, clipboard history (30 items), built-in slash commands, swipe gestures, per-app autocorrect, configurable quick key, color-coded extra row, haptic feedback, and shift/caps lock. Requires microphone permission for voice input. No network access, no tracking.
 
-**KeyJawn Full** is $4, lifetime. It adds voice input, clipboard history, SCP upload, SSH host management, slash commands, custom command sets, keyboard color themes, swipe gestures, and per-app autocorrect toggle. No subscriptions, no ads, no tracking. One payment, done.
+**KeyJawn Full** is $4, lifetime. Everything in the free version, plus SCP image upload, multi-host SSH management, encrypted credential storage, keyboard color themes (4 presets), an inline menu panel, clipboard pinning, custom slash command sets, and a tooltip toggle. No subscriptions, no ads, no tracking. One payment, done.
 
-The code is MIT-licensed and [on GitHub](https://github.com/jamditis/keyjawn). Both versions are built from the same codebase -- the full version unlocks features that need additional permissions (microphone, network, storage).
+The code is MIT-licensed and [on GitHub](https://github.com/jamditis/keyjawn). Both versions are built from the same codebase -- the full version unlocks features that need additional permissions (network, storage).
 
 ## Try it
 

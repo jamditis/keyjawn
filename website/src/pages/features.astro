@@ -1,16 +1,17 @@
 ---
 import Base from '../layouts/Base.astro';
 import KeyCap from '../components/KeyCap.astro';
+import FeatureCard from '../components/FeatureCard.astro';
 ---
 
 <Base
   title="Features -- KeyJawn"
-  description="Every feature in KeyJawn: terminal keys, voice input, SCP upload, slash commands, swipe gestures, and more."
+  description="Every feature in KeyJawn: terminal keys, voice input, SCP upload, slash commands, clipboard history, themes, and more."
 >
   <section class="section">
     <div class="container">
       <h1 class="page-title">Features</h1>
-      <p class="page-intro">Everything the keyboard does, section by section. The free version includes voice input, clipboard history, slash commands, and swipe gestures. The full version adds SCP upload, color themes, clipboard pinning, and custom slash commands.</p>
+      <p class="page-intro">Everything the keyboard does. The free version includes terminal keys, voice input, clipboard history, slash commands, swipe gestures, per-app autocorrect, and a configurable quick key. The full version ($4) adds SCP upload, multi-host SSH, keyboard themes, a menu panel, clipboard pinning, and custom slash commands.</p>
     </div>
   </section>
 
@@ -21,6 +22,7 @@ import KeyCap from '../components/KeyCap.astro';
         <h2>Terminal keys</h2>
         <p>A dedicated row above the QWERTY layout with the keys terminals need: <KeyCap label="Esc" />, <KeyCap label="Tab" />, <KeyCap label="Ctrl" />, and arrow keys <KeyCap label="<" /> <KeyCap label=">" />.</p>
         <p>Always visible. No toggling layers or long-pressing to find them. <KeyCap label="Ctrl" /> uses a three-state toggle: tap once to arm it for one keypress, long-press to lock it on, tap again to turn it off. Hold arrow keys to repeat.</p>
+        <p>Each key in the row has a distinct background color so you can tell them apart at a glance. Ctrl changes color when armed or locked.</p>
       </div>
       <div class="feature-visual">
         <div class="key-row-demo">
@@ -34,52 +36,6 @@ import KeyCap from '../components/KeyCap.astro';
     </div>
   </section>
 
-  <!-- Number row -->
-  <section class="section feature-section" id="number-row">
-    <div class="container feature-row reverse">
-      <div class="feature-content">
-        <h2>Number row</h2>
-        <p>A dedicated 0-9 row above the QWERTY keys. Long-press any number for its shifted symbol. Small hint labels on each key show you what you'll get.</p>
-        <p>No switching layers to type a number. No memorizing which symbol lives where. Every key shows both values up front.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="key-row-demo">
-          <KeyCap label="1" />
-          <KeyCap label="2" />
-          <KeyCap label="3" />
-          <KeyCap label="4" />
-          <KeyCap label="5" />
-          <KeyCap label="6" />
-          <KeyCap label="7" />
-          <KeyCap label="8" />
-          <KeyCap label="9" />
-          <KeyCap label="0" />
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Alt keys -->
-  <section class="section feature-section" id="alt-keys">
-    <div class="container feature-row">
-      <div class="feature-content">
-        <h2>Alt characters</h2>
-        <p>Long-press any letter for accented characters and symbol variants. Keys with a single alt character fire immediately. Keys with multiple options show a popup where you slide to pick.</p>
-        <p>Examples: long-press <KeyCap label="a" /> for accented variants, <KeyCap label="n" /> for the tilde variant, <KeyCap label="e" /> for accented forms.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="alt-demo">
-          <div class="alt-popup-demo">
-            <span class="alt-base">a</span>
-            <div class="alt-options">
-              <span>a</span><span>a</span><span>a</span><span>a</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- Voice input -->
   <section class="section feature-section" id="voice">
     <div class="container feature-row reverse">
@@ -87,7 +43,7 @@ import KeyCap from '../components/KeyCap.astro';
         <h2>Voice input</h2>
         <p>Tap the mic in the extra row. A waveform animation shows audio level while you speak. Text appears at your cursor as the speech recognizer processes it -- streaming partial results, not waiting for you to finish.</p>
         <p>When 90% of what you type into an AI agent is natural language, speaking is faster than typing on a phone keyboard. Tap stop or the mic again to finish.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Requires microphone permission.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Requires microphone permission. Included in both free and full versions.</p>
       </div>
       <div class="feature-visual">
         <div class="voice-demo">
@@ -107,32 +63,14 @@ import KeyCap from '../components/KeyCap.astro';
     </div>
   </section>
 
-  <!-- Clipboard -->
-  <section class="section feature-section" id="clipboard">
-    <div class="container feature-row">
-      <div class="feature-content">
-        <h2>Clipboard history</h2>
-        <p>Tap the clipboard button in the extra row to see your recent clipboard history (up to 30 items). Tap any entry to paste it at your cursor. No more switching apps to re-copy something you already copied.</p>
-        <p>The full version adds pinning -- long-lived clipboard items that persist across sessions and stay at the top of the list.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="clipboard-demo">
-          <div class="clip-item">git commit -m "fix auth"</div>
-          <div class="clip-item">ssh pi@192.168.1.50</div>
-          <div class="clip-item">export API_KEY=sk-...</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- SCP upload -->
   <section class="section feature-section" id="scp-upload">
-    <div class="container feature-row reverse">
+    <div class="container feature-row">
       <div class="feature-content">
         <h2>SCP upload</h2>
         <p>Configure your SSH hosts in settings. Tap the upload button in the extra row. Pick a photo from your gallery. KeyJawn SCPs it to your server and types the remote file path at your cursor.</p>
-        <p>Useful for sharing screenshots with Claude Code without leaving the terminal. One tap to upload, path auto-inserted.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only. Credentials stored with AndroidX EncryptedSharedPreferences.</p>
+        <p>Supports multiple SSH hosts with per-host upload directories. Switch between servers without reconfiguring. All credentials encrypted with AES-256 via AndroidX EncryptedSharedPreferences. Host key verification uses trust-on-first-use and rejects changed keys.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
       </div>
       <div class="feature-visual">
         <div class="scp-demo card">
@@ -147,76 +85,45 @@ import KeyCap from '../components/KeyCap.astro';
     </div>
   </section>
 
+  <!-- Clipboard -->
+  <section class="section feature-section" id="clipboard">
+    <div class="container feature-row reverse">
+      <div class="feature-content">
+        <h2>Clipboard history and pinning</h2>
+        <p>Tap the clipboard button in the extra row to see your recent clipboard history (up to 30 items). Tap any entry to paste it at your cursor.</p>
+        <p>The full version adds pinning -- pin up to 15 items that persist across sessions and stay at the top of the list. Pinned items are highlighted so you can tell them apart from regular history.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Clipboard history is free. Pinning is full version only.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="clipboard-demo">
+          <div class="clip-item clip-pinned">ssh pi@192.168.1.50</div>
+          <div class="clip-item">git commit -m "fix auth"</div>
+          <div class="clip-item">export API_KEY=sk-...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Slash commands -->
   <section class="section feature-section" id="slash-commands">
     <div class="container feature-row">
       <div class="feature-content">
         <h2>Slash commands</h2>
         <p>On the symbols layer, the <code>/</code> key opens a command picker instead of typing a literal slash. Select a command to insert it. Dismiss without selecting to type <code>/</code> normally.</p>
-        <p>Built for the slash command patterns every LLM CLI uses: <code>/help</code>, <code>/clear</code>, <code>/compact</code>, and others.</p>
+        <p>Built-in sets cover Claude Code, OpenClaw, and Gemini CLI. Recently used commands float to the top. The full version lets you create custom command sets -- add commands for your own tools, group them by project, toggle sets on and off.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Built-in sets are free. Custom sets are full version only.</p>
       </div>
       <div class="feature-visual">
         <div class="slash-demo card">
+          <div class="cmd-set-header">
+            <span class="cmd-set-name">claude-code</span>
+            <span class="cmd-set-badge">built-in</span>
+          </div>
           <div class="slash-item">/help</div>
           <div class="slash-item">/clear</div>
           <div class="slash-item">/compact</div>
           <div class="slash-item">/review</div>
           <div class="slash-item">/init</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Themes -->
-  <section class="section feature-section" id="themes">
-    <div class="container feature-row reverse">
-      <div class="feature-content">
-        <h2>Color themes</h2>
-        <p>Four color themes to match your setup: Dark (the default), Light for outdoor use, OLED black for true-black displays, and Terminal green for the classic look.</p>
-        <p>Themes apply to every element -- keys, backgrounds, hints, accent colors. Pick one in settings and the keyboard changes on the next open.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="theme-demo">
-          <div class="theme-swatch" style="background: #1B1B1F; border: 2px solid #6C9BF2;">
-            <span class="theme-label" style="color: #E8E8EC;">Dark</span>
-            <span class="theme-key" style="background: #2B2B30; color: #E8E8EC; border: 1px solid #333338;">A</span>
-          </div>
-          <div class="theme-swatch" style="background: #E8E8EC; border: 2px solid #2563EB;">
-            <span class="theme-label" style="color: #1A1A1F;">Light</span>
-            <span class="theme-key" style="background: #FFFFFF; color: #1A1A1F; border: 1px solid #D8D8E0;">A</span>
-          </div>
-          <div class="theme-swatch" style="background: #000000; border: 2px solid #6C9BF2;">
-            <span class="theme-label" style="color: #E8E8EC;">OLED</span>
-            <span class="theme-key" style="background: #111114; color: #E8E8EC; border: 1px solid #1A1A1E;">A</span>
-          </div>
-          <div class="theme-swatch" style="background: #0A1A0A; border: 2px solid #33FF33;">
-            <span class="theme-label" style="color: #33FF33;">Term</span>
-            <span class="theme-key" style="background: #0F2B0F; color: #33FF33; border: 1px solid #1A3A1A;">A</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Custom slash commands -->
-  <section class="section feature-section" id="custom-commands">
-    <div class="container feature-row">
-      <div class="feature-content">
-        <h2>Custom slash commands</h2>
-        <p>Create your own slash command sets alongside the built-in ones. Add commands for tools you use, group them by project, toggle sets on and off.</p>
-        <p>Built-in sets cover Claude Code, OpenClaw, and Gemini CLI patterns. Custom sets let you add whatever commands your workflow needs.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="custom-cmd-demo card">
-          <div class="cmd-set-header">
-            <span class="cmd-set-name">my-project</span>
-            <span class="cmd-set-badge">custom</span>
-          </div>
-          <div class="slash-item">/deploy-staging</div>
-          <div class="slash-item">/run-tests</div>
-          <div class="slash-item">/check-logs</div>
         </div>
       </div>
     </div>
@@ -258,93 +165,153 @@ import KeyCap from '../components/KeyCap.astro';
     </div>
   </section>
 
-  <!-- Quick key -->
-  <section class="section feature-section" id="quick-key">
+  <!-- Keyboard themes -->
+  <section class="section feature-section" id="themes">
     <div class="container feature-row">
       <div class="feature-content">
-        <h2>Quick key</h2>
-        <p>The bottom-right key (next to the spacebar) is configurable. Long-press it to pick from <code>/</code>, <code>.</code>, <code>,</code>, <code>?</code>, <code>!</code>, and more. It remembers your choice.</p>
-        <p>Set it to whatever character you type most often. Default is <code>/</code> for terminal users.</p>
+        <h2>Keyboard themes</h2>
+        <p>Four color themes: Dark (the default), Light for outdoor use, OLED black for true-black displays, and Terminal green for the classic look.</p>
+        <p>Themes apply to every element -- keys, backgrounds, hints, accent colors, and the extra row. Pick one in the menu panel.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only. Free version uses the Dark theme.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="theme-demo">
+          <div class="theme-swatch" style="background: #1B1B1F; border: 2px solid #6C9BF2;">
+            <span class="theme-label" style="color: #E8E8EC;">Dark</span>
+            <span class="theme-key" style="background: #2B2B30; color: #E8E8EC; border: 1px solid #333338;">A</span>
+          </div>
+          <div class="theme-swatch" style="background: #E8E8EC; border: 2px solid #2563EB;">
+            <span class="theme-label" style="color: #1A1A1F;">Light</span>
+            <span class="theme-key" style="background: #FFFFFF; color: #1A1A1F; border: 1px solid #D8D8E0;">A</span>
+          </div>
+          <div class="theme-swatch" style="background: #000000; border: 2px solid #6C9BF2;">
+            <span class="theme-label" style="color: #E8E8EC;">OLED</span>
+            <span class="theme-key" style="background: #111114; color: #E8E8EC; border: 1px solid #1A1A1E;">A</span>
+          </div>
+          <div class="theme-swatch" style="background: #0A1A0A; border: 2px solid #33FF33;">
+            <span class="theme-label" style="color: #33FF33;">Term</span>
+            <span class="theme-key" style="background: #0F2B0F; color: #33FF33; border: 1px solid #1A3A1A;">A</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Menu panel -->
+  <section class="section feature-section" id="menu-panel">
+    <div class="container feature-row reverse">
+      <div class="feature-content">
+        <h2>Menu panel</h2>
+        <p>Tap the gear icon in the extra row to open an inline settings overlay. Switch themes, toggle haptic feedback, toggle autocorrect, toggle tooltips, and trigger SCP upload -- all without leaving the keyboard.</p>
+        <p>The panel overlays the keyboard rather than replacing it. Tap a setting to change it, or dismiss to go back to typing.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="menu-demo card">
+          <div class="menu-section-label">Appearance</div>
+          <div class="menu-row">
+            <span class="menu-item-label">Theme</span>
+            <span class="menu-item-value">Dark</span>
+          </div>
+          <div class="menu-section-label">Toggles</div>
+          <div class="menu-row">
+            <span class="menu-item-label">Haptic feedback</span>
+            <span class="menu-toggle menu-on">on</span>
+          </div>
+          <div class="menu-row">
+            <span class="menu-item-label">Autocorrect</span>
+            <span class="menu-toggle menu-off">off</span>
+          </div>
+          <div class="menu-row">
+            <span class="menu-item-label">Tooltips</span>
+            <span class="menu-toggle menu-on">on</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Number row -->
+  <section class="section feature-section" id="number-row">
+    <div class="container feature-row">
+      <div class="feature-content">
+        <h2>Number row</h2>
+        <p>A dedicated 0-9 row above the QWERTY keys. Long-press any number for its shifted symbol. Small hint labels on each key show you what you'll get.</p>
+        <p>No switching layers to type a number. No memorizing which symbol lives where.</p>
       </div>
       <div class="feature-visual">
         <div class="key-row-demo">
-          <KeyCap label="/" />
-          <KeyCap label="." />
-          <KeyCap label="," />
-          <KeyCap label="?" />
-          <KeyCap label="!" />
+          <KeyCap label="1" />
+          <KeyCap label="2" />
+          <KeyCap label="3" />
+          <KeyCap label="4" />
+          <KeyCap label="5" />
+          <KeyCap label="6" />
+          <KeyCap label="7" />
+          <KeyCap label="8" />
+          <KeyCap label="9" />
+          <KeyCap label="0" />
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Color-coded extra row -->
-  <section class="section feature-section" id="color-coded-keys">
+  <!-- Alt keys -->
+  <section class="section feature-section" id="alt-keys">
     <div class="container feature-row reverse">
       <div class="feature-content">
-        <h2>Color-coded keys</h2>
-        <p>Each function key in the extra row has a distinct background color. At a glance, you can tell Esc from Tab from Ctrl from the arrow cluster. No reading labels in the heat of a terminal session.</p>
-        <p>Arrow keys share one color. Clipboard, upload, and mic each get their own. Ctrl stays neutral until armed or locked, then shifts to active/locked colors.</p>
+        <h2>Alt characters</h2>
+        <p>Long-press any letter for accented characters and symbol variants. Keys with a single alt character fire immediately. Keys with multiple options show a popup where you slide to pick.</p>
+        <p>Examples: long-press <KeyCap label="a" /> for accented variants, <KeyCap label="n" /> for the tilde variant, <KeyCap label="e" /> for accented forms.</p>
       </div>
       <div class="feature-visual">
-        <div class="color-demo">
-          <span class="color-key" style="background: #1A1A1A; border: 1px solid #333;">ESC</span>
-          <span class="color-key" style="background: #2A4A35; border: 1px solid #3a6a4a;">Tab</span>
-          <span class="color-key" style="background: #4A3D20; border: 1px solid #6a5d40;">Clip</span>
-          <span class="color-key" style="background: #2a2a2f; border: 1px solid #3a3a4a;">Ctrl</span>
-          <span class="color-key" style="background: #3A3A3F; border: 1px solid #4a4a5a;">Arrows</span>
-          <span class="color-key" style="background: #253050; border: 1px solid #354a70;">Upload</span>
-          <span class="color-key" style="background: #4A2525; border: 1px solid #6a3535;">Mic</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Autocorrect -->
-  <section class="section feature-section" id="autocorrect">
-    <div class="container feature-row">
-      <div class="feature-content">
-        <h2>Per-app autocorrect</h2>
-        <p>Off by default -- because autocorrect in a terminal is a disaster. Long-press the spacebar to toggle autocorrect per app. When enabled, the spacebar label changes to show you it's active.</p>
-        <p>Turn it on for Slack, leave it off for Termux. KeyJawn remembers the setting for each app.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="autocorrect-demo card">
-          <div class="ac-row">
-            <span class="ac-app">Termux</span>
-            <span class="ac-status ac-off">off</span>
-          </div>
-          <div class="ac-row">
-            <span class="ac-app">Slack</span>
-            <span class="ac-status ac-on">on</span>
-          </div>
-          <div class="ac-row">
-            <span class="ac-app">Cockpit</span>
-            <span class="ac-status ac-off">off</span>
+        <div class="alt-demo">
+          <div class="alt-popup-demo">
+            <span class="alt-base">a</span>
+            <div class="alt-options">
+              <span>&#225;</span><span>&#224;</span><span>&#226;</span><span>&#228;</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Shift -->
-  <section class="section feature-section" id="shift">
-    <div class="container feature-row reverse">
-      <div class="feature-content">
-        <h2>Shift and caps lock</h2>
-        <p>Single-tap <KeyCap label="Shift" /> for one uppercase letter -- it auto-returns to lowercase after. Double-tap for caps lock. The shift key changes appearance to show you which state you're in.</p>
-      </div>
-      <div class="feature-visual">
-        <div class="shift-demo">
-          <div class="shift-state">
-            <KeyCap label="Shift" />
-            <span class="shift-label">tap once = one capital</span>
-          </div>
-          <div class="shift-state">
-            <KeyCap label="SHIFT" />
-            <span class="shift-label">double-tap = caps lock</span>
-          </div>
-        </div>
+  <!-- More features grid -->
+  <section class="section" id="more">
+    <div class="container">
+      <h2 class="section-heading">And also</h2>
+      <div class="more-grid">
+        <FeatureCard
+          title="symbol-layers"
+          icon="{"
+          description="Three keyboard layers: lowercase, uppercase, and symbols. The symbols layout follows Samsung-style grouping with a second page for less common characters. Swipe up to switch to symbols, swipe down to go back."
+        />
+        <FeatureCard
+          title="per-app-autocorrect"
+          icon="A"
+          description="Autocorrect is off by default -- because autocorrect in a terminal is a disaster. Long-press spacebar to toggle it per app. Turn it on for Slack, leave it off for Termux. KeyJawn remembers your setting for each app."
+        />
+        <FeatureCard
+          title="quick-key"
+          icon="/"
+          description="The bottom-right key next to the spacebar is configurable. Long-press it to pick from /, ., ,, ?, !, and more. It remembers your choice. Default is / for terminal users."
+        />
+        <FeatureCard
+          title="haptic-feedback"
+          icon="~"
+          description="Optional vibration on key presses. Toggle it in the menu panel or settings. Off by default for a quieter typing experience."
+        />
+        <FeatureCard
+          title="shift-and-caps"
+          icon="^"
+          description="Tap shift for one uppercase letter -- it auto-returns to lowercase after. Double-tap for caps lock. The key changes appearance to show you which state you're in."
+        />
+        <FeatureCard
+          title="color-coded-keys"
+          icon="="
+          description="Each function key in the extra row has a distinct background color. Esc, Tab, Ctrl, arrows, clipboard, upload, and mic are all visually separated so you can find them without reading labels."
+        />
       </div>
     </div>
   </section>
@@ -534,8 +501,20 @@ import KeyCap from '../components/KeyCap.astro';
     transition: border-color 0.2s;
   }
 
-  .clip-item:first-child {
+  .clip-pinned {
     border-color: rgba(108, 242, 168, 0.3);
+    position: relative;
+  }
+
+  .clip-pinned::after {
+    content: "pinned";
+    font-size: 0.6rem;
+    color: var(--accent);
+    position: absolute;
+    right: 0.6em;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.7;
   }
 
   .clip-item:hover {
@@ -562,7 +541,7 @@ import KeyCap from '../components/KeyCap.astro';
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    min-width: 180px;
+    min-width: 200px;
   }
 
   .slash-item {
@@ -574,9 +553,34 @@ import KeyCap from '../components/KeyCap.astro';
     transition: background 0.2s, color 0.2s;
   }
 
-  .slash-item:first-child {
+  .slash-item:first-of-type {
     background: rgba(108, 242, 168, 0.1);
     color: var(--accent);
+  }
+
+  .cmd-set-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5em 0.75em;
+    margin-bottom: 0.25rem;
+  }
+
+  .cmd-set-name {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .cmd-set-badge {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    background: rgba(108, 242, 168, 0.1);
+    padding: 0.15em 0.5em;
+    border-radius: 3px;
+    border: 1px solid rgba(108, 242, 168, 0.2);
   }
 
   /* Swipe demo */
@@ -608,90 +612,6 @@ import KeyCap from '../components/KeyCap.astro';
     font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--text-muted);
-  }
-
-  /* Autocorrect demo */
-  .autocorrect-demo {
-    min-width: 220px;
-  }
-
-  .ac-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.6em 0;
-    border-bottom: 1px solid var(--border);
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-  }
-
-  .ac-row:last-child {
-    border-bottom: none;
-  }
-
-  .ac-app {
-    color: var(--text);
-  }
-
-  .ac-status {
-    font-weight: 500;
-    font-size: 0.75rem;
-    padding: 0.2em 0.6em;
-    border-radius: 3px;
-  }
-
-  .ac-off {
-    color: var(--text-muted);
-    background: rgba(90, 90, 110, 0.15);
-  }
-
-  .ac-on {
-    color: var(--accent);
-    background: rgba(108, 242, 168, 0.1);
-  }
-
-  /* Shift demo */
-  .shift-demo {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-    padding: var(--space-md);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-  }
-
-  .shift-state {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-  }
-
-  .shift-label {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: var(--text-muted);
-  }
-
-  /* Color-coded key demo */
-  .color-demo {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: var(--space-md);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    justify-content: center;
-  }
-
-  .color-key {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: #e0e0e8;
-    padding: 0.5em 0.8em;
-    border-radius: 5px;
-    white-space: nowrap;
   }
 
   /* Theme demo */
@@ -734,41 +654,76 @@ import KeyCap from '../components/KeyCap.astro';
     border-radius: 5px;
   }
 
-  /* Custom command demo */
-  .custom-cmd-demo {
-    padding: var(--space-sm);
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    min-width: 200px;
+  /* Menu panel demo */
+  .menu-demo {
+    min-width: 220px;
+    padding: var(--space-sm) var(--space-md);
   }
 
-  .cmd-set-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5em 0.75em;
+  .menu-section-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.5em 0 0.25em;
+    border-bottom: 1px solid var(--border);
     margin-bottom: 0.25rem;
   }
 
-  .cmd-set-name {
+  .menu-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5em 0;
     font-family: var(--font-mono);
     font-size: 0.85rem;
-    font-weight: 500;
+  }
+
+  .menu-item-label {
     color: var(--text);
   }
 
-  .cmd-set-badge {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--accent);
-    background: rgba(108, 242, 168, 0.1);
+  .menu-item-value {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+
+  .menu-toggle {
+    font-size: 0.7rem;
+    font-weight: 500;
     padding: 0.15em 0.5em;
     border-radius: 3px;
-    border: 1px solid rgba(108, 242, 168, 0.2);
+  }
+
+  .menu-on {
+    color: var(--accent);
+    background: rgba(108, 242, 168, 0.1);
+  }
+
+  .menu-off {
+    color: var(--text-muted);
+    background: rgba(90, 90, 110, 0.15);
+  }
+
+  /* More features grid */
+  .section-heading {
+    margin-bottom: var(--space-lg);
+  }
+
+  .more-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
   }
 
   /* Responsive */
+  @media (max-width: 900px) {
+    .more-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
   @media (max-width: 768px) {
     .feature-row {
       grid-template-columns: 1fr;
@@ -778,6 +733,12 @@ import KeyCap from '../components/KeyCap.astro';
     .feature-row.reverse .feature-content,
     .feature-row.reverse .feature-visual {
       order: unset;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .more-grid {
+      grid-template-columns: 1fr;
     }
   }
 </style>
