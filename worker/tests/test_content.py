@@ -7,6 +7,7 @@ from worker.content import (
     BANNED_OPENERS,
     build_generation_prompt,
     validate_generated_content,
+    utm_url,
 )
 
 
@@ -116,3 +117,31 @@ def test_banned_words_list():
 def test_banned_openers_list():
     assert "ever struggled" in BANNED_OPENERS
     assert "don't miss" in BANNED_OPENERS
+
+
+# --- utm_url ---
+
+
+def test_utm_url_twitter():
+    url = utm_url("twitter")
+    assert "utm_source=twitter" in url
+    assert "utm_medium=social" in url
+    assert "utm_campaign=worker" in url
+    assert url.startswith("keyjawn.amditis.tech?")
+
+
+def test_utm_url_custom_campaign():
+    url = utm_url("bluesky", campaign="launch")
+    assert "utm_source=bluesky" in url
+    assert "utm_campaign=launch" in url
+
+
+def test_build_prompt_includes_utm_url():
+    req = ContentRequest(
+        pillar="demo",
+        platform="twitter",
+        topic="voice input demo",
+    )
+    prompt = build_generation_prompt(req)
+    assert "utm_source=twitter" in prompt
+    assert "utm_medium=social" in prompt

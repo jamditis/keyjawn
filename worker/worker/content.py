@@ -57,9 +57,20 @@ class ContentRequest:
     context: Optional[str] = None  # for replies
 
 
+def utm_url(platform: str, campaign: str = "worker") -> str:
+    """Build a UTM-tagged URL for keyjawn.amditis.tech."""
+    return (
+        f"keyjawn.amditis.tech"
+        f"?utm_source={platform}"
+        f"&utm_medium=social"
+        f"&utm_campaign={campaign}"
+    )
+
+
 def build_generation_prompt(req: ContentRequest) -> str:
     """Build a prompt for Gemini CLI to generate a social media post."""
     char_limit = PLATFORM_LIMITS.get(req.platform, 280)
+    tracked_url = utm_url(req.platform)
 
     lines = [
         f"Write a {req.platform} post. Max {char_limit} characters.",
@@ -74,7 +85,7 @@ def build_generation_prompt(req: ContentRequest) -> str:
         "About KeyJawn: Android keyboard for CLI/LLM agents. "
         "Permanent Esc/Tab/Ctrl/arrow row, voice input, SCP image upload, "
         "slash commands. $4 one-time purchase, free lite version. "
-        "keyjawn.amditis.tech"
+        f"Link: {tracked_url}"
     )
 
     lines.append(
@@ -82,7 +93,8 @@ def build_generation_prompt(req: ContentRequest) -> str:
         "Use contractions. Max 2 sentences before getting to the point. "
         "No rhetorical questions. No hashtag spam. No exclamation marks. "
         "No emoji strings. No hype words. No filler. No fake emotion. "
-        "Never trash competitors. Put links at the end if needed."
+        "Never trash competitors. Put links at the end if needed. "
+        f"If you include the link, use EXACTLY: {tracked_url}"
     )
 
     lines.append(

@@ -216,6 +216,85 @@ async def show_status(config):
     await db.close()
 
 
+async def weekly_report(config):
+    """Generate a weekly metrics report: actions taken, approval rates, platform breakdown."""
+    from datetime import date, timedelta
+    from worker.db import Database
+
+    db = Database(config.db_path)
+    await db.init()
+
+    today = date.today()
+    week_ago = (today - timedelta(days=7)).isoformat()
+
+    # Actions this week by status
+    cursor = await db._db.execute(
+        "SELECT status, COUNT(*) as cnt FROM actions WHERE acted_at >= ? GROUP BY status ORDER BY cnt DESC",
+        (week_ago,),
+    )
+    rows = await cursor.fetchall()
+    total_actions = sum(dict(r)["cnt"] for r in rows)
+    log.info("=== Weekly report (%s to %s) ===", week_ago, today.isoformat())
+    log.info("actions: %d total", total_actions)
+    for r in rows:
+        d = dict(r)
+        log.info("  %s: %d", d["status"], d["cnt"])
+
+    # Actions by platform
+    cursor = await db._db.execute(
+        "SELECT platform, COUNT(*) as cnt FROM actions WHERE acted_at >= ? AND status = 'posted' GROUP BY platform",
+        (week_ago,),
+    )
+    rows = await cursor.fetchall()
+    log.info("posted by platform:")
+    for r in rows:
+        d = dict(r)
+        log.info("  %s: %d", d["platform"], d["cnt"])
+
+    # Approval rates
+    cursor = await db._db.execute(
+        "SELECT approval_decision, COUNT(*) as cnt FROM actions WHERE acted_at >= ? AND approval_decision IS NOT NULL GROUP BY approval_decision",
+        (week_ago,),
+    )
+    rows = await cursor.fetchall()
+    if rows:
+        log.info("approval decisions:")
+        for r in rows:
+            d = dict(r)
+            log.info("  %s: %d", d["approval_decision"], d["cnt"])
+
+    # Findings queued this week
+    cursor = await db._db.execute(
+        "SELECT COUNT(*) FROM findings WHERE found_at >= ?", (week_ago,)
+    )
+    row = await cursor.fetchone()
+    log.info("findings queued: %d", row[0])
+
+    # Calendar completion rate
+    cursor = await db._db.execute(
+        "SELECT status, COUNT(*) as cnt FROM calendar WHERE scheduled_date >= ? AND scheduled_date <= ? GROUP BY status",
+        (week_ago, today.isoformat()),
+    )
+    rows = await cursor.fetchall()
+    if rows:
+        log.info("calendar entries:")
+        for r in rows:
+            d = dict(r)
+            log.info("  %s: %d", d["status"], d["cnt"])
+
+    # Try to get store stats via localhost API (if reachable via SSH tunnel or direct)
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get("http://100.122.208.15:5060/api/health")
+            if resp.status_code == 200:
+                log.info("store API: reachable")
+    except Exception:
+        log.info("store API: not reachable from this machine")
+
+    await db.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description="keyjawn-worker management commands")
     sub = parser.add_subparsers(dest="command")
@@ -223,6 +302,7 @@ def main():
     sub.add_parser("smoke-test", help="Test the full Telegram approval flow")
     sub.add_parser("generate-calendar", help="Generate this week's content calendar")
     sub.add_parser("status", help="Show worker DB status")
+    sub.add_parser("weekly-report", help="Generate weekly metrics report")
 
     args = parser.parse_args()
 
@@ -241,6 +321,8 @@ def main():
         asyncio.run(generate_calendar(config))
     elif args.command == "status":
         asyncio.run(show_status(config))
+    elif args.command == "weekly-report":
+        asyncio.run(weekly_report(config))
 
 
 if __name__ == "__main__":
