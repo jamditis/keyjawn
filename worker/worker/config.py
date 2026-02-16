@@ -58,12 +58,25 @@ class RedisConfig:
 
 
 @dataclass(frozen=True)
+class CurationConfig:
+    youtube_api_key: str = ""
+    twitch_client_id: str = ""
+    twitch_client_secret: str = ""
+    google_alert_urls: tuple = ()
+    max_curated_shares_per_day: int = 2
+    max_parallel_evaluations: int = 5
+    scan_interval_hours: int = 6
+    twitch_scan_interval_hours: int = 8
+
+
+@dataclass(frozen=True)
 class Config:
     twitter: TwitterConfig
     bluesky: BlueskyConfig
     telegram: TelegramConfig
     redis: RedisConfig
     producthunt: ProductHuntConfig = field(default_factory=ProductHuntConfig)
+    curation: CurationConfig = field(default_factory=CurationConfig)
     db_path: str = "keyjawn-worker.db"
     action_window_start_hour: int = 18
     action_window_end_hour: int = 21
@@ -94,6 +107,19 @@ class Config:
         except subprocess.CalledProcessError:
             ph_token = ""
 
+        # Curation: optional API keys
+        try:
+            yt_key = _pass_get("claude/api/youtube")
+        except subprocess.CalledProcessError:
+            yt_key = ""
+        try:
+            twitch_creds = _pass_get("claude/api/twitch").split("\n")
+            twitch_id = twitch_creds[0]
+            twitch_secret = twitch_creds[1] if len(twitch_creds) > 1 else ""
+        except subprocess.CalledProcessError:
+            twitch_id = ""
+            twitch_secret = ""
+
         return cls(
             twitter=TwitterConfig(
                 username=twitter_lines[0],
@@ -113,6 +139,11 @@ class Config:
             ),
             producthunt=ProductHuntConfig(
                 developer_token=ph_token,
+            ),
+            curation=CurationConfig(
+                youtube_api_key=yt_key,
+                twitch_client_id=twitch_id,
+                twitch_client_secret=twitch_secret,
             ),
         )
 
@@ -139,5 +170,6 @@ class Config:
             producthunt=ProductHuntConfig(
                 developer_token="test-ph-token",
             ),
+            curation=CurationConfig(),
             db_path=":memory:",
         )

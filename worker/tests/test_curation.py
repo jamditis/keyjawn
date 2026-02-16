@@ -394,6 +394,25 @@ def test_pipeline_keyword_filter():
     assert passed[0].keyword_score >= 0.3
 
 
+from worker.config import CurationConfig
+
+
+def test_curation_config_defaults():
+    config = CurationConfig()
+    assert config.max_curated_shares_per_day == 2
+    assert config.youtube_api_key == ""
+    assert config.scan_interval_hours == 6
+
+
+def test_curation_config_custom():
+    config = CurationConfig(
+        youtube_api_key="yt-key",
+        max_curated_shares_per_day=3,
+    )
+    assert config.youtube_api_key == "yt-key"
+    assert config.max_curated_shares_per_day == 3
+
+
 from worker.telegram import format_curation_message
 
 
