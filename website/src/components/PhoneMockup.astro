@@ -405,6 +405,74 @@
     }
   };
 
+  // Make SVG focusable for desktop keyboard input
+  if (svg) {
+    svg.setAttribute('tabindex', '0');
+    svg.style.outline = 'none';
+
+    // Focus on click anywhere in the mockup
+    svg.addEventListener('click', () => svg.focus());
+
+    svg.addEventListener('keydown', (e: KeyboardEvent) => {
+      // Don't capture if user is typing in an actual input
+      if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
+
+      switch (e.key) {
+        case 'Backspace':
+          e.preventDefault();
+          if (cursorPos > 0) {
+            buffer = buffer.slice(0, cursorPos - 1) + buffer.slice(cursorPos);
+            cursorPos--;
+            render();
+          }
+          return;
+        case 'Delete':
+          e.preventDefault();
+          if (cursorPos < buffer.length) {
+            buffer = buffer.slice(0, cursorPos) + buffer.slice(cursorPos + 1);
+            render();
+          }
+          return;
+        case 'Enter':
+          e.preventDefault();
+          typeChar('\n');
+          return;
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (cursorPos > 0) { cursorPos--; render(); }
+          return;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (cursorPos < buffer.length) { cursorPos++; render(); }
+          return;
+        case 'Tab':
+          e.preventDefault();
+          typeChar('    ');
+          return;
+        case 'Escape':
+          e.preventDefault();
+          typeChar('^[');
+          return;
+        case 'Shift':
+        case 'Control':
+        case 'Alt':
+        case 'Meta':
+          return; // Ignore modifier-only presses
+      }
+
+      // Printable character
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        typeChar(e.key);
+
+        // Flash the matching SVG key if one exists
+        const lower = e.key.toLowerCase();
+        const matchingKey = svg.querySelector(`[data-key="${lower}"]`) || svg.querySelector(`[data-key="${e.key}"]`);
+        if (matchingKey) flashKey(matchingKey);
+      }
+    });
+  }
+
   // Hide static prompt text, we're rendering dynamically now
   const terminalArea = document.getElementById('terminal-area');
   if (terminalArea) {
