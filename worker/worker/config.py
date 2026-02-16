@@ -25,11 +25,10 @@ def _pass_get_json(key: str) -> dict:
 
 @dataclass(frozen=True)
 class TwitterConfig:
-    api_key: str
-    api_secret: str
-    access_token: str
-    access_token_secret: str
-    bearer_token: str
+    username: str
+    email: str
+    password: str
+    cookies_path: str = "twitter_cookies.json"
 
 
 @dataclass(frozen=True)
@@ -68,26 +67,33 @@ class Config:
     @classmethod
     def from_pass(cls) -> Config:
         """Build config by reading credentials from the pass store."""
-        twitter_creds = _pass_get_json("claude/services/keyjawn-worker-twitter")
-        bluesky_creds = _pass_get_json("claude/services/keyjawn-worker-bluesky")
+        # Twitter: stored as username\nemail\npassword
+        twitter_raw = _pass_get("claude/social/twitter-keyjawn")
+        twitter_lines = twitter_raw.split("\n")
+
+        bluesky_raw = _pass_get("claude/services/bluesky-keyjawn")
+        bluesky_lines = bluesky_raw.split("\n")
+
         telegram_token = _pass_get("claude/tokens/telegram-bot")
-        redis_password = _pass_get("claude/services/redis-password")
+
+        from pathlib import Path
+        redis_password = Path(
+            "/home/jamditis/.config/brain/redis.key"
+        ).read_text().strip()
 
         return cls(
             twitter=TwitterConfig(
-                api_key=twitter_creds["api_key"],
-                api_secret=twitter_creds["api_secret"],
-                access_token=twitter_creds["access_token"],
-                access_token_secret=twitter_creds["access_token_secret"],
-                bearer_token=twitter_creds["bearer_token"],
+                username=twitter_lines[0],
+                email=twitter_lines[1] if len(twitter_lines) > 1 else "",
+                password=twitter_lines[2] if len(twitter_lines) > 2 else "",
             ),
             bluesky=BlueskyConfig(
-                handle=bluesky_creds["handle"],
-                app_password=bluesky_creds["app_password"],
+                handle=bluesky_lines[0],
+                app_password=bluesky_lines[1] if len(bluesky_lines) > 1 else "",
             ),
             telegram=TelegramConfig(
                 bot_token=telegram_token,
-                chat_id=bluesky_creds.get("telegram_chat_id", ""),
+                chat_id="",  # set from env or pass
             ),
             redis=RedisConfig(
                 password=redis_password,
@@ -99,11 +105,9 @@ class Config:
         """Return an in-memory config suitable for tests. No real credentials."""
         return cls(
             twitter=TwitterConfig(
-                api_key="test-api-key",
-                api_secret="test-api-secret",
-                access_token="test-access-token",
-                access_token_secret="test-access-token-secret",
-                bearer_token="test-bearer-token",
+                username="test-user",
+                email="test@example.com",
+                password="test-password",
             ),
             bluesky=BlueskyConfig(
                 handle="test.bsky.social",
