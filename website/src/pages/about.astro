@@ -1,0 +1,258 @@
+---
+import Base from '../layouts/Base.astro';
+import FeatureCard from '../components/FeatureCard.astro';
+---
+
+<Base
+  title="About Amditis Tech"
+  description="Apps, web tools, and open source projects by Joe Amditis."
+>
+  <!-- Hero -->
+  <section class="about-hero">
+    <div class="container">
+      <h1 class="about-headline">
+        <span class="hero-prompt">&gt;</span> amditis.tech<span class="cursor">_</span>
+      </h1>
+      <p class="about-bio">
+        I'm Joe Amditis. I build apps, web tools, and open source projects — mostly things I needed that didn't exist yet.
+        Amditis Tech is the name I use for personal and freelance work that lives outside my day job.
+        Everything here is built in the open when possible.
+      </p>
+      <div class="about-links">
+        <a href="https://github.com/jamditis" class="btn btn-secondary" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://amditis.com" class="btn btn-secondary" target="_blank" rel="noopener">amditis.com</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Apps -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-heading prompt">ls apps/</h2>
+      <div class="project-grid">
+        <FeatureCard
+          title="keyjawn"
+          icon="K"
+          description="Custom Android keyboard for LLM CLI agents. Terminal keys, voice input, SCP upload, and slash commands — built for people who SSH into servers from their phone."
+        >
+          <div class="project-links">
+            <a href="/">Site</a>
+            <span class="link-sep">/</span>
+            <a href="https://play.google.com/store/apps/details?id=com.keyjawn" target="_blank" rel="noopener">Google Play</a>
+            <span class="link-sep">/</span>
+            <a href="https://github.com/jamditis/keyjawn" target="_blank" rel="noopener">Source</a>
+          </div>
+        </FeatureCard>
+        <FeatureCard
+          title="pisscord"
+          icon="P"
+          description="A free, private voice chat app. No accounts, no tracking, no data collection. Just open it and talk."
+        >
+          <div class="project-links">
+            <a href="https://pisscord.app/" target="_blank" rel="noopener">Site</a>
+            <span class="link-sep">/</span>
+            <a href="https://github.com/jamditis/pisscord" target="_blank" rel="noopener">Source</a>
+          </div>
+        </FeatureCard>
+        <FeatureCard
+          title="audiobash"
+          icon="A"
+          description="Voice-controlled terminal. Speak commands, execute instantly. For developers who want to talk to their computer instead of typing."
+        >
+          <div class="project-links">
+            <a href="https://audiobash.app" target="_blank" rel="noopener">Site</a>
+            <span class="link-sep">/</span>
+            <a href="https://github.com/jamditis/audiobash" target="_blank" rel="noopener">Source</a>
+          </div>
+        </FeatureCard>
+      </div>
+    </div>
+  </section>
+
+  <!-- Web tools -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-heading prompt">ls web-tools/</h2>
+      <div class="project-grid">
+        <FeatureCard
+          title="reroute-nj"
+          icon="R"
+          description="Free tools to help NJ Transit riders navigate the Portal North Bridge cutover. Trip planner, service alerts, and alternative route finder."
+        >
+          <div class="project-links">
+            <a href="https://reroutenj.org" target="_blank" rel="noopener">Site</a>
+            <span class="link-sep">/</span>
+            <a href="https://github.com/jamditis/reroute-nj" target="_blank" rel="noopener">Source</a>
+          </div>
+        </FeatureCard>
+        <FeatureCard
+          title="securenj"
+          icon="S"
+          description="Clone-to-own open source tools for organizers and residents to help protect themselves and their neighbors."
+        >
+          <div class="project-links">
+            <a href="https://github.com/jamditis/SecureNJ" target="_blank" rel="noopener">Source</a>
+          </div>
+        </FeatureCard>
+        <FeatureCard
+          title="claude-codiac"
+          icon="C"
+          description="Compare Claude Code /insights reports and discover your coding compatibility. Upload two reports, get a match score."
+        >
+          <div class="project-links">
+            <a href="https://codiac.amditis.tech/" target="_blank" rel="noopener">Site</a>
+            <span class="link-sep">/</span>
+            <a href="https://github.com/jamditis/claude-codiac" target="_blank" rel="noopener">Source</a>
+          </div>
+        </FeatureCard>
+        <FeatureCard
+          title="llm-advisor"
+          icon="L"
+          description="Decision tree tool for picking the right AI model for your task. Walks you through use case, budget, and constraints to recommend a model."
+        >
+          <div class="project-links">
+            <a href="https://tools.amditis.tech/llm-advisor/" target="_blank" rel="noopener">Site</a>
+          </div>
+        </FeatureCard>
+      </div>
+    </div>
+  </section>
+
+  <!-- Developer tools -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-heading prompt">ls dev-tools/</h2>
+      <div class="project-grid">
+        <FeatureCard
+          title="scrapefruit"
+          icon="F"
+          description="Desktop web scraping platform. PyWebView frontend, Flask backend. Point it at a site, configure selectors, get structured data."
+        >
+          <div class="project-links">
+            <a href="https://jamditis.github.io/scrapefruit/" target="_blank" rel="noopener">Site</a>
+            <span class="link-sep">/</span>
+            <a href="https://github.com/jamditis/scrapefruit" target="_blank" rel="noopener">Source</a>
+          </div>
+        </FeatureCard>
+        <FeatureCard
+          title="pocketlink"
+          icon="/"
+          description="Free browser extension that creates a shortlink to any website in a few clicks. No account required."
+        >
+          <div class="project-links">
+            <a href="https://github.com/jamditis/pocketlink" target="_blank" rel="noopener">Source</a>
+          </div>
+        </FeatureCard>
+        <FeatureCard
+          title="wristcontrol"
+          icon="W"
+          description="Control and talk to your computer with your smartwatch. Voice commands from your wrist to your desktop."
+        >
+          <div class="project-links">
+            <a href="https://github.com/jamditis/wristcontrol" target="_blank" rel="noopener">Source</a>
+          </div>
+        </FeatureCard>
+      </div>
+    </div>
+  </section>
+
+  <!-- Closing -->
+  <section class="section about-footer-section">
+    <div class="container">
+      <p class="about-closing">
+        All projects are open source unless noted. Built by Joe Amditis with a Raspberry Pi, too much coffee, and a general unwillingness to pay for things that should be free.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* Hero */
+  .about-hero {
+    padding: var(--space-2xl) 0 var(--space-xl);
+  }
+
+  .about-headline {
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    line-height: 1.15;
+    margin-bottom: var(--space-md);
+  }
+
+  .hero-prompt {
+    color: var(--accent);
+  }
+
+  .about-bio {
+    font-size: clamp(1rem, 2vw, 1.15rem);
+    color: var(--text-muted);
+    max-width: 600px;
+    line-height: 1.8;
+    margin-bottom: var(--space-md);
+  }
+
+  .about-links {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  /* Project grid */
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+  }
+
+  /* Project links inside cards */
+  .project-links {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+  }
+
+  .project-links a {
+    color: var(--accent);
+    text-decoration: none;
+    padding: 0.2em 0;
+    transition: opacity 0.2s;
+  }
+
+  .project-links a:hover {
+    opacity: 0.7;
+  }
+
+  .link-sep {
+    color: var(--border);
+  }
+
+  /* Closing */
+  .about-closing {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    max-width: 600px;
+  }
+
+  .about-footer-section {
+    padding-bottom: var(--space-lg);
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .project-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .project-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .about-hero {
+      padding-top: var(--space-xl);
+    }
+  }
+</style>
