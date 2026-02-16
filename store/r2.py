@@ -28,12 +28,15 @@ def get_r2_client():
     )
 
 
-def generate_signed_url(r2_key: str, expires_in: int = DOWNLOAD_EXPIRY) -> str:
+def generate_signed_url(r2_key: str, expires_in: int = DOWNLOAD_EXPIRY, filename: str = None) -> str:
     try:
         client = get_r2_client()
+        params = {"Bucket": R2_BUCKET, "Key": r2_key}
+        if filename:
+            params["ResponseContentDisposition"] = f'attachment; filename="{filename}"'
         return client.generate_presigned_url(
             "get_object",
-            Params={"Bucket": R2_BUCKET, "Key": r2_key},
+            Params=params,
             ExpiresIn=expires_in,
         )
     except Exception as e:

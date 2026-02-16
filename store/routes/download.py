@@ -42,7 +42,7 @@ async def download(req: DownloadRequest):
     r2_key = release["r2_key"]
 
     # Generate presigned R2 URL, fall back to GitHub releases
-    url = generate_signed_url(r2_key)
+    url = generate_signed_url(r2_key, filename=f"keyjawn-v{version}.apk")
     if not url:
         url = f"{GITHUB_RELEASES}/tag/v{version}"
 

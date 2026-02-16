@@ -32,7 +32,7 @@ def _get_latest_version() -> str:
 def _apk_url(version: str) -> str:
     """Generate a presigned R2 download URL for the full APK."""
     r2_key = f"keyjawn/releases/v{version}/app-full-release.apk"
-    url = generate_signed_url(r2_key)
+    url = generate_signed_url(r2_key, filename=f"keyjawn-v{version}.apk")
     if url:
         return url
     return f"{GITHUB_RELEASES}/tag/v{version}"
