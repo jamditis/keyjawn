@@ -1,4 +1,6 @@
 from worker.curation.models import CurationCandidate
+from worker.curation.keywords import score_keywords, POSITIVE_SIGNALS, NEGATIVE_SIGNALS
+from worker.curation.boost import BOOST_CHANNELS, is_boosted
 
 
 def test_curation_candidate_defaults():
@@ -135,3 +137,70 @@ def test_curation_dedup(db):
         )
         assert result is None
     asyncio.get_event_loop().run_until_complete(_test())
+
+
+def test_keyword_score_high_relevance():
+    c = CurationCandidate(
+        source="youtube", url="http://a.com", author="dev",
+        title="Open source terminal keyboard for Android",
+        description="A CLI keyboard for mobile developers",
+    )
+    score = score_keywords(c)
+    assert score >= 0.7
+
+
+def test_keyword_score_medium_relevance():
+    c = CurationCandidate(
+        source="youtube", url="http://b.com", author="dev",
+        title="New mobile development tool",
+        description="A tool for coding on the go",
+    )
+    score = score_keywords(c)
+    assert 0.3 <= score <= 0.7
+
+
+def test_keyword_score_irrelevant():
+    c = CurationCandidate(
+        source="youtube", url="http://c.com", author="dev",
+        title="Best photo filters for Instagram",
+        description="Beautiful photo editing app",
+    )
+    score = score_keywords(c)
+    assert score < 0.3
+
+
+def test_keyword_score_open_source_boost():
+    base = CurationCandidate(
+        source="youtube", url="http://d.com", author="dev",
+        title="New terminal emulator",
+        description="A terminal app",
+    )
+    oss = CurationCandidate(
+        source="youtube", url="http://e.com", author="dev",
+        title="New open source terminal emulator",
+        description="A terminal app, code on GitHub",
+    )
+    assert score_keywords(oss) > score_keywords(base)
+
+
+def test_keyword_score_negative_signals():
+    c = CurationCandidate(
+        source="youtube", url="http://f.com", author="dev",
+        title="LIMITED TIME: Terminal keyboard discount",
+        description="Sponsored content about a CLI tool",
+    )
+    score = score_keywords(c)
+    assert score < 0.3
+
+
+def test_boost_list_known_channel():
+    assert is_boosted("youtube", "Fireship")
+    assert is_boosted("youtube", "ThePrimeagen")
+
+
+def test_boost_list_unknown_channel():
+    assert not is_boosted("youtube", "RandomChannel123")
+
+
+def test_boost_list_case_insensitive():
+    assert is_boosted("youtube", "fireship")
