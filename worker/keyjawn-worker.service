@@ -1,0 +1,15 @@
+[Unit]
+Description=KeyJawn marketing worker
+After=network.target redis.target
+
+[Service]
+Type=simple
+User=jamditis
+WorkingDirectory=/home/jamditis/projects/keyjawn/worker
+ExecStart=/home/jamditis/projects/keyjawn/worker/start.sh
+Restart=on-failure
+RestartSec=30
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
