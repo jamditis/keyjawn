@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [main, dev]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -110,11 +111,15 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: ./gradlew bundleFullRelease
 
-      - name: Create GitHub release
+      - name: Upload full release APK (for R2 distribution)
+        uses: actions/upload-artifact@v4
+        with:
+          name: keyjawn-full-release
+          path: app/build/outputs/apk/full/release/*.apk
+
+      - name: Create GitHub release (lite APK only)
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            app/build/outputs/apk/full/release/*.apk
             app/build/outputs/apk/lite/release/*.apk
-            app/build/outputs/bundle/fullRelease/*.aab
           generate_release_notes: true
