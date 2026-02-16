@@ -47,8 +47,7 @@ class MenuPanelTest {
             onOpenSettings = {},
             onThemeChanged = {},
             onShowTooltip = { tooltipMessages.add(it) },
-            currentPackageProvider = { "com.test.app" },
-            onExtraRowChanged = {}
+            currentPackageProvider = { "com.test.app" }
         )
     }
 
@@ -112,14 +111,11 @@ class MenuPanelTest {
             onOpenSettings = {},
             onThemeChanged = {},
             onShowTooltip = { tooltipMessages.add(it) },
-            currentPackageProvider = { "com.test.app" },
-            onExtraRowChanged = {}
+            currentPackageProvider = { "com.test.app" }
         )
         litePanel.show()
 
         // Find and click the SCP upload row (first action row, which is full-only)
-        // The list has section headers and action rows
-        // Click each clickable child to trigger the tooltip for disabled items
         var foundUpgradeTooltip = false
         for (i in 0 until list.childCount) {
             val child = list.getChildAt(i)
@@ -135,7 +131,7 @@ class MenuPanelTest {
     }
 
     @Test
-    fun `menu shows key mapping section when full flavor`() {
+    fun `menu does not show key mapping section`() {
         menuPanel.show()
         var foundKeyMapping = false
         for (i in 0 until list.childCount) {
@@ -145,28 +141,43 @@ class MenuPanelTest {
                 break
             }
         }
-        assertTrue("Should have key mapping section header", foundKeyMapping)
+        assertFalse("Menu should not have key mapping section", foundKeyMapping)
     }
 
     @Test
-    fun `key mapping section has 4 rows`() {
-        menuPanel.show()
-        var inSection = false
-        var rowCount = 0
-        for (i in 0 until list.childCount) {
+    fun `showSlotPicker populates picker options`() {
+        menuPanel.showSlotPicker(0) {}
+        assertTrue(menuPanel.isShowing())
+        // Should have section header + option rows with dividers
+        assertTrue("Picker should have options", list.childCount > 1)
+        // First child should be the header
+        val header = list.getChildAt(0) as TextView
+        assertTrue(header.text.toString().contains("slot 1"))
+    }
+
+    @Test
+    fun `showQuickKeyPicker populates picker options`() {
+        menuPanel.showQuickKeyPicker {}
+        assertTrue(menuPanel.isShowing())
+        assertTrue("Picker should have options", list.childCount > 1)
+        val header = list.getChildAt(0) as TextView
+        assertEquals("Choose quick key", header.text.toString())
+    }
+
+    @Test
+    fun `showSlotPicker calls onSelect and hides on option tap`() {
+        var selectedValue: String? = null
+        menuPanel.showSlotPicker(0) { selectedValue = it }
+
+        // Find first clickable option row (skip header at index 0)
+        for (i in 1 until list.childCount) {
             val child = list.getChildAt(i)
-            if (child is TextView && child.text.toString() == "Key mapping") {
-                inSection = true
-                continue
-            }
-            if (inSection) {
-                if (child is LinearLayout) {
-                    rowCount++
-                } else if (child is TextView && rowCount > 0) {
-                    break
-                }
+            if (child is LinearLayout) {
+                child.performClick()
+                break
             }
         }
-        assertEquals("Should have 4 key mapping rows (3 slots + quick key)", 4, rowCount)
+        assertNotNull("Should have selected a value", selectedValue)
+        assertFalse("Panel should be hidden after selection", menuPanel.isShowing())
     }
 }

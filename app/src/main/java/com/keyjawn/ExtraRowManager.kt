@@ -50,6 +50,8 @@ class ExtraRowManager(
     private val handler = Handler(Looper.getMainLooper())
     private var tooltipDismissRunnable: Runnable? = null
 
+    var onQuickKeyChanged: ((String) -> Unit)? = null
+
     init {
         wireSlot(0, R.id.key_esc)
         wireSlot(1, R.id.key_tab)
@@ -122,7 +124,11 @@ class ExtraRowManager(
             config == "ctrl" -> {
                 button.text = "Ctrl"
                 button.setOnClickListener { ctrlState.tap() }
-                button.setOnLongClickListener { ctrlState.longPress(); true }
+                if (isFullFlavor) {
+                    button.setOnLongClickListener { showSlotPicker(slotIndex); true }
+                } else {
+                    button.setOnLongClickListener { ctrlState.longPress(); true }
+                }
             }
             config.startsWith("keycode:") -> {
                 val keyCodeName = config.removePrefix("keycode:")
@@ -136,6 +142,9 @@ class ExtraRowManager(
                     val ic = inputConnectionProvider() ?: return@setOnClickListener
                     keySender.sendKey(ic, keyCode)
                 }
+                if (isFullFlavor) {
+                    button.setOnLongClickListener { showSlotPicker(slotIndex); true }
+                }
             }
             config.startsWith("text:") -> {
                 val text = config.removePrefix("text:")
@@ -143,6 +152,9 @@ class ExtraRowManager(
                 button.setOnClickListener {
                     val ic = inputConnectionProvider() ?: return@setOnClickListener
                     keySender.sendText(ic, text)
+                }
+                if (isFullFlavor) {
+                    button.setOnLongClickListener { showSlotPicker(slotIndex); true }
                 }
             }
         }
@@ -153,6 +165,20 @@ class ExtraRowManager(
         wireSlot(1, R.id.key_tab)
         wireSlot(2, R.id.key_ctrl)
         applyThemeColors()
+    }
+
+    fun showSlotPicker(slotIndex: Int) {
+        menuPanel?.showSlotPicker(slotIndex) { value ->
+            appPrefs?.setExtraSlot(slotIndex, value)
+            rewireSlots()
+        }
+    }
+
+    fun showQuickKeyPicker() {
+        menuPanel?.showQuickKeyPicker { value ->
+            appPrefs?.setQuickKey(value)
+            onQuickKeyChanged?.invoke(value)
+        }
     }
 
     private fun wireClipboard() {
@@ -232,8 +258,7 @@ class ExtraRowManager(
                 onOpenSettings = { onOpenSettings?.invoke() },
                 onThemeChanged = { onThemeChanged?.invoke() },
                 onShowTooltip = { msg -> showTooltip(msg) },
-                currentPackageProvider = currentPackageProvider ?: { "unknown" },
-                onExtraRowChanged = { rewireSlots() }
+                currentPackageProvider = currentPackageProvider ?: { "unknown" }
             )
             menuPanel = mp
             uploadButton.setOnClickListener {

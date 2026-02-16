@@ -18,8 +18,7 @@ class MenuPanel(
     private val onOpenSettings: () -> Unit,
     private val onThemeChanged: () -> Unit,
     private val onShowTooltip: (String) -> Unit,
-    private val currentPackageProvider: () -> String,
-    private val onExtraRowChanged: () -> Unit = {}
+    private val currentPackageProvider: () -> String
 ) {
 
     private val context: Context get() = panel.context
@@ -39,6 +38,63 @@ class MenuPanel(
     }
 
     fun isShowing(): Boolean = panel.visibility == View.VISIBLE
+
+    fun showSlotPicker(slotIndex: Int, onSelect: (String) -> Unit) {
+        list.removeAllViews()
+        val slotLabel = when (slotIndex) {
+            0 -> "slot 1 (left)"
+            1 -> "slot 2 (center)"
+            2 -> "slot 3 (right)"
+            else -> "slot ${slotIndex + 1}"
+        }
+        addSectionHeader("Choose key for $slotLabel")
+        for (option in AppPrefs.EXTRA_SLOT_OPTIONS) {
+            val label = AppPrefs.getExtraSlotLabel(option)
+            addPickerOption(label) {
+                onSelect(option)
+                hide()
+            }
+        }
+        panel.visibility = View.VISIBLE
+        panel.scrollTo(0, 0)
+    }
+
+    fun showQuickKeyPicker(onSelect: (String) -> Unit) {
+        list.removeAllViews()
+        addSectionHeader("Choose quick key")
+        for (option in AppPrefs.QUICK_KEY_OPTIONS) {
+            addPickerOption(option) {
+                onSelect(option)
+                hide()
+            }
+        }
+        panel.visibility = View.VISIBLE
+        panel.scrollTo(0, 0)
+    }
+
+    private fun addPickerOption(label: String, action: () -> Unit) {
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)
+            )
+            setPadding(dp(14), 0, dp(14), 0)
+        }
+
+        val text = TextView(context).apply {
+            this.text = label
+            textSize = 16f
+            setTextColor(themeManager.keyText())
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        row.addView(text)
+
+        row.setOnClickListener { action() }
+
+        list.addView(row)
+        addDivider()
+    }
 
     private fun populateMenu() {
         list.removeAllViews()
@@ -69,39 +125,6 @@ class MenuPanel(
             isOn = { appPrefs.isTooltipsEnabled() },
             onToggle = { appPrefs.setTooltipsEnabled(!appPrefs.isTooltipsEnabled()); populateMenu() }
         )
-
-        if (isFullFlavor) {
-            addSectionHeader("Key mapping")
-            for (slot in 0..2) {
-                val label = when (slot) {
-                    0 -> "Slot 1 (left)"
-                    1 -> "Slot 2 (center)"
-                    2 -> "Slot 3 (right)"
-                    else -> "Slot $slot"
-                }
-                addPickerRow(
-                    label = label,
-                    currentValue = AppPrefs.getExtraSlotLabel(appPrefs.getExtraSlot(slot)),
-                    options = AppPrefs.EXTRA_SLOT_OPTIONS.map { AppPrefs.getExtraSlotLabel(it) to it },
-                    onSelect = { value ->
-                        appPrefs.setExtraSlot(slot, value)
-                        onExtraRowChanged()
-                        populateMenu()
-                    }
-                )
-            }
-            addPickerRow(
-                label = "Quick key",
-                currentValue = appPrefs.getQuickKey().let {
-                    if (it.startsWith("text:")) it.removePrefix("text:") else it
-                },
-                options = AppPrefs.QUICK_KEY_OPTIONS.map { it to it },
-                onSelect = { value ->
-                    appPrefs.setQuickKey(value)
-                    populateMenu()
-                }
-            )
-        }
     }
 
     private fun addSectionHeader(title: String) {
@@ -298,105 +321,6 @@ class MenuPanel(
 
         list.addView(strip)
         addDivider()
-    }
-
-    private fun addPickerRow(label: String, currentValue: String, options: List<Pair<String, String>>, onSelect: (String) -> Unit) {
-        val row = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)
-            )
-            setPadding(dp(14), 0, dp(14), 0)
-        }
-
-        val text = TextView(context).apply {
-            this.text = label
-            textSize = 15f
-            setTextColor(themeManager.keyText())
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        row.addView(text)
-
-        val value = TextView(context).apply {
-            this.text = currentValue
-            textSize = 13f
-            setTextColor(themeManager.accent())
-        }
-        row.addView(value)
-
-        row.setOnClickListener {
-            showPickerPopup(options, onSelect)
-        }
-
-        list.addView(row)
-        addDivider()
-    }
-
-    private fun showPickerPopup(options: List<Pair<String, String>>, onSelect: (String) -> Unit) {
-        val scrollView = ScrollView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(200)
-            )
-        }
-        val pickerList = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-        }
-        scrollView.addView(pickerList)
-
-        for ((displayLabel, rawValue) in options) {
-            val item = TextView(context).apply {
-                text = displayLabel
-                textSize = 16f
-                setTextColor(themeManager.keyText())
-                setPadding(dp(12), dp(12), dp(12), dp(12))
-                setOnClickListener {
-                    onSelect(rawValue)
-                    (scrollView.parent as? LinearLayout)?.removeView(scrollView)
-                }
-            }
-            pickerList.addView(item)
-        }
-
-        val customItem = TextView(context).apply {
-            text = "Custom..."
-            textSize = 16f
-            setTextColor(themeManager.accent())
-            setPadding(dp(12), dp(12), dp(12), dp(12))
-            setOnClickListener {
-                showCustomTextInput { customText ->
-                    if (customText.isNotEmpty()) {
-                        onSelect("text:$customText")
-                    }
-                    (scrollView.parent as? LinearLayout)?.removeView(scrollView)
-                }
-            }
-        }
-        pickerList.addView(customItem)
-
-        scrollView.setBackgroundColor(themeManager.keyboardBg())
-        list.addView(scrollView)
-        scrollView.requestFocus()
-    }
-
-    private fun showCustomTextInput(onConfirm: (String) -> Unit) {
-        val input = android.widget.EditText(context).apply {
-            hint = "Type custom key (max 8 chars)"
-            setTextColor(themeManager.keyText())
-            setHintTextColor(themeManager.keyHint())
-            filters = arrayOf(android.text.InputFilter.LengthFilter(8))
-        }
-        android.app.AlertDialog.Builder(context)
-            .setTitle("Custom key")
-            .setView(input)
-            .setPositiveButton("OK") { _, _ ->
-                val sanitized = AppPrefs.sanitizeCustomText(input.text.toString())
-                onConfirm(sanitized)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun addDivider() {

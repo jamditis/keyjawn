@@ -41,6 +41,7 @@ class SettingsActivity : Activity() {
         setupHapticToggle()
         setupTooltipToggle()
         setupThemePicker()
+        setupKeyMapping()
 
         val hostSection = findViewById<LinearLayout>(R.id.host_section)
         if (isFull) {
@@ -176,6 +177,158 @@ class SettingsActivity : Activity() {
 
         // Restore the real theme for the manager
         themeManager.currentTheme = selected
+    }
+
+    // -- Key mapping --
+
+    private fun setupKeyMapping() {
+        val section = findViewById<LinearLayout>(R.id.key_mapping_section)
+        if (!isFull) {
+            section.visibility = View.GONE
+            return
+        }
+        section.visibility = View.VISIBLE
+        val listContainer = findViewById<LinearLayout>(R.id.key_mapping_list)
+        refreshKeyMapping(listContainer)
+    }
+
+    private fun refreshKeyMapping(listContainer: LinearLayout) {
+        listContainer.removeAllViews()
+        val appPrefs = AppPrefs(this)
+        val density = resources.displayMetrics.density
+
+        for (slot in 0..2) {
+            val slotLabel = when (slot) {
+                0 -> "Slot 1 (left)"
+                1 -> "Slot 2 (center)"
+                2 -> "Slot 3 (right)"
+                else -> "Slot $slot"
+            }
+            val currentValue = AppPrefs.getExtraSlotLabel(appPrefs.getExtraSlot(slot))
+            addKeyMappingRow(listContainer, slotLabel, currentValue) { selectedValue ->
+                appPrefs.setExtraSlot(slot, selectedValue)
+                refreshKeyMapping(listContainer)
+            }
+        }
+
+        val quickKeyValue = appPrefs.getQuickKey().let {
+            if (it.startsWith("text:")) it.removePrefix("text:") else it
+        }
+        addKeyMappingRow(listContainer, "Quick key", quickKeyValue, isQuickKey = true) { selectedValue ->
+            appPrefs.setQuickKey(selectedValue)
+            refreshKeyMapping(listContainer)
+        }
+    }
+
+    private fun addKeyMappingRow(
+        container: LinearLayout,
+        label: String,
+        currentValue: String,
+        isQuickKey: Boolean = false,
+        onSelect: (String) -> Unit
+    ) {
+        val density = resources.displayMetrics.density
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (48 * density).toInt()
+            )
+        }
+
+        val labelView = TextView(this).apply {
+            text = label
+            textSize = 14f
+            setTextColor(0xFFBBBBBB.toInt())
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        row.addView(labelView)
+
+        val valueView = TextView(this).apply {
+            text = currentValue
+            textSize = 14f
+            setTextColor(0xFF6C9BF2.toInt())
+            setPadding((8 * density).toInt(), 0, (8 * density).toInt(), 0)
+        }
+        row.addView(valueView)
+
+        val changeBtn = Button(this).apply {
+            text = "Change"
+            textSize = 12f
+            isAllCaps = false
+            val w = (80 * density).toInt()
+            val h = (36 * density).toInt()
+            layoutParams = LinearLayout.LayoutParams(w, h)
+            setPadding(0, 0, 0, 0)
+            minWidth = 0
+            minimumWidth = 0
+            minHeight = 0
+            minimumHeight = 0
+        }
+
+        changeBtn.setOnClickListener {
+            if (isQuickKey) {
+                showQuickKeyPickerDialog(onSelect)
+            } else {
+                showSlotPickerDialog(onSelect)
+            }
+        }
+        row.addView(changeBtn)
+
+        container.addView(row)
+    }
+
+    private fun showSlotPickerDialog(onSelect: (String) -> Unit) {
+        val options = AppPrefs.EXTRA_SLOT_OPTIONS
+        val labels = options.map { AppPrefs.getExtraSlotLabel(it) }.toTypedArray()
+        val items = labels.toMutableList()
+        items.add("Custom...")
+        AlertDialog.Builder(this)
+            .setTitle("Choose key")
+            .setItems(items.toTypedArray()) { _, which ->
+                if (which < options.size) {
+                    onSelect(options[which])
+                } else {
+                    showCustomTextDialog(onSelect)
+                }
+            }
+            .show()
+    }
+
+    private fun showQuickKeyPickerDialog(onSelect: (String) -> Unit) {
+        val options = AppPrefs.QUICK_KEY_OPTIONS
+        val items = options.toMutableList()
+        items.add("Custom...")
+        AlertDialog.Builder(this)
+            .setTitle("Choose quick key")
+            .setItems(items.toTypedArray()) { _, which ->
+                if (which < options.size) {
+                    onSelect(options[which])
+                } else {
+                    showCustomTextDialog(onSelect)
+                }
+            }
+            .show()
+    }
+
+    private fun showCustomTextDialog(onSelect: (String) -> Unit) {
+        val input = EditText(this).apply {
+            hint = "Type custom key (max 8 chars)"
+            filters = arrayOf(android.text.InputFilter.LengthFilter(8))
+            setPadding(48, 24, 48, 0)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Custom key")
+            .setView(input)
+            .setPositiveButton("OK") { _, _ ->
+                val sanitized = AppPrefs.sanitizeCustomText(input.text.toString())
+                if (sanitized.isNotEmpty()) {
+                    onSelect("text:$sanitized")
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     // -- Host management --

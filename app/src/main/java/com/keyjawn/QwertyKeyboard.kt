@@ -215,19 +215,13 @@ class QwertyKeyboard(
             button.text = displayKey
             quickKeyButton = button
             button.setOnLongClickListener {
-                val options = AppPrefs.QUICK_KEY_OPTIONS
-                altKeyPopup.show(button, options, onSelect = { selected ->
-                    appPrefs?.setQuickKey(selected)
-                    button.text = selected
-                })
+                extraRowManager.showQuickKeyPicker()
                 true
             }
         }
 
-        // Key preview on touch for character keys (letters + numbers only, not symbols)
-        if (key.output is KeyOutput.Character && keyPreview != null &&
-            currentLayer != KeyboardLayouts.LAYER_SYMBOLS &&
-            currentLayer != KeyboardLayouts.LAYER_SYMBOLS2) {
+        // Key preview on touch for all character keys
+        if (key.output is KeyOutput.Character && keyPreview != null) {
             val previewLabel = key.label
             button.setOnTouchListener { v, event ->
                 when (event.action) {

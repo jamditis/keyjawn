@@ -86,6 +86,32 @@
 
         </LinearLayout>
 
+        <!-- Key mapping section (full flavor only) -->
+        <LinearLayout
+            android:id="@+id/key_mapping_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Key mapping"
+                android:textColor="#BBBBBB"
+                android:textSize="14sp"
+                android:textAllCaps="false"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:id="@+id/key_mapping_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+        </LinearLayout>
+
         <!-- Hosts section (full flavor only) -->
         <LinearLayout
             android:id="@+id/host_section"

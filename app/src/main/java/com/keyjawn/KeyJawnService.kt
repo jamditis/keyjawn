@@ -121,6 +121,10 @@ class KeyJawnService : InputMethodService() {
         qwerty.setLayer(KeyboardLayouts.LAYER_LOWER)
         qwertyKeyboard = qwerty
 
+        erm.onQuickKeyChanged = { _ ->
+            qwerty.setLayer(qwerty.currentLayer)
+        }
+
         // Bottom padding for gesture nav bar + breathing room above gesture indicator
         val extraPad = (32 * resources.displayMetrics.density + 0.5f).toInt()
         ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
