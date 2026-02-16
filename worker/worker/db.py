@@ -52,6 +52,33 @@ CREATE TABLE IF NOT EXISTS metrics (
 CREATE INDEX IF NOT EXISTS idx_findings_status ON findings(status);
 CREATE INDEX IF NOT EXISTS idx_actions_acted_date ON actions(date(acted_at));
 CREATE INDEX IF NOT EXISTS idx_calendar_scheduled_date ON calendar(scheduled_date);
+
+CREATE TABLE IF NOT EXISTS curation_candidates (
+    id TEXT PRIMARY KEY,
+    source TEXT NOT NULL,
+    url TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    author TEXT,
+    description TEXT,
+    published_at TEXT,
+    metadata TEXT,
+    keyword_score REAL DEFAULT 0,
+    haiku_pass INTEGER,
+    haiku_reasoning TEXT,
+    gemini_score REAL DEFAULT 0,
+    gemini_analysis TEXT,
+    sonnet_pass INTEGER,
+    sonnet_draft TEXT,
+    sonnet_reasoning TEXT,
+    final_score REAL DEFAULT 0,
+    status TEXT DEFAULT 'new',
+    created_at TEXT NOT NULL,
+    evaluated_at TEXT,
+    posted_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_curation_status ON curation_candidates(status);
+CREATE INDEX IF NOT EXISTS idx_curation_url ON curation_candidates(url);
 """
 
 
@@ -198,3 +225,75 @@ class Database:
             (platform, metric_type, value, _now()),
         )
         await self._db.commit()
+
+    # -- curation --
+
+    async def insert_curation_candidate(
+        self,
+        source: str,
+        url: str,
+        title: str,
+        author: str,
+        description: str,
+        published_at: str = None,
+        metadata: str = None,
+    ) -> Optional[str]:
+        """Insert a curation candidate. Returns ID or None if URL already exists."""
+        cursor = await self._db.execute(
+            "SELECT 1 FROM curation_candidates WHERE url = ?", (url,)
+        )
+        if await cursor.fetchone():
+            return None
+
+        cid = _new_id()
+        await self._db.execute(
+            """INSERT INTO curation_candidates
+               (id, source, url, title, author, description, published_at, metadata, status, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)""",
+            (cid, source, url, title, author, description, published_at, metadata, _now()),
+        )
+        await self._db.commit()
+        return cid
+
+    async def get_curation_candidate(self, cid: str) -> Optional[dict]:
+        cursor = await self._db.execute(
+            "SELECT * FROM curation_candidates WHERE id = ?", (cid,)
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
+    async def update_curation_evaluation(self, cid: str, **kwargs):
+        """Update evaluation fields on a curation candidate."""
+        kwargs["evaluated_at"] = _now()
+        sets = ", ".join(f"{k} = ?" for k in kwargs)
+        vals = list(kwargs.values()) + [cid]
+        await self._db.execute(
+            f"UPDATE curation_candidates SET {sets} WHERE id = ?", vals
+        )
+        await self._db.commit()
+
+    async def get_new_curations(self, limit: int = 50) -> list[dict]:
+        """Get unevaluated curation candidates."""
+        cursor = await self._db.execute(
+            "SELECT * FROM curation_candidates WHERE status = 'new' ORDER BY created_at ASC LIMIT ?",
+            (limit,),
+        )
+        return [dict(row) for row in await cursor.fetchall()]
+
+    async def get_approved_curations(self, limit: int = 5) -> list[dict]:
+        """Get approved curations ready to post."""
+        cursor = await self._db.execute(
+            "SELECT * FROM curation_candidates WHERE status = 'approved' ORDER BY final_score DESC LIMIT ?",
+            (limit,),
+        )
+        return [dict(row) for row in await cursor.fetchall()]
+
+    async def get_daily_curation_count(self) -> int:
+        """Count curated shares posted today."""
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        cursor = await self._db.execute(
+            "SELECT COUNT(*) FROM curation_candidates WHERE status = 'posted' AND date(posted_at) = ?",
+            (today,),
+        )
+        row = await cursor.fetchone()
+        return row[0]
