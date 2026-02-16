@@ -55,7 +55,7 @@ async def notify_purchasers(version: str, authorization: Optional[str] = Header(
         raise HTTPException(404, f"Release {version} not found")
 
     changelog = release["changelog"] or ""
-    users = conn.execute("SELECT email FROM users").fetchall()
+    users = conn.execute("SELECT email FROM users WHERE unsubscribed = 0").fetchall()
     conn.close()
 
     sent = 0

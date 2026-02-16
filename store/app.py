@@ -27,6 +27,9 @@ app.include_router(releases_router)
 from routes.admin import router as admin_router
 app.include_router(admin_router)
 
+from routes.unsubscribe import router as unsubscribe_router
+app.include_router(unsubscribe_router)
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "service": "keyjawn-store"}
