@@ -99,8 +99,10 @@ class Monitor:
 
         return queued
 
-    async def scan_all_platforms(self, twitter_client, bluesky_client) -> int:
-        """Scan Twitter and Bluesky for relevant conversations.
+    async def scan_all_platforms(
+        self, twitter_client, bluesky_client, producthunt_client=None
+    ) -> int:
+        """Scan Twitter, Bluesky, and Product Hunt for relevant conversations.
 
         Returns total count of newly queued findings.
         """
@@ -133,6 +135,20 @@ class Monitor:
                     })
         except Exception:
             log.exception("bluesky search failed")
+
+        # Scan Product Hunt for relevant launches
+        if producthunt_client:
+            try:
+                launches = await producthunt_client.find_relevant_launches()
+                for launch in launches:
+                    all_findings.append({
+                        "url": launch.get("url", ""),
+                        "text": f"{launch['name']}: {launch['tagline']}",
+                        "author": "producthunt",
+                        "platform": "producthunt",
+                    })
+            except Exception:
+                log.exception("producthunt scan failed")
 
         count = await self.queue_new_findings(all_findings)
         log.info("scan complete: %d findings queued from %d candidates", count, len(all_findings))

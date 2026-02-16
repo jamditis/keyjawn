@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 PLATFORM_LIMITS: dict[str, int] = {
     "twitter": 280,
     "bluesky": 300,
+    "producthunt": 260,
     "reddit": 10000,
     "hn": 10000,
     "devto": 50000,

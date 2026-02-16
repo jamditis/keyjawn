@@ -45,6 +45,11 @@ class TelegramConfig:
 
 
 @dataclass(frozen=True)
+class ProductHuntConfig:
+    developer_token: str = ""
+
+
+@dataclass(frozen=True)
 class RedisConfig:
     host: str = "100.122.208.15"
     port: int = 6379
@@ -58,6 +63,7 @@ class Config:
     bluesky: BlueskyConfig
     telegram: TelegramConfig
     redis: RedisConfig
+    producthunt: ProductHuntConfig = field(default_factory=ProductHuntConfig)
     db_path: str = "keyjawn-worker.db"
     action_window_start_hour: int = 18
     action_window_end_hour: int = 21
@@ -82,6 +88,12 @@ class Config:
             "/home/jamditis/.config/brain/redis.key"
         ).read_text().strip()
 
+        # Product Hunt: optional, may not be set on all machines
+        try:
+            ph_token = _pass_get("claude/tokens/producthunt-dev")
+        except subprocess.CalledProcessError:
+            ph_token = ""
+
         return cls(
             twitter=TwitterConfig(
                 username=twitter_lines[0],
@@ -98,6 +110,9 @@ class Config:
             ),
             redis=RedisConfig(
                 password=redis_password,
+            ),
+            producthunt=ProductHuntConfig(
+                developer_token=ph_token,
             ),
         )
 
@@ -120,6 +135,9 @@ class Config:
             ),
             redis=RedisConfig(
                 password="test-redis-password",
+            ),
+            producthunt=ProductHuntConfig(
+                developer_token="test-ph-token",
             ),
             db_path=":memory:",
         )

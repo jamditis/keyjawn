@@ -104,3 +104,58 @@ def test_bluesky_post_url():
     from worker.platforms.bluesky import _post_url
     url = _post_url("keyjawn.bsky.social", "at://did:plc:abc123/app.bsky.feed.post/xyz789")
     assert url == "https://bsky.app/profile/keyjawn.bsky.social/post/xyz789"
+
+
+# --- Product Hunt tests ---
+
+from worker.platforms.producthunt import (
+    ProductHuntClient,
+    MONITOR_TOPICS,
+    RELEVANCE_KEYWORDS,
+)
+
+
+def test_producthunt_client_init():
+    client = ProductHuntClient("test-token")
+    assert client.token == "test-token"
+    assert "Bearer test-token" in client._headers["Authorization"]
+
+
+def test_producthunt_relevance_scoring():
+    client = ProductHuntClient("test-token")
+
+    # High relevance: multiple keyword hits
+    post = {"name": "TermKey", "tagline": "A CLI keyboard for Android developers", "topics": []}
+    score = client.score_relevance(post)
+    assert score >= 0.7
+
+    # Medium relevance: single keyword
+    post = {"name": "DevApp", "tagline": "A new terminal for your Mac", "topics": []}
+    score = client.score_relevance(post)
+    assert score >= 0.4
+
+    # Low relevance: no keywords
+    post = {"name": "PhotoFilter", "tagline": "Beautiful photo filters for Instagram", "topics": []}
+    score = client.score_relevance(post)
+    assert score < 0.4
+
+
+def test_producthunt_topic_boost():
+    client = ProductHuntClient("test-token")
+
+    # Keyword + relevant topic should boost score
+    post = {
+        "name": "MobileDev",
+        "tagline": "Mobile coding environment",
+        "topics": ["developer-tools"],
+    }
+    score = client.score_relevance(post)
+    assert score >= 0.6  # keyword match + topic boost
+
+
+def test_producthunt_constants():
+    assert len(MONITOR_TOPICS) > 0
+    assert "developer-tools" in MONITOR_TOPICS
+    assert len(RELEVANCE_KEYWORDS) > 0
+    assert "keyboard" in RELEVANCE_KEYWORDS
+    assert "cli" in RELEVANCE_KEYWORDS
