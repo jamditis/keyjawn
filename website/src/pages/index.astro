@@ -26,7 +26,7 @@ import KeyCap from '../components/KeyCap.astro';
         "description": "Terminal keys, voice input, and SCP upload on an Android keyboard built for AI-era CLI users.",
         "url": "https://keyjawn.amditis.tech",
         "downloadUrl": "https://github.com/jamditis/keyjawn/releases",
-        "softwareVersion": "1.0.0",
+        "softwareVersion": "1.1.0",
         "offers": [
           {
             "@type": "Offer",
@@ -110,6 +110,11 @@ import KeyCap from '../components/KeyCap.astro';
           description="Swipe left to delete a word, right for space, up for symbols, down for letters. Fast layer switching without button hunting."
         />
         <FeatureCard
+          title="customizable-keys"
+          icon=">"
+          description="Configurable extra row slots and quick key. Long-press to swap ESC, Tab, or Ctrl for other system keys or text characters. 24+ quick key options."
+        />
+        <FeatureCard
           title="number-row"
           icon="#"
           description="Dedicated number row with long-press shifted symbols. Alt character hints visible on every key so you never guess."
@@ -150,7 +155,7 @@ import KeyCap from '../components/KeyCap.astro';
           <TerminalBlock command="adb install keyjawn-full.apk" output="Success" />
         </div>
         <div class="install-info">
-          <p>Free version includes terminal keys, voice input, clipboard history, slash commands, and swipe gestures. $4 one-time purchase adds SCP upload, keyboard themes, menu panel, clipboard pinning, and custom slash commands.</p>
+          <p>Free version includes terminal keys, voice input, clipboard history, slash commands, swipe gestures, and key press preview. $4 one-time purchase adds SCP upload, keyboard themes, customizable extra row keys, menu panel, clipboard pinning, and custom slash commands.</p>
           <div class="install-actions">
             <a href="https://github.com/jamditis/keyjawn/releases" class="btn btn-primary">Download free APK</a>
             <a href="https://buy.stripe.com/14AeVdafC3pi9Yl8nIdnW00" class="btn btn-secondary">Buy full version ($4)</a>

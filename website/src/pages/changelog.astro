@@ -1,0 +1,169 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Changelog -- KeyJawn"
+  description="Release history for KeyJawn. Every version, what changed, and download links."
+>
+  <section class="section">
+    <div class="container">
+      <h1 class="page-title">Changelog</h1>
+      <p class="page-intro">Release history. Each version links to the full release notes on GitHub.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container changelog">
+
+      <article class="release" id="v1.1.0">
+        <div class="release-header">
+          <h2 class="release-version">v1.1.0</h2>
+          <time class="release-date" datetime="2026-02-16">February 16, 2026</time>
+        </div>
+        <ul class="release-changes">
+          <li><strong>Key press preview</strong> -- a bubble appears above each key on tap, showing the character with a bounce animation. Works on letters, numbers, and symbols.</li>
+          <li><strong>Wider spacebar</strong> -- period key removed from the bottom row, spacebar widened from 3.5x to 4.5x weight. Period still available on symbols layer and as a quick key.</li>
+          <li><strong>Configurable extra row</strong> -- the three left slots (ESC, Tab, Ctrl) are now customizable via long-press pickers or Settings. Options: Home, End, PgUp, PgDn, Insert, Delete, and text characters (|, ~, `, \).</li>
+          <li><strong>Expanded quick key</strong> -- picker now offers 24 terminal characters plus custom text (up to 8 characters). Also configurable in Settings.</li>
+          <li><strong>Key mapping in Settings</strong> -- configuration moved from menu panel to long-press pickers and a dedicated Settings section.</li>
+        </ul>
+        <a href="https://github.com/jamditis/keyjawn/releases/tag/v1.1.0" class="release-link">Full release notes</a>
+      </article>
+
+      <article class="release" id="v1.0.2">
+        <div class="release-header">
+          <h2 class="release-version">v1.0.2</h2>
+          <time class="release-date" datetime="2026-02-16">February 16, 2026</time>
+        </div>
+        <ul class="release-changes">
+          <li><strong>Gesture navigation support</strong> -- keyboard adds bottom padding on phones with swipe-bar navigation so keys don't overlap system icons.</li>
+          <li><strong>Android Lint in CI</strong> -- lint runs on every build. NewApi and MissingPermission errors are fatal.</li>
+          <li><strong>Expanded test coverage</strong> -- 57 new unit tests across AltKeyMappings, ThemeManager, ExtraRowManager, NumberRowManager, and MenuPanel. Total: 214 tests.</li>
+        </ul>
+        <a href="https://github.com/jamditis/keyjawn/releases/tag/v1.0.2" class="release-link">Full release notes</a>
+      </article>
+
+      <article class="release" id="v1.0.1">
+        <div class="release-header">
+          <h2 class="release-version">v1.0.1</h2>
+          <time class="release-date" datetime="2026-02-15">February 15, 2026</time>
+        </div>
+        <ul class="release-changes">
+          <li><strong>Feature gating fix</strong> -- settings features now correctly gated on build flavor instead of billing state.</li>
+          <li><strong>Download fix</strong> -- R2 presigned URLs now include Content-Disposition header so browsers download the APK instead of trying to render it.</li>
+        </ul>
+        <a href="https://github.com/jamditis/keyjawn/releases/tag/v1.0.1" class="release-link">Full release notes</a>
+      </article>
+
+      <article class="release" id="v1.0.0">
+        <div class="release-header">
+          <h2 class="release-version">v1.0.0</h2>
+          <time class="release-date" datetime="2026-02-15">February 15, 2026</time>
+        </div>
+        <ul class="release-changes">
+          <li><strong>Menu panel</strong> -- overlay with SCP upload, theme picker, settings access, and quick toggles for haptic feedback, autocorrect, and tooltips.</li>
+          <li><strong>Clipboard pinning</strong> -- pin frequently used items to persist across sessions. Up to 15 pins, 30 history items. Full version only.</li>
+          <li><strong>Inline panels</strong> -- clipboard and menu now render as overlays within the keyboard instead of floating popups.</li>
+          <li><strong>Tooltip system</strong> -- inline hints replace toast messages. Auto-dismiss after 1.5s. Configurable in full version.</li>
+          <li><strong>Free/full split</strong> -- voice input, clipboard history, slash commands, swipe gestures, and per-app autocorrect now free. Full version adds SCP, themes, pinning, custom commands.</li>
+        </ul>
+        <a href="https://github.com/jamditis/keyjawn/releases/tag/v1.0.0" class="release-link">Full release notes</a>
+      </article>
+
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-title {
+    margin-bottom: var(--space-sm);
+  }
+
+  .page-intro {
+    color: var(--text);
+    font-size: 1.1rem;
+    max-width: 680px;
+  }
+
+  .changelog {
+    max-width: 720px;
+  }
+
+  .release {
+    padding: var(--space-lg) 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .release:last-child {
+    border-bottom: none;
+  }
+
+  .release-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+  }
+
+  .release-version {
+    font-family: var(--font-mono);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0;
+  }
+
+  .release-date {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .release-changes {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-sm) 0;
+  }
+
+  .release-changes li {
+    padding: 0.4em 0;
+    padding-left: 1.2em;
+    position: relative;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  .release-changes li::before {
+    content: '--';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+
+  .release-changes strong {
+    color: var(--text);
+  }
+
+  .release-link {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+    text-decoration: none;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+
+  .release-link:hover {
+    opacity: 1;
+  }
+
+  @media (max-width: 600px) {
+    .release-header {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+  }
+</style>

@@ -22,6 +22,8 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li><a href="#number-row">Number row</a></li>
             <li><a href="#alt-characters">Alt characters</a></li>
             <li><a href="#quick-key">Quick key</a></li>
+            <li><a href="#key-mapping">Key mapping</a></li>
+            <li><a href="#key-preview">Key preview</a></li>
             <li><a href="#voice-input">Voice input</a></li>
             <li><a href="#clipboard-history">Clipboard history</a></li>
             <li><a href="#scp-upload">SCP upload</a></li>
@@ -100,6 +102,7 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li><strong>Mic</strong> -- tap to start/stop voice input.</li>
           </ul>
           <p>Each button has a distinct background color so you can find it at a glance without reading labels.</p>
+          <p>In the full version, the three left slots (Esc, Tab, Ctrl) are customizable. Long-press any of them to open a picker and swap it for a different key. See <a href="#key-mapping">key mapping</a> for details.</p>
         </section>
 
         <!-- Number row -->
@@ -135,9 +138,33 @@ import TerminalBlock from '../components/TerminalBlock.astro';
           <p>The bottom-right key on the letter layers (next to the spacebar) is a configurable quick key. It defaults to <code>/</code>.</p>
           <ul>
             <li><strong>Tap</strong> -- types the configured character.</li>
-            <li><strong>Long-press</strong> -- opens a picker to choose a different character: <code>/</code>, <code>.</code>, <code>,</code>, <code>?</code>, <code>!</code>, <code>--</code>, <code>'</code>, <code>"</code>, <code>:</code>, <code>;</code>.</li>
+            <li><strong>Long-press</strong> -- opens a picker with 24 terminal characters: <code>/</code>, <code>.</code>, <code>,</code>, <code>?</code>, <code>!</code>, <code>--</code>, <code>'</code>, <code>"</code>, <code>:</code>, <code>;</code>, <code>|</code>, <code>~</code>, <code>`</code>, <code>\</code>, <code>@</code>, <code>#</code>, <code>$</code>, <code>_</code>, <code>&amp;</code>, <code>-</code>, <code>+</code>, <code>=</code>, <code>^</code>, <code>%</code>. There's also a custom text option for typing up to 8 characters.</li>
           </ul>
-          <p>Your choice is saved and persists across sessions. Set it to whatever you type most.</p>
+          <p>Your choice is saved and persists across sessions. Set it to whatever you type most. Also configurable in Settings.</p>
+        </section>
+
+        <!-- Key mapping -->
+        <section class="manual-section" id="key-mapping">
+          <h2>Key mapping</h2>
+          <p>The full version lets you customize which keys appear in the extra row and what the quick key types. There are two ways to configure them:</p>
+          <ul>
+            <li><strong>Long-press the key</strong> -- long-press any of the three left extra row slots (Esc, Tab, Ctrl by default) or the quick key to open a picker and choose a replacement.</li>
+            <li><strong>Settings</strong> -- open the menu (gear icon), tap Settings, and scroll to the key mapping section for all options in one place.</li>
+          </ul>
+          <p>Available extra row options:</p>
+          <ul>
+            <li><strong>System keys:</strong> Esc, Tab, Home, End, PgUp, PgDn, Insert, Delete</li>
+            <li><strong>Ctrl:</strong> keeps its three-state behavior (off, armed, locked) regardless of which slot it occupies</li>
+            <li><strong>Text characters:</strong> <code>|</code>, <code>~</code>, <code>`</code>, <code>\</code></li>
+          </ul>
+          <p>Changes take effect immediately and persist across sessions.</p>
+        </section>
+
+        <!-- Key preview -->
+        <section class="manual-section" id="key-preview">
+          <h2>Key preview</h2>
+          <p>When you tap a letter, number, or symbol key, a small bubble appears above the key showing the character you're pressing. The bubble uses a bounce animation (scales from 0.8 to 1.0) and fades out when you release the key.</p>
+          <p>Key preview works on all three keyboard layers (lowercase, uppercase, symbols). Special keys like Shift, Enter, Backspace, and the extra row keys don't show a preview.</p>
         </section>
 
         <!-- Voice input -->

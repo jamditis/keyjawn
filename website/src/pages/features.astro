@@ -11,7 +11,7 @@ import FeatureCard from '../components/FeatureCard.astro';
   <section class="section">
     <div class="container">
       <h1 class="page-title">Features</h1>
-      <p class="page-intro">Everything the keyboard does. The free version includes terminal keys, voice input, clipboard history, slash commands, swipe gestures, per-app autocorrect, and a configurable quick key. The full version ($4) adds SCP upload, multi-host SSH, keyboard themes, a menu panel, clipboard pinning, and custom slash commands.</p>
+      <p class="page-intro">Everything the keyboard does. The free version includes terminal keys, voice input, clipboard history, slash commands, swipe gestures, per-app autocorrect, key press preview, and a configurable quick key. The full version ($4) adds SCP upload, multi-host SSH, keyboard themes, customizable extra row keys, a menu panel, clipboard pinning, and custom slash commands.</p>
     </div>
   </section>
 
@@ -23,6 +23,7 @@ import FeatureCard from '../components/FeatureCard.astro';
         <p>A dedicated row above the QWERTY layout with the keys terminals need: <KeyCap label="Esc" />, <KeyCap label="Tab" />, <KeyCap label="Ctrl" />, and arrow keys <KeyCap label="<" /> <KeyCap label=">" />.</p>
         <p>Always visible. No toggling layers or long-pressing to find them. <KeyCap label="Ctrl" /> uses a three-state toggle: tap once to arm it for one keypress, long-press to lock it on, tap again to turn it off. Hold arrow keys to repeat.</p>
         <p>Each key in the row has a distinct background color so you can tell them apart at a glance. Ctrl changes color when armed or locked.</p>
+        <p>In the full version, the three left slots (Esc, Tab, Ctrl) are customizable. Long-press to swap them for Home, End, PgUp, PgDn, Insert, Delete, or text characters like <code>|</code>, <code>~</code>, <code>`</code>, <code>\</code>. Also configurable in Settings.</p>
       </div>
       <div class="feature-visual">
         <div class="key-row-demo">
@@ -295,7 +296,7 @@ import FeatureCard from '../components/FeatureCard.astro';
         <FeatureCard
           title="quick-key"
           icon="/"
-          description="The bottom-right key next to the spacebar is configurable. Long-press it to pick from /, ., ,, ?, !, and more. It remembers your choice. Default is / for terminal users."
+          description="The bottom-right key next to the spacebar is configurable. Long-press to pick from 24 terminal characters (/, |, ~, `, \, @, #, $, and more) or set custom text up to 8 characters. Also configurable in Settings."
         />
         <FeatureCard
           title="haptic-feedback"
@@ -306,6 +307,16 @@ import FeatureCard from '../components/FeatureCard.astro';
           title="shift-and-caps"
           icon="^"
           description="Tap shift for one uppercase letter -- it auto-returns to lowercase after. Double-tap for caps lock. The key changes appearance to show you which state you're in."
+        />
+        <FeatureCard
+          title="key-preview"
+          icon="."
+          description="A preview bubble appears above each key on tap, showing the character with a bounce animation. Works on letters, numbers, and symbols across all layers."
+        />
+        <FeatureCard
+          title="configurable-extra-row"
+          icon=">"
+          description="Long-press ESC, Tab, or Ctrl to swap them for Home, End, PgUp, PgDn, Ins, Del, or custom text. Also configurable in Settings. Full version only."
         />
         <FeatureCard
           title="color-coded-keys"
