@@ -8,6 +8,7 @@ parallel subagents via asyncio.gather() for concurrent evaluation.
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import re
 
@@ -15,36 +16,50 @@ from worker.curation.models import CurationCandidate
 
 log = logging.getLogger(__name__)
 
-CLI_TIMEOUT = 90  # seconds per subprocess call
+CLI_TIMEOUT = 120  # seconds per CLI call
 
 
 async def _run_claude(prompt: str, model: str = "sonnet") -> str:
     """Run a Claude Code CLI prompt and return the response text.
 
-    Uses 'claude -p' (print mode) for non-interactive one-shot prompts.
-    No API key needed -- uses the CLI's own auth/subscription.
+    Follows claude-scheduler.py pattern: base64-encode the prompt for
+    safe shell transmission, pipe it into claude -p, and use shell-level
+    timeout (timeout --foreground) instead of asyncio.wait_for which
+    can prevent the CLI from initializing properly.
     """
+    encoded = base64.b64encode(prompt.encode()).decode()
+
+    # Base64 pipe -> timeout wrapper -> claude -p
+    # Same pattern as claude-scheduler.py bash wrapper scripts
+    cmd = (
+        f"echo '{encoded}' | base64 -d | "
+        f"timeout --foreground --kill-after=30 {CLI_TIMEOUT} "
+        f"claude --dangerously-skip-permissions -p --model {model}"
+    )
+
     try:
-        process = await asyncio.create_subprocess_exec(
-            "claude", "-p", prompt, "--model", model,
+        process = await asyncio.create_subprocess_shell(
+            cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await asyncio.wait_for(
-            process.communicate(), timeout=CLI_TIMEOUT
-        )
-    except asyncio.TimeoutError:
-        log.warning("claude CLI timed out after %ds", CLI_TIMEOUT)
-        return ""
+        stdout, stderr = await process.communicate()
     except FileNotFoundError:
         log.error("claude CLI not found")
         return ""
     except Exception:
-        log.exception("claude CLI failed")
+        log.exception("claude CLI subprocess failed")
         return ""
 
+    if process.returncode == 124:
+        log.warning("claude CLI timed out after %ds", CLI_TIMEOUT)
+        return ""
     if process.returncode != 0:
-        log.warning("claude CLI returned %d: %s", process.returncode, stderr.decode()[:200])
+        log.warning(
+            "claude CLI returned %d: %s",
+            process.returncode,
+            stderr.decode()[:200],
+        )
         return ""
 
     return stdout.decode().strip()
