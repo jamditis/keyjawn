@@ -60,3 +60,47 @@ def test_search_keywords_defined():
     for kw in SEARCH_KEYWORDS:
         assert isinstance(kw, str)
         assert len(kw) > 0
+
+
+# --- Bluesky tests ---
+
+from worker.config import BlueskyConfig
+from worker.platforms.bluesky import BlueskyClient, SEARCH_KEYWORDS as BSKY_SEARCH_KEYWORDS
+
+
+def _make_bluesky_config() -> BlueskyConfig:
+    return BlueskyConfig(
+        handle="keyjawn.bsky.social",
+        app_password="test-app-password",
+    )
+
+
+def test_bluesky_client_init():
+    config = _make_bluesky_config()
+    client = BlueskyClient(config)
+    assert client.config == config
+    assert client._client is None
+
+
+def test_bluesky_post_too_long():
+    client = BlueskyClient(_make_bluesky_config())
+    long_text = "x" * 301
+    with pytest.raises(ValueError, match="exceeds 300"):
+        client.validate_post(long_text)
+
+
+def test_bluesky_post_valid():
+    client = BlueskyClient(_make_bluesky_config())
+    client.validate_post("x" * 300)  # should not raise
+    client.validate_post("hello")  # should not raise
+
+
+def test_bluesky_search_terms():
+    assert len(BSKY_SEARCH_KEYWORDS) > 0
+    assert any("SSH" in kw or "CLI" in kw for kw in BSKY_SEARCH_KEYWORDS)
+
+
+def test_bluesky_post_url():
+    from worker.platforms.bluesky import _post_url
+    url = _post_url("keyjawn.bsky.social", "at://did:plc:abc123/app.bsky.feed.post/xyz789")
+    assert url == "https://bsky.app/profile/keyjawn.bsky.social/post/xyz789"
