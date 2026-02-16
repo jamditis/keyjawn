@@ -161,12 +161,86 @@ def send_download_email(to_email: str):
     )
 
 
-def send_update_email(to_email: str, version: str):
+def _update_email_html(version: str, changelog: str = "") -> str:
+    url = _apk_url(version)
+    changes_html = ""
+    if changelog:
+        items = [f"<li style='margin:0 0 6px; color:#333;'>{line.lstrip('- ').strip()}</li>"
+                 for line in changelog.strip().splitlines() if line.strip()]
+        if items:
+            changes_html = f"""
+          <div style="background:#f8f8fb; border-radius:6px; padding:16px 20px; margin:0 0 20px;">
+            <p style="margin:0 0 8px; font-size:14px; font-weight:600; color:#1a1a1a;">What's new:</p>
+            <ul style="margin:0; padding:0 0 0 20px; font-size:14px; line-height:1.6;">
+              {''.join(items)}
+            </ul>
+          </div>"""
+
+    return f"""\
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0; padding:0; background:#f4f4f7; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7; padding:32px 0;">
+    <tr><td align="center">
+      <table width="540" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; overflow:hidden;">
+
+        <!-- header -->
+        <tr><td style="background:#1B1B1F; padding:24px 32px;">
+          <span style="color:#6cf2a8; font-size:22px; font-weight:700; letter-spacing:0.5px;">KeyJawn</span>
+          <span style="color:#6E6E78; font-size:14px; float:right; line-height:30px;">update</span>
+        </td></tr>
+
+        <!-- body -->
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 20px; font-size:16px; color:#1a1a1a; line-height:1.5;">
+            KeyJawn v{version} is available. Here's your download:
+          </p>
+
+          {changes_html}
+
+          <!-- download button -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+            <tr><td align="center">
+              <a href="{url}"
+                 style="display:inline-block; background:#6cf2a8; color:#0a0a0f; text-decoration:none;
+                        font-size:16px; font-weight:600; padding:14px 32px; border-radius:6px;">
+                Download KeyJawn v{version}
+              </a>
+            </td></tr>
+          </table>
+
+          <p style="margin:0 0 8px; font-size:14px; color:#555; line-height:1.5;">
+            <strong>To install:</strong> Open the APK on your Android device. If prompted, allow
+            installation from unknown sources.
+          </p>
+
+          <p style="margin:16px 0 0; font-size:14px; color:#555; line-height:1.5;">
+            This link expires in 7 days. Reply to this email if you need a new one.
+          </p>
+        </td></tr>
+
+        <!-- footer -->
+        <tr><td style="padding:20px 32px; border-top:1px solid #eee;">
+          <p style="margin:0; font-size:12px; color:#999; line-height:1.5;">
+            You're receiving this because you purchased KeyJawn.
+            <br>KeyJawn -- a keyboard for people who use the terminal from their phone.
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+
+def send_update_email(to_email: str, version: str, changelog: str = ""):
     """Send an update notification to an existing purchaser."""
     _send_email(
         to_email,
-        f"KeyJawn v{version} is available",
-        _download_email_html(version),
+        f"KeyJawn v{version} -- what's new",
+        _update_email_html(version, changelog),
     )
 
 

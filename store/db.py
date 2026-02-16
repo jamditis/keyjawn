@@ -53,7 +53,13 @@ def init_db():
             r2_key TEXT NOT NULL,
             file_size INTEGER,
             sha256 TEXT,
+            changelog TEXT,
             released_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
     """)
+    # Add changelog column if missing (existing DBs)
+    try:
+        conn.execute("ALTER TABLE releases ADD COLUMN changelog TEXT")
+    except sqlite3.OperationalError:
+        pass  # column already exists
     conn.close()

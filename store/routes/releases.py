@@ -25,6 +25,7 @@ class ReleaseRequest(BaseModel):
     r2_key: str
     file_size: Optional[int] = None
     sha256: Optional[str] = None
+    changelog: Optional[str] = None
 
 
 @router.post("/api/releases")
@@ -32,10 +33,11 @@ async def register_release(req: ReleaseRequest, authorization: Optional[str] = H
     require_admin(authorization)
     conn = get_db()
     conn.execute("""
-        INSERT INTO releases (version, r2_key, file_size, sha256)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(version) DO UPDATE SET r2_key=?, file_size=?, sha256=?
-    """, (req.version, req.r2_key, req.file_size, req.sha256, req.r2_key, req.file_size, req.sha256))
+        INSERT INTO releases (version, r2_key, file_size, sha256, changelog)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(version) DO UPDATE SET r2_key=?, file_size=?, sha256=?, changelog=?
+    """, (req.version, req.r2_key, req.file_size, req.sha256, req.changelog,
+          req.r2_key, req.file_size, req.sha256, req.changelog))
     conn.commit()
     conn.close()
     return {"version": req.version, "status": "registered"}
@@ -52,6 +54,7 @@ async def notify_purchasers(version: str, authorization: Optional[str] = Header(
         conn.close()
         raise HTTPException(404, f"Release {version} not found")
 
+    changelog = release["changelog"] or ""
     users = conn.execute("SELECT email FROM users").fetchall()
     conn.close()
 
@@ -59,7 +62,7 @@ async def notify_purchasers(version: str, authorization: Optional[str] = Header(
     failed = 0
     for user in users:
         try:
-            send_update_email(user["email"], version)
+            send_update_email(user["email"], version, changelog)
             sent += 1
         except Exception as e:
             log.error(f"Failed to notify {user['email']}: {e}")
