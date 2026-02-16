@@ -294,3 +294,78 @@ def test_twitch_parse_clip():
     assert candidate.title == "Building a terminal tool live"
     assert candidate.author == "devstreamer"
     assert candidate.metadata["view_count"] == 500
+
+
+from worker.curation.evaluate import (
+    build_evaluate_prompt, parse_evaluate_response,
+    build_draft_prompt, parse_draft_response,
+)
+
+
+def test_build_evaluate_prompt():
+    c = CurationCandidate(
+        source="youtube", url="http://test.com",
+        title="Open source terminal tool",
+        description="A CLI keyboard for Android developers",
+        author="devuser",
+    )
+    prompt = build_evaluate_prompt(c)
+    assert "Open source terminal tool" in prompt
+    assert "CLI keyboard" in prompt
+    assert "RELEVANT:" in prompt
+
+
+def test_parse_evaluate_response_relevant():
+    response = """RELEVANT: yes
+REASONING: Developer tools video about a CLI keyboard for Android
+OPEN_SOURCE: yes
+INDIE: yes
+CORPORATE: no
+CLICKBAIT: no
+QUALITY: 8/10"""
+    result = parse_evaluate_response(response)
+    assert result["relevant"] is True
+    assert result["is_oss"] is True
+    assert result["is_indie"] is True
+    assert result["quality_score"] == 8.0
+
+
+def test_parse_evaluate_response_irrelevant():
+    response = """RELEVANT: no
+REASONING: This is a cooking tutorial, not developer tools
+QUALITY: 2/10"""
+    result = parse_evaluate_response(response)
+    assert result["relevant"] is False
+    assert result["quality_score"] == 2.0
+
+
+def test_build_draft_prompt():
+    c = CurationCandidate(
+        source="youtube", url="http://test.com",
+        title="Terminal file manager in Rust",
+        description="Building a TUI app",
+        author="devuser",
+    )
+    evaluation = {"reasoning": "Great indie dev content", "quality_score": 8.0}
+    prompt = build_draft_prompt(c, evaluation, "twitter")
+    assert "Terminal file manager" in prompt
+    assert "280" in prompt
+    assert "DECISION:" in prompt
+
+
+def test_parse_draft_response_share():
+    text = """DECISION: SHARE
+REASONING: High quality indie dev content about terminal tools
+DRAFT: Solid Rust terminal file manager from a solo dev. Open source, clean codebase. youtube.com/watch?v=abc"""
+    result = parse_draft_response(text)
+    assert result["share"] is True
+    assert "indie" in result["reasoning"].lower()
+    assert "Solid Rust" in result["draft"]
+
+
+def test_parse_draft_response_skip():
+    text = """DECISION: SKIP
+REASONING: Corporate product launch, not relevant enough"""
+    result = parse_draft_response(text)
+    assert result["share"] is False
+    assert result["draft"] == ""
