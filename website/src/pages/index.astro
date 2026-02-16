@@ -60,6 +60,7 @@ import KeyCap from '../components/KeyCap.astro';
           <a href="https://github.com/jamditis/keyjawn/releases" class="btn btn-primary">Download free APK</a>
           <a href="https://buy.stripe.com/14AeVdafC3pi9Yl8nIdnW00" class="btn btn-secondary">Buy full version ($4)</a>
         </div>
+        <p class="fine-print">* Both versions are <a href="https://github.com/jamditis/keyjawn">open source</a>. If you can build the full APK from source, it's yours — no purchase needed. The $4 is for people who'd rather not.</p>
         <div class="hero-keys">
           <KeyCap label="Esc" />
           <KeyCap label="Tab" />
@@ -157,6 +158,7 @@ import KeyCap from '../components/KeyCap.astro';
           <p class="text-muted" style="font-size: 0.9rem; margin-top: 0.75rem;">
             No subscriptions. No ads. No tracking. Not in any version, ever. <a href="/pricing">See what's included</a>.
           </p>
+          <p class="fine-print">* Both versions are <a href="https://github.com/jamditis/keyjawn">open source</a>. If you can build the full APK from source, it's yours — no purchase needed. The $4 is for people who'd rather not.</p>
         </div>
       </div>
     </div>
@@ -283,6 +285,20 @@ import KeyCap from '../components/KeyCap.astro';
     gap: var(--space-sm);
     flex-wrap: wrap;
     margin-top: var(--space-sm);
+  }
+
+  /* Fine print */
+  .fine-print {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    line-height: 1.4;
+  }
+
+  .fine-print a {
+    color: var(--text-muted);
+    text-decoration: underline;
   }
 
   /* Responsive */
