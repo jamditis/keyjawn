@@ -6,7 +6,7 @@
 
 **Architecture:** A Python service on officejawn with two modes: a monitor loop (scans platforms for relevant conversations during business hours) and an action window (executes queued actions in the evening). Communicates with houseofjawn's Telegram bot via Redis pub/sub for approval flows. Uses Gemini CLI for content generation.
 
-**Tech stack:** Python 3.11, aiosqlite, tweepy (Twitter), atproto SDK (Bluesky), httpx, APScheduler, Redis pub/sub, Gemini CLI, python-telegram-bot (callback handlers on houseofjawn)
+**Tech stack:** Python 3.11, aiosqlite, twikit (Twitter, no API key needed), atproto SDK (Bluesky), httpx, APScheduler, Redis pub/sub, Gemini CLI, python-telegram-bot (callback handlers on houseofjawn)
 
 **Design doc:** `docs/plans/2026-02-16-keyjawn-worker-design.md`
 
@@ -16,12 +16,11 @@
 
 These require human action and can't be automated:
 
-1. **Create @KeyJawn Twitter/X account**
-   - Sign up at twitter.com
+1. **Create @KeyJawn Twitter/X account** (DONE)
+   - Account: @KeyJawn, email: thejawnstars@gmail.com
    - Bio: "Android keyboard built for CLI and LLM agents. AI-assisted account. Built by @jamditis"
-   - Apply for Twitter Developer API access (developer.twitter.com)
-   - Create an app, get: API key, API secret, access token, access token secret, bearer token
-   - Store in pass: `pass insert claude/api/twitter-keyjawn` (JSON with all five values)
+   - Credentials stored in pass: `claude/social/twitter-keyjawn` (username\nemail\npassword)
+   - Uses twikit library (no Developer API needed — authenticates with account credentials)
 
 2. **Create KeyJawn Bluesky account**
    - Sign up at bsky.app with handle `keyjawn.bsky.social`
