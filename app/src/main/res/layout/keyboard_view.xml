@@ -20,6 +20,7 @@
     <include layout="@layout/voice_bar" />
 
     <FrameLayout
+        android:id="@+id/keyboard_frame"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 

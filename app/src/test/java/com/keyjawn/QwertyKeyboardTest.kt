@@ -125,8 +125,8 @@ class QwertyKeyboardTest {
     fun `render creates correct key count in row 4`() {
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
         val row4 = container.getChildAt(3) as LinearLayout
-        // sym, comma, space, period, quickkey, enter
-        assertEquals(6, row4.childCount)
+        // sym, comma, space, quickkey, enter
+        assertEquals(5, row4.childCount)
     }
 
     @Test
@@ -154,8 +154,8 @@ class QwertyKeyboardTest {
     fun `tapping enter sends KEYCODE_ENTER`() {
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
         val row4 = container.getChildAt(3) as LinearLayout
-        // enter is at index 5
-        val enterButton = findButton(row4.getChildAt(5))
+        // enter is at index 4
+        val enterButton = findButton(row4.getChildAt(4))
         enterButton.performClick()
 
         verify(keySender).sendKey(any(), eq(KeyEvent.KEYCODE_ENTER), any())
@@ -165,8 +165,8 @@ class QwertyKeyboardTest {
     fun `tapping quick key sends default slash character`() {
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
         val row4 = container.getChildAt(3) as LinearLayout
-        // quickkey is at index 4
-        val quickKeyButton = findButton(row4.getChildAt(4))
+        // quickkey is at index 3
+        val quickKeyButton = findButton(row4.getChildAt(3))
         quickKeyButton.performClick()
 
         verify(keySender).sendChar(any(), eq("/"), any())

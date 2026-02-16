@@ -25,7 +25,8 @@ class QwertyKeyboard(
     private val inputConnectionProvider: () -> InputConnection?,
     private val appPrefs: AppPrefs? = null,
     private val slashPopup: SlashCommandPopup? = null,
-    private val themeManager: ThemeManager? = null
+    private val themeManager: ThemeManager? = null,
+    private val keyPreview: KeyPreview? = null
 ) {
 
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider)
@@ -219,6 +220,25 @@ class QwertyKeyboard(
                     button.text = selected
                 })
                 true
+            }
+        }
+
+        // Key preview on touch for character keys (letters + numbers only, not symbols)
+        if (key.output is KeyOutput.Character && keyPreview != null &&
+            currentLayer != KeyboardLayouts.LAYER_SYMBOLS &&
+            currentLayer != KeyboardLayouts.LAYER_SYMBOLS2) {
+            val previewLabel = key.label
+            button.setOnTouchListener { v, event ->
+                when (event.action) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        keyPreview.show(v, previewLabel)
+                    }
+                    android.view.MotionEvent.ACTION_UP,
+                    android.view.MotionEvent.ACTION_CANCEL -> {
+                        keyPreview.hide()
+                    }
+                }
+                false  // Don't consume -- let click listener fire too
             }
         }
 

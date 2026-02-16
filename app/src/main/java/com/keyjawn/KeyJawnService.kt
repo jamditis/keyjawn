@@ -98,6 +98,9 @@ class KeyJawnService : InputMethodService() {
 
         NumberRowManager(view, keySender, { currentInputConnection }, tm)
 
+        val keyboardFrame = view.findViewById<android.widget.FrameLayout>(R.id.keyboard_frame)
+        val keyPreview = KeyPreview(keyboardFrame, tm)
+
         val container = view.findViewById<LinearLayout>(R.id.qwerty_container)
         val registry = slashCommandRegistry
         val slashPopup = if (registry != null) {
@@ -114,7 +117,7 @@ class KeyJawnService : InputMethodService() {
             )
         } else null
 
-        val qwerty = QwertyKeyboard(container, keySender, erm, { currentInputConnection }, appPrefs, slashPopup, tm)
+        val qwerty = QwertyKeyboard(container, keySender, erm, { currentInputConnection }, appPrefs, slashPopup, tm, keyPreview)
         qwerty.setLayer(KeyboardLayouts.LAYER_LOWER)
         qwertyKeyboard = qwerty
 
