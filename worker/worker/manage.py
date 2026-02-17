@@ -377,6 +377,7 @@ def main():
     sub.add_parser("weekly-report", help="Generate weekly metrics report")
     sub.add_parser("curation-scan", help="Run one-shot curation scan and evaluation")
     sub.add_parser("curation-status", help="Show curation pipeline status")
+    sub.add_parser("discovery-scan", help="Run on-platform discovery scan")
 
     args = parser.parse_args()
 
@@ -401,6 +402,14 @@ def main():
         asyncio.run(curation_scan(config))
     elif args.command == "curation-status":
         asyncio.run(curation_status(config))
+    elif args.command == "discovery-scan":
+        async def _scan():
+            from worker.runner import WorkerRunner
+            runner = WorkerRunner(config)
+            await runner.start()
+            await runner.run_discovery_scan()
+            await runner.stop()
+        asyncio.run(_scan())
 
 
 if __name__ == "__main__":

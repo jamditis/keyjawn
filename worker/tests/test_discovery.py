@@ -86,3 +86,37 @@ def test_follow_is_auto_approved():
 
 def test_quote_repost_needs_approval():
     assert ActionPicker.get_escalation_tier("quote_repost", "twitter") == EscalationTier.BUTTONS
+
+
+from worker.config import Config
+
+
+def test_pick_actions_engagement_fallback(db):
+    """When no calendar, findings, or curations exist, engagement fills the gap."""
+    async def _test():
+        config = Config.for_testing()
+        picker = ActionPicker(config, db)
+
+        # Insert some engagement opportunities
+        await db.insert_engagement(
+            platform="twitter",
+            post_id="tw1",
+            post_url="https://x.com/dev/status/tw1",
+            author="somedev",
+            text="cool terminal tool",
+            opportunity_type="like",
+        )
+        await db.insert_engagement(
+            platform="twitter",
+            post_id="tw2",
+            post_url="https://x.com/dev/status/tw2",
+            author="otherdev",
+            text="new CLI keyboard",
+            opportunity_type="repost",
+        )
+
+        actions = await picker.pick_actions()
+        # Should still pick up engagement even with no calendar/findings/curations
+        assert len(actions) >= 1
+        assert any(a["source"] == "engagement" for a in actions)
+    asyncio.get_event_loop().run_until_complete(_test())
