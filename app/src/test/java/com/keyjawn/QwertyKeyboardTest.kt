@@ -1,6 +1,8 @@
 package com.keyjawn
 
+import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputConnection
 import android.widget.Button
@@ -72,6 +74,19 @@ class QwertyKeyboardTest {
         }
     }
 
+    /** Simulate a tap via touch events (ACTION_DOWN + ACTION_UP). Required for keys using OnTouchListener. */
+    private fun simulateTap(button: Button) {
+        val now = SystemClock.uptimeMillis()
+        val x = button.width / 2f
+        val y = button.height / 2f
+        val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x, y, 0)
+        val up = MotionEvent.obtain(now, now, MotionEvent.ACTION_UP, x, y, 0)
+        button.dispatchTouchEvent(down)
+        button.dispatchTouchEvent(up)
+        down.recycle()
+        up.recycle()
+    }
+
     @Test
     fun `starts on lowercase layer`() {
         assertEquals(KeyboardLayouts.LAYER_LOWER, keyboard.currentLayer)
@@ -134,7 +149,7 @@ class QwertyKeyboardTest {
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
         val row1 = container.getChildAt(0) as LinearLayout
         val qButton = findButton(row1.getChildAt(0))
-        qButton.performClick()
+        simulateTap(qButton)
 
         verify(keySender).sendChar(any(), eq("q"), any())
     }
@@ -215,7 +230,7 @@ class QwertyKeyboardTest {
 
         val row1 = container.getChildAt(0) as LinearLayout
         val qButton = findButton(row1.getChildAt(0))
-        qButton.performClick()
+        simulateTap(qButton)
 
         assertEquals(ShiftState.OFF, keyboard.shiftState)
         // Layer reverts via post(), check state directly
@@ -265,7 +280,7 @@ class QwertyKeyboardTest {
         // Type a character
         val row1 = container.getChildAt(0) as LinearLayout
         val aButton = findButton(row1.getChildAt(0))
-        aButton.performClick()
+        simulateTap(aButton)
 
         // Should stay in CAPS_LOCK
         assertEquals(ShiftState.CAPS_LOCK, keyboard.shiftState)
@@ -303,7 +318,7 @@ class QwertyKeyboardTest {
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
         val row1 = container.getChildAt(0) as LinearLayout
         val qButton = findButton(row1.getChildAt(0))
-        qButton.performClick()
+        simulateTap(qButton)
 
         verify(keySender).sendKey(any(), any(), eq(true))
         verify(keySender, never()).sendText(any(), eq("q"))

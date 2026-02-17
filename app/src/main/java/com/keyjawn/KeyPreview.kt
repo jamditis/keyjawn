@@ -1,7 +1,5 @@
 package com.keyjawn
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.graphics.drawable.GradientDrawable
@@ -90,18 +88,8 @@ class KeyPreview(
 
     fun hide() {
         currentAnimator?.cancel()
-        val fadeOut = ObjectAnimator.ofFloat(previewView, "alpha", 1f, 0f).apply {
-            duration = 80
-        }
-        fadeOut.addListener(object : AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: Animator) {
-                previewView.visibility = View.GONE
-                previewView.alpha = 1f
-            }
-        })
-        currentAnimator = AnimatorSet().apply {
-            play(fadeOut)
-        }
-        currentAnimator?.start()
+        currentAnimator = null
+        previewView.visibility = View.GONE
+        previewView.alpha = 1f
     }
 }
