@@ -373,6 +373,18 @@ REASONING: Corporate product launch, not relevant enough"""
     assert result["draft"] == ""
 
 
+def test_parse_draft_response_strips_emojis():
+    text = """DECISION: SHARE
+REASONING: Great terminal tool
+DRAFT: This terminal file manager is fire \U0001f525\U0001f975\U0001f525 check it out youtube.com/watch?v=abc"""
+    result = parse_draft_response(text)
+    assert result["share"] is True
+    assert "\U0001f525" not in result["draft"]
+    assert "\U0001f975" not in result["draft"]
+    assert "terminal file manager" in result["draft"]
+    assert "youtube.com" in result["draft"]
+
+
 from worker.curation.pipeline import CurationPipeline
 
 

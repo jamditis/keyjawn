@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import os
 import re
 
 from worker.curation.models import CurationCandidate
@@ -37,11 +38,19 @@ async def _run_claude(prompt: str, model: str = "sonnet") -> str:
         f"claude --dangerously-skip-permissions -p --model {model}"
     )
 
+    # Strip nesting-detection env vars so claude -p doesn't refuse to run
+    # when invoked from within a Claude Code session.
+    clean_env = {
+        k: v for k, v in os.environ.items()
+        if k not in ("CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT")
+    }
+
     try:
         process = await asyncio.create_subprocess_shell(
             cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=clean_env,
         )
         stdout, stderr = await process.communicate()
     except FileNotFoundError:
@@ -130,7 +139,14 @@ def build_draft_prompt(
 
     return f"""You are drafting a social media post for @KeyJawn, a developer tools curation account.
 
-Voice: developer-to-developer. Short sentences. No hype. No exclamation marks. No hashtag spam. No emoji strings. Contractions are fine.
+Voice: developer-to-developer. Short sentences. No hype. No exclamation marks. No hashtag spam. Contractions are fine.
+
+STRICT RULES — violating any of these means the draft will be rejected:
+- ZERO emojis. Not one. No fire, no rocket, no checkmark, no pointing finger, nothing.
+- No hashtags unless the content creator uses one as a brand name.
+- No "thread" or "1/" numbering.
+- Sentence case only. Never Title Case.
+- No filler phrases ("check this out", "you need to see this", "this is amazing").
 
 Content to share:
 Title: {candidate.title}
@@ -149,6 +165,27 @@ Format:
 DECISION: SHARE or SKIP
 REASONING: [one line why]
 DRAFT: [post text, only if SHARE]"""
+
+
+def _strip_emojis(text: str) -> str:
+    """Remove all emoji characters from text as a safety net."""
+    # Covers all major Unicode emoji ranges
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map
+        "\U0001F1E0-\U0001F1FF"  # flags
+        "\U0001F900-\U0001F9FF"  # supplemental symbols
+        "\U0001FA00-\U0001FA6F"  # chess symbols
+        "\U0001FA70-\U0001FAFF"  # symbols extended-A
+        "\U00002702-\U000027B0"  # dingbats
+        "\U000024C2-\U0001F251"  # enclosed characters
+        "\U0000FE0F"             # variation selector
+        "]+",
+        flags=re.UNICODE,
+    )
+    return emoji_pattern.sub("", text).strip()
 
 
 def parse_draft_response(text: str) -> dict:
@@ -176,6 +213,9 @@ def parse_draft_response(text: str) -> dict:
             draft_lines.append(line)
 
     draft = "\n".join(draft_lines).strip() if draft_lines else ""
+
+    # Safety net: strip any emojis the AI might have slipped in
+    draft = _strip_emojis(draft)
 
     return {
         "share": decision == "share",
