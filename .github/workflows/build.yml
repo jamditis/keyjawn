@@ -165,11 +165,12 @@ jobs:
           FOOTER
           sed -i 's/^          //' release-body.md
 
-      - name: Create GitHub release (lite APK only)
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             app/build/outputs/apk/lite/release/*.apk
+            app/build/outputs/bundle/liteRelease/*.aab
           body_path: release-body.md
 
   publish-play-store:
