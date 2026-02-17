@@ -36,6 +36,12 @@ ENGAGEMENT_KEYWORDS = [
     "SSH mobile",
     "developer keyboard",
     "terminal multiplexer",
+    "mobile terminal",
+    "remote terminal",
+    "claude code",
+    "mobile coding",
+    "phone terminal",
+    "android keyboard",
 ]
 
 

@@ -17,6 +17,9 @@ SEARCH_KEYWORDS = [
     "terminal keyboard phone",
     "Claude Code mobile",
     "SSH from phone",
+    "mobile terminal",
+    "remote terminal mobile",
+    "tmux mobile",
 ]
 
 
