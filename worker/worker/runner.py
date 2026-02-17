@@ -248,6 +248,21 @@ class WorkerRunner:
             )
             await self.db._db.commit()
 
+            # For curated shares, cross-post to the other platform too
+            if action["action_type"] == "curated_share":
+                other_platform = "bluesky" if action["platform"] == "twitter" else "twitter"
+                other_url = await self._post_to_platform(
+                    other_platform, content, action["action_type"],
+                )
+                if other_url:
+                    await self.db.log_action(
+                        action_type="curated_share",
+                        platform=other_platform,
+                        content=content,
+                        status="posted",
+                        post_url=other_url,
+                    )
+
     async def _execute_engagement(self, action: dict) -> bool:
         """Execute an engagement action (like, repost, follow)."""
         platform = action["platform"]

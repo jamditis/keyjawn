@@ -561,3 +561,11 @@ def test_format_curation_message():
     assert "0.87" in msg
     assert "terminal file manager" in msg
     assert "Draft" in msg
+
+
+def test_curation_action_targets_both_platforms():
+    """Curated shares should need approval on both twitter and bluesky."""
+    tier_tw = ActionPicker.get_escalation_tier("curated_share", "twitter")
+    tier_bs = ActionPicker.get_escalation_tier("curated_share", "bluesky")
+    assert tier_tw == EscalationTier.BUTTONS
+    assert tier_bs == EscalationTier.BUTTONS

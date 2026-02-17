@@ -122,6 +122,7 @@ class ActionPicker:
                     "curation_url": curation["url"],
                     "curation_title": curation["title"],
                     "curation_source": curation["source"],
+                    "curation_author": curation.get("author", ""),
                     "curation_score": curation["final_score"],
                     "curation_reasoning": curation["sonnet_reasoning"] or "",
                     "tier": self.get_escalation_tier("curated_share", "twitter"),
