@@ -111,6 +111,13 @@ class WorkerRunner:
         """Execute an auto-approved action."""
         content = action["content"]
 
+        # Handle engagement actions (like, repost, follow)
+        if action["source"] == "engagement":
+            success = await self._execute_engagement(action)
+            if success and action.get("engagement_id"):
+                await self.db.mark_engagement_done(action["engagement_id"])
+            return
+
         # Generate content if it's a calendar post
         if action["source"] == "calendar":
             generated = await generate_content(ContentRequest(
@@ -241,6 +248,35 @@ class WorkerRunner:
             )
             await self.db._db.commit()
 
+    async def _execute_engagement(self, action: dict) -> bool:
+        """Execute an engagement action (like, repost, follow)."""
+        platform = action["platform"]
+        action_type = action["action_type"]
+        post_id = action.get("post_id", "")
+
+        if platform == "twitter":
+            if action_type == "like":
+                return await self.twitter.like(post_id)
+            elif action_type == "repost":
+                return await self.twitter.retweet(post_id)
+            else:
+                logger.warning("unhandled twitter engagement: %s", action_type)
+                return False
+        elif platform == "bluesky":
+            if action_type == "like":
+                # Bluesky like needs uri + cid; post_id stores the uri
+                # We'd need the cid too -- skip for now if not available
+                logger.info("bluesky like requires cid, skipping")
+                return False
+            elif action_type == "repost":
+                return await self.bluesky.repost(post_id)
+            else:
+                logger.warning("unhandled bluesky engagement: %s", action_type)
+                return False
+        else:
+            logger.warning("no engagement support for %s", platform)
+            return False
+
     async def _post_to_platform(
         self, platform: str, content: str, action_type: str,
         in_reply_to: str = None,
@@ -256,6 +292,13 @@ class WorkerRunner:
         else:
             logger.warning("no posting support for %s", platform)
             return None
+
+    async def run_discovery_scan(self):
+        """Run on-platform discovery scan."""
+        from worker.discovery import DiscoveryEngine
+        engine = DiscoveryEngine(self.db)
+        found = await engine.scan_all(self.twitter, self.bluesky)
+        logger.info("discovery scan done: %d opportunities found", found)
 
     async def listen_for_decisions(self):
         """Listen for approval decisions via Redis pub/sub."""

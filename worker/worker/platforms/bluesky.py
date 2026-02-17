@@ -112,6 +112,25 @@ class BlueskyClient:
             log.exception("bluesky like failed")
             return False
 
+    async def repost(self, uri: str) -> bool:
+        """Repost a Bluesky post."""
+        try:
+            # Need to resolve the CID from the URI
+            parts = uri.split("/")
+            if len(parts) >= 5:
+                response = self.client.app.bsky.feed.get_posts(
+                    {"uris": [uri]}
+                )
+                if response.posts:
+                    post = response.posts[0]
+                    self.client.repost(post.uri, post.cid)
+                    log.info("reposted on bluesky: %s", uri)
+                    return True
+            return False
+        except Exception:
+            log.exception("bluesky repost failed")
+            return False
+
 
 def _post_url(handle: str, uri: str) -> str:
     """Convert an AT URI to a bsky.app URL."""

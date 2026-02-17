@@ -64,3 +64,25 @@ def test_db_has_engagement_table(db):
         tables = await db.list_tables()
         assert "engagement_opportunities" in tables
     asyncio.get_event_loop().run_until_complete(_check())
+
+
+from worker.executor import ActionPicker, EscalationTier
+
+
+def test_like_is_auto_approved():
+    assert ActionPicker.get_escalation_tier("like", "twitter") == EscalationTier.AUTO
+    assert ActionPicker.get_escalation_tier("like", "bluesky") == EscalationTier.AUTO
+
+
+def test_repost_is_auto_approved():
+    assert ActionPicker.get_escalation_tier("repost", "twitter") == EscalationTier.AUTO
+    assert ActionPicker.get_escalation_tier("repost", "bluesky") == EscalationTier.AUTO
+
+
+def test_follow_is_auto_approved():
+    assert ActionPicker.get_escalation_tier("follow", "twitter") == EscalationTier.AUTO
+    assert ActionPicker.get_escalation_tier("follow", "bluesky") == EscalationTier.AUTO
+
+
+def test_quote_repost_needs_approval():
+    assert ActionPicker.get_escalation_tier("quote_repost", "twitter") == EscalationTier.BUTTONS
