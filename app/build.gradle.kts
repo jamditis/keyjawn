@@ -57,6 +57,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Sign debug builds with the release key when the keystore is available.
+            // This ensures all distributed APKs share the same signature so Android
+            // allows in-place updates without requiring uninstall first.
+            val releaseKeystore = signingConfigs.getByName("release").storeFile
+            if (releaseKeystore != null && releaseKeystore.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
