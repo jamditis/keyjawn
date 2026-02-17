@@ -140,6 +140,49 @@ Astro static site at `website/`. Deployed to GitHub Pages at `keyjawn.amditis.te
 
 **Key pages:** index, features, pricing, privacy, manual, about, thanks (post-purchase redirect)
 
+## Worker (social media automation)
+
+Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, and Product Hunt for relevant conversations, curates dev tool content, and posts/engages with Telegram approval.
+
+**Stack:** Python 3, asyncio, aiosqlite, twikit (Twitter), atproto (Bluesky), APScheduler, Redis pub/sub
+
+**Install:** `cd worker && pip install -e ".[dev]"`
+
+**Test:** `cd worker && python -m pytest tests/ -v` (145 tests)
+
+**Run:** `cd worker && python -m worker.main`
+
+**Management CLI:** `cd worker && python -m worker.manage <command>`
+- `smoke-test` — test Telegram approval flow
+- `status` — show DB stats
+- `generate-calendar` — generate weekly content calendar
+- `curation-scan` — run one curation scan + evaluation
+- `curation-status` — show curation pipeline stats
+- `discovery-scan` — run on-platform discovery scan
+- `weekly-report` — generate metrics report
+
+**Architecture:**
+```
+Monitor (keyword search) → Findings queue
+Discovery (engagement scan) → Engagement opportunities
+Curation (RSS/YouTube/News) → Curation candidates → AI eval → Approved shares
+          ↓
+    ActionPicker (daily budget) → EscalationTier
+          ↓
+    AUTO: like/repost/follow (no approval)
+    BUTTONS: replies/shares (Telegram inline buttons)
+          ↓
+    Runner → Twitter/Bluesky clients → post
+```
+
+**Key config:** `worker/worker/config.py` — all settings from env vars
+**DB:** `worker/keyjawn-worker.db` (aiosqlite, 6 tables)
+**Credentials:** `pass show claude/social/twitter-keyjawn`, `pass show claude/services/bluesky-keyjawn`
+
+**Twitter posting:** Twikit is Cloudflare-blocked as of Feb 2026. Use `claude --chrome` on Legion for authenticated posting until a fix is found.
+
+**Branch:** `strategy/social-media` (PR #11) has engagement actions, cross-posting, discovery scheduling, and keyword improvements.
+
 ## Google Play (pending)
 
 - Developer account: `thejawnstars@gmail.com` — verification pending
