@@ -16,7 +16,10 @@ async def db():
 @pytest.mark.asyncio
 async def test_init_creates_tables(db):
     tables = await db.list_tables()
-    assert sorted(tables) == ["actions", "calendar", "findings", "metrics"]
+    assert sorted(tables) == [
+        "actions", "calendar", "curation_candidates",
+        "engagement_opportunities", "findings", "metrics",
+    ]
 
 
 @pytest.mark.asyncio
