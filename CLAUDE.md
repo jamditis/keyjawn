@@ -29,7 +29,7 @@ adb install app/build/outputs/apk/full/debug/app-full-debug.apk
 
 ## Build environment
 
-- Gradle 8.11.1, AGP 8.7.3, Kotlin 2.1.0
+- Gradle 8.13, AGP 8.13.2, Kotlin 2.1.0
 - JDK 17, compileSdk 35, minSdk 26
 - CI runs on GitHub Actions (`.github/workflows/build.yml`) — builds both flavors, uploads APK artifacts, creates releases on version tags
 
@@ -145,14 +145,19 @@ Astro static site at `website/`. Deployed to GitHub Pages at `keyjawn.amditis.te
 - **Developer account:** `thejawnstars@gmail.com` (verified, account #5874742502246953529)
 - **Credentials:** `pass show claude/services/google-play-{email,password,account-id}`
 - **Application ID:** `com.keyjawn.lite` (lite only — full version stays on website/Stripe)
-- **CI publishing:** Gradle Play Publisher (GPP) 4.0.0 in `.github/workflows/build.yml`
+- **CI publishing:** Gradle Play Publisher (GPP) 3.13.0 in `.github/workflows/build.yml`
   - `publish-play-store` job runs on version tags after the `release` job
   - Needs `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` GitHub secret (service account key JSON)
   - `PLAY_TRACK` defaults to `internal` — change to `production` once verified
   - Only publishes `publishLiteReleaseBundle` — full flavor is never uploaded to Play
 - **Store listing metadata:** `app/src/lite/play/listings/en-US/` (managed by GPP)
 - **Asset generation:** `scripts/generate-store-assets.py` (Selenium + Chromium snap → icon, feature graphic, screenshots)
-- **Manual setup required:** Create app in Play Console, upload first AAB manually, create service account, fill content rating/data safety forms
+- **Setup status (completed 2026-02-17):**
+  - App created in Play Console
+  - First AAB uploaded to internal testing (v1.3.0)
+  - Store listing, content rating, data safety, and all other forms complete
+  - 7 testers configured on internal track
+  - CI auto-publish ready (`publish-play-store` job) -- change track to `production` when ready
 
 ## Code style
 
