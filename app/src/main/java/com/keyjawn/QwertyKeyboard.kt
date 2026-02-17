@@ -1,11 +1,17 @@
 package com.keyjawn
 
 import android.graphics.Typeface
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.widget.Button
 import android.widget.FrameLayout
@@ -29,7 +35,7 @@ class QwertyKeyboard(
     private val keyPreview: KeyPreview? = null
 ) {
 
-    private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider)
+    private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider, themeManager)
     private var quickKeyButton: Button? = null
 
     var currentLayer: Int = KeyboardLayouts.LAYER_LOWER
@@ -45,9 +51,42 @@ class QwertyKeyboard(
     private var lastShiftTapTime: Long = 0
     private val doubleTapThresholdMs = 400L
 
+    // Double-tap space to period (item 3)
+    private var lastSpaceTime: Long = 0
+    private var lastWasSpace: Boolean = false
+
+    // Adaptive enter key (item 7)
+    private var currentImeAction: Int = EditorInfo.IME_ACTION_UNSPECIFIED
+    private var currentImeFlags: Int = 0
+
+    // EditorInfo inputType hints (item 11)
+    private var inputTypeQuickKeyOverride: String? = null
+
+    // Touch drag-off long-press handler
+    private val longPressHandler = Handler(Looper.getMainLooper())
+
     fun updatePackage(packageName: String) {
         currentPackage = packageName
         render()
+    }
+
+    fun resetTransientState() {
+        lastWasSpace = false
+        lastSpaceTime = 0
+    }
+
+    fun updateImeAction(action: Int, flags: Int) {
+        currentImeAction = action
+        currentImeFlags = flags
+    }
+
+    fun updateInputType(inputType: Int) {
+        val variation = inputType and InputType.TYPE_MASK_VARIATION
+        inputTypeQuickKeyOverride = when (variation) {
+            InputType.TYPE_TEXT_VARIATION_URI -> "/"
+            InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS -> "@"
+            else -> null
+        }
     }
 
     fun isAutocorrectOn(): Boolean {
@@ -94,7 +133,7 @@ class QwertyKeyboard(
             val rowLayout = container.getChildAt(i) as? LinearLayout ?: continue
             rowLayout.setOnTouchListener(SwipeGestureDetector { direction ->
                 val ic = inputConnectionProvider() ?: return@SwipeGestureDetector false
-                when (direction) {
+                val handled = when (direction) {
                     SwipeGestureDetector.SwipeDirection.LEFT -> {
                         keySender.sendKey(ic, android.view.KeyEvent.KEYCODE_DEL, ctrl = true)
                         true
@@ -117,6 +156,8 @@ class QwertyKeyboard(
                         true
                     }
                 }
+                if (handled) performHaptic(HapticFeedbackConstants.LONG_PRESS)
+                handled
             })
         }
     }
@@ -168,6 +209,27 @@ class QwertyKeyboard(
             button.text = "SPACE"
         }
 
+        // Adaptive enter key label (item 7)
+        if (key.output is KeyOutput.Enter) {
+            val noEnterAction = currentImeFlags and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0
+            if (!noEnterAction) {
+                val label = when (currentImeAction) {
+                    EditorInfo.IME_ACTION_GO -> "Go"
+                    EditorInfo.IME_ACTION_SEND -> "Send"
+                    EditorInfo.IME_ACTION_SEARCH -> "Search"
+                    EditorInfo.IME_ACTION_NEXT -> "Next"
+                    EditorInfo.IME_ACTION_DONE -> "Done"
+                    else -> null
+                }
+                if (label != null) {
+                    button.text = label
+                    if (tm != null) {
+                        button.background = tm.createKeyDrawable(tm.accent())
+                    }
+                }
+            }
+        }
+
         val textSize = when (key.output) {
             is KeyOutput.Character -> 18f
             is KeyOutput.Shift, is KeyOutput.Backspace,
@@ -200,17 +262,25 @@ class QwertyKeyboard(
         }
 
         if (key.output is KeyOutput.Space) {
-            button.setOnLongClickListener {
-                val enabled = appPrefs?.toggleAutocorrect(currentPackage) ?: false
-                val state = if (enabled) "on" else "off"
-                extraRowManager.showTooltip("Autocorrect $state")
-                render()
-                true
-            }
+            val cursorController = SpacebarCursorController(
+                keySender = keySender,
+                inputConnectionProvider = inputConnectionProvider,
+                onTap = { handleKeyPress(key) },
+                onLongPress = {
+                    val enabled = appPrefs?.toggleAutocorrect(currentPackage) ?: false
+                    val state = if (enabled) "on" else "off"
+                    extraRowManager.showTooltip("Autocorrect $state")
+                    render()
+                },
+                hapticView = container,
+                appPrefs = appPrefs
+            )
+            button.setOnTouchListener(cursorController)
         }
 
         if (key.output is KeyOutput.QuickKey) {
-            val currentQuickKey = appPrefs?.getQuickKey() ?: "/"
+            val override = inputTypeQuickKeyOverride
+            val currentQuickKey = override ?: appPrefs?.getQuickKey() ?: "/"
             val displayKey = if (currentQuickKey.startsWith("text:")) currentQuickKey.removePrefix("text:") else currentQuickKey
             button.text = displayKey
             quickKeyButton = button
@@ -220,34 +290,71 @@ class QwertyKeyboard(
             }
         }
 
-        // Key preview on touch for all character keys
-        if (key.output is KeyOutput.Character && keyPreview != null) {
+        // Character key touch handling with drag-off cancellation (item 4)
+        val alts = if (key.output is KeyOutput.Character) AltKeyMappings.getAlts(key.label) else null
+        if (key.output is KeyOutput.Character) {
             val previewLabel = key.label
+            var touchStarted = false
+            var longPressRunnable: Runnable? = null
+
+            button.setOnClickListener(null) // Remove default click -- handled by touch
             button.setOnTouchListener { v, event ->
                 when (event.action) {
-                    android.view.MotionEvent.ACTION_DOWN -> {
-                        keyPreview.show(v, previewLabel)
-                    }
-                    android.view.MotionEvent.ACTION_UP,
-                    android.view.MotionEvent.ACTION_CANCEL -> {
-                        keyPreview.hide()
-                    }
-                }
-                false  // Don't consume -- let click listener fire too
-            }
-        }
+                    MotionEvent.ACTION_DOWN -> {
+                        touchStarted = true
+                        v.isPressed = true
+                        keyPreview?.show(v, previewLabel)
 
-        // Alt key long-press for Character keys
-        val alts = if (key.output is KeyOutput.Character) AltKeyMappings.getAlts(key.label) else null
-        if (key.output is KeyOutput.Character && alts != null) {
-            button.setOnLongClickListener {
-                if (alts.size == 1) {
-                    val ic = inputConnectionProvider() ?: return@setOnLongClickListener true
-                    keySender.sendText(ic, alts[0])
-                } else {
-                    altKeyPopup.show(button, alts)
+                        // Schedule long-press for alt keys
+                        if (alts != null) {
+                            val runnable = Runnable {
+                                touchStarted = false
+                                keyPreview?.hide()
+                                if (alts.size == 1) {
+                                    val ic = inputConnectionProvider() ?: return@Runnable
+                                    keySender.sendText(ic, alts[0])
+                                } else {
+                                    altKeyPopup.show(v, alts)
+                                }
+                            }
+                            longPressRunnable = runnable
+                            longPressHandler.postDelayed(runnable, 500L)
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val inBounds = event.x >= 0 && event.x <= v.width &&
+                            event.y >= -v.height && event.y <= v.height * 2
+                        if (!inBounds && touchStarted) {
+                            touchStarted = false
+                            v.isPressed = false
+                            keyPreview?.hide()
+                            longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                            longPressRunnable = null
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        keyPreview?.hide()
+                        longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                        longPressRunnable = null
+                        if (touchStarted && v.isPressed) {
+                            handleKeyPress(key)
+                        }
+                        touchStarted = false
+                        v.isPressed = false
+                        true
+                    }
+                    MotionEvent.ACTION_CANCEL -> {
+                        keyPreview?.hide()
+                        longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                        longPressRunnable = null
+                        touchStarted = false
+                        v.isPressed = false
+                        true
+                    }
+                    else -> false
                 }
-                true
             }
         }
 
@@ -287,14 +394,26 @@ class QwertyKeyboard(
         return button
     }
 
-    private fun performHaptic() {
+    private fun performHaptic(type: Int = HapticFeedbackConstants.KEYBOARD_TAP) {
         if (appPrefs?.isHapticEnabled() != false) {
-            container.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            container.performHapticFeedback(type)
         }
     }
 
     private fun handleKeyPress(key: Key) {
-        performHaptic()
+        // Determine haptic type based on key output (item 6)
+        val hapticType = when (key.output) {
+            is KeyOutput.Enter -> if (Build.VERSION.SDK_INT >= 27)
+                HapticFeedbackConstants.KEYBOARD_PRESS else HapticFeedbackConstants.KEYBOARD_TAP
+            else -> HapticFeedbackConstants.KEYBOARD_TAP
+        }
+        performHaptic(hapticType)
+
+        // Reset double-tap space tracking for any non-space key (item 3)
+        if (key.output !is KeyOutput.Space) {
+            lastWasSpace = false
+        }
+
         val ic = inputConnectionProvider() ?: return
 
         when (key.output) {
@@ -318,10 +437,43 @@ class QwertyKeyboard(
                 }
             }
             is KeyOutput.Enter -> {
-                keySender.sendKey(ic, KeyEvent.KEYCODE_ENTER)
+                // Adaptive enter: use performEditorAction for specific IME actions (item 7)
+                val noEnterAction = currentImeFlags and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0
+                val hasSpecificAction = !noEnterAction && currentImeAction != EditorInfo.IME_ACTION_UNSPECIFIED
+                    && currentImeAction != EditorInfo.IME_ACTION_NONE
+                if (hasSpecificAction) {
+                    ic.performEditorAction(currentImeAction)
+                } else {
+                    keySender.sendKey(ic, KeyEvent.KEYCODE_ENTER)
+                }
             }
             is KeyOutput.Space -> {
-                keySender.sendChar(ic, " ")
+                val now = System.currentTimeMillis()
+                if (isAutocorrectOn() && lastWasSpace && now - lastSpaceTime < 350L) {
+                    // Double-tap space: replace trailing space with period+space (item 3)
+                    ic.deleteSurroundingText(1, 0)
+                    keySender.sendText(ic, ". ")
+                    lastWasSpace = false
+                    // Auto-capitalize after sentence-ending punctuation (item 10)
+                    if (shiftState == ShiftState.OFF &&
+                        (currentLayer == KeyboardLayouts.LAYER_LOWER || currentLayer == KeyboardLayouts.LAYER_UPPER)) {
+                        shiftState = ShiftState.SINGLE
+                        container.post { setLayer(KeyboardLayouts.LAYER_UPPER) }
+                    }
+                } else {
+                    keySender.sendChar(ic, " ")
+                    lastWasSpace = true
+                    lastSpaceTime = now
+                    // Auto-capitalize after sentence-ending punctuation (item 10)
+                    if (isAutocorrectOn() && shiftState == ShiftState.OFF &&
+                        (currentLayer == KeyboardLayouts.LAYER_LOWER || currentLayer == KeyboardLayouts.LAYER_UPPER)) {
+                        val before = ic.getTextBeforeCursor(2, 0)?.toString()
+                        if (before == ". " || before == "? " || before == "! ") {
+                            shiftState = ShiftState.SINGLE
+                            container.post { setLayer(KeyboardLayouts.LAYER_UPPER) }
+                        }
+                    }
+                }
             }
             is KeyOutput.SymSwitch -> {
                 setLayer(KeyboardLayouts.LAYER_SYMBOLS)
@@ -341,7 +493,8 @@ class QwertyKeyboard(
                 }
             }
             is KeyOutput.QuickKey -> {
-                val quickChar = appPrefs?.getQuickKey() ?: "/"
+                val override = inputTypeQuickKeyOverride
+                val quickChar = override ?: appPrefs?.getQuickKey() ?: "/"
                 val text = if (quickChar.startsWith("text:")) quickChar.removePrefix("text:") else quickChar
                 keySender.sendChar(ic, text)
             }
@@ -354,7 +507,7 @@ class QwertyKeyboard(
     }
 
     private fun handleShiftTap() {
-        performHaptic()
+        performHaptic(HapticFeedbackConstants.CLOCK_TICK)
         val now = System.currentTimeMillis()
         val timeSinceLastTap = now - lastShiftTapTime
         lastShiftTapTime = now

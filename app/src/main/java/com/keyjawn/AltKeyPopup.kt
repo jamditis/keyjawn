@@ -10,7 +10,8 @@ import android.widget.PopupWindow
 
 class AltKeyPopup(
     private val keySender: KeySender,
-    private val inputConnectionProvider: () -> InputConnection?
+    private val inputConnectionProvider: () -> InputConnection?,
+    private val themeManager: ThemeManager? = null
 ) {
 
     private var popup: PopupWindow? = null
@@ -34,8 +35,14 @@ class AltKeyPopup(
             val btn = Button(context).apply {
                 text = alt
                 isAllCaps = false
-                setBackgroundResource(R.drawable.key_bg)
-                setTextColor(context.getColor(R.color.key_text))
+                val tm = themeManager
+                if (tm != null) {
+                    background = tm.createKeyDrawable(tm.keyBg())
+                    setTextColor(tm.keyText())
+                } else {
+                    setBackgroundResource(R.drawable.key_bg)
+                    setTextColor(context.getColor(R.color.key_text))
+                }
                 gravity = Gravity.CENTER
                 setPadding(0, 0, 0, 0)
                 minWidth = 0
@@ -67,9 +74,9 @@ class AltKeyPopup(
             true
         )
         val bg = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xFF2B2B30.toInt())
+            setColor(themeManager?.keyboardBg() ?: 0xFF2B2B30.toInt())
             cornerRadius = 8 * density
-            setStroke((1 * density + 0.5f).toInt(), 0xFF38383E.toInt())
+            setStroke((1 * density + 0.5f).toInt(), themeManager?.divider() ?: 0xFF38383E.toInt())
         }
         window.setBackgroundDrawable(bg)
         window.elevation = 8 * density

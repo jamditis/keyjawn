@@ -4,6 +4,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.InputConnection
@@ -354,6 +355,7 @@ class ExtraRowManager(
     }
 
     private fun updateCtrlAppearance(mode: CtrlMode) {
+        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
         val tm = themeManager
         if (tm != null) {
             when (mode) {

@@ -133,6 +133,13 @@ class KeyJawnService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+
+        // Pass EditorInfo to keyboard before updatePackage triggers render
+        val imeAction = (info?.imeOptions ?: 0) and EditorInfo.IME_MASK_ACTION
+        qwertyKeyboard?.updateImeAction(imeAction, info?.imeOptions ?: 0)
+        qwertyKeyboard?.updateInputType(info?.inputType ?: 0)
+        qwertyKeyboard?.resetTransientState()
+
         val packageName = info?.packageName ?: "unknown"
         qwertyKeyboard?.updatePackage(packageName)
     }
