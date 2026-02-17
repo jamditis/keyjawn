@@ -301,6 +301,7 @@ def test_twitch_parse_clip():
 from worker.curation.evaluate import (
     build_evaluate_prompt, parse_evaluate_response,
     build_draft_prompt, parse_draft_response,
+    build_batch_draft_prompt, parse_batch_draft_response,
 )
 
 
@@ -385,6 +386,85 @@ DRAFT: This terminal file manager is fire \U0001f525\U0001f975\U0001f525 check i
     assert "youtube.com" in result["draft"]
 
 
+# --- Batch draft (4 variants) tests ---
+
+
+def test_build_batch_draft_prompt():
+    c = CurationCandidate(
+        source="youtube", url="http://test.com",
+        title="Terminal file manager in Rust",
+        description="Building a TUI app",
+        author="devuser",
+    )
+    evaluation = {"reasoning": "Great indie dev content", "quality_score": 8.0}
+    prompt = build_batch_draft_prompt(c, evaluation, "twitter")
+    assert "Terminal file manager" in prompt
+    assert "280" in prompt
+    assert "DRAFT_A:" in prompt
+    assert "DRAFT_B:" in prompt
+    assert "DRAFT_C:" in prompt
+    assert "DRAFT_D:" in prompt
+    assert "DECISION:" in prompt
+
+
+def test_parse_batch_draft_response_share():
+    text = """DECISION: SHARE
+REASONING: High quality indie dev content about terminal tools
+DRAFT_A: Rust terminal file manager by a solo dev. Clean codebase, worth a look. youtube.com/watch?v=abc
+DRAFT_B: New TUI file manager written in Rust. Open source, no bloat. youtube.com/watch?v=abc
+DRAFT_C: Another Rust CLI tool worth trying — this one is a terminal file manager. youtube.com/watch?v=abc
+DRAFT_D: Solo dev built a terminal file manager in Rust. Focused and minimal. youtube.com/watch?v=abc"""
+    result = parse_batch_draft_response(text)
+    assert result["share"] is True
+    assert "indie" in result["reasoning"].lower()
+    assert len(result["drafts"]) == 4
+    assert "Rust terminal" in result["drafts"]["A"]
+    assert "TUI file manager" in result["drafts"]["B"]
+    assert "Rust CLI" in result["drafts"]["C"]
+    assert "Solo dev" in result["drafts"]["D"]
+
+
+def test_parse_batch_draft_response_skip():
+    text = """DECISION: SKIP
+REASONING: Corporate product launch, not relevant enough"""
+    result = parse_batch_draft_response(text)
+    assert result["share"] is False
+    assert result["drafts"] == {}
+
+
+def test_parse_batch_draft_response_partial():
+    text = """DECISION: SHARE
+REASONING: Good content but hard to frame many ways
+DRAFT_A: Rust terminal file manager from a solo dev. Open source. youtube.com/watch?v=abc
+DRAFT_B: New TUI file manager in Rust, worth checking out. youtube.com/watch?v=abc"""
+    result = parse_batch_draft_response(text)
+    assert result["share"] is True
+    assert len(result["drafts"]) == 2
+    assert "A" in result["drafts"]
+    assert "B" in result["drafts"]
+    assert "C" not in result["drafts"]
+    assert "D" not in result["drafts"]
+
+
+def test_parse_batch_draft_response_strips_emojis():
+    text = """DECISION: SHARE
+REASONING: Great terminal tool
+DRAFT_A: This file manager is fire \U0001f525 check it out youtube.com/watch?v=abc
+DRAFT_B: Awesome tool \U0001f680 for terminal users youtube.com/watch?v=abc
+DRAFT_C: Clean Rust code \u2728 in a TUI app youtube.com/watch?v=abc
+DRAFT_D: Solo dev built this \U0001f4aa terminal file manager youtube.com/watch?v=abc"""
+    result = parse_batch_draft_response(text)
+    assert result["share"] is True
+    assert len(result["drafts"]) == 4
+    for key, draft in result["drafts"].items():
+        assert "\U0001f525" not in draft
+        assert "\U0001f680" not in draft
+        assert "\u2728" not in draft
+        assert "\U0001f4aa" not in draft
+    assert "file manager" in result["drafts"]["A"]
+    assert "terminal users" in result["drafts"]["B"]
+
+
 from worker.curation.pipeline import CurationPipeline
 
 
@@ -437,7 +517,33 @@ def test_curation_config_custom():
     assert config.max_curated_shares_per_day == 3
 
 
+from worker.approvals import DECISION_STATUS_MAP
 from worker.telegram import format_curation_message
+
+
+def test_draft_selections_map_to_approved():
+    assert DECISION_STATUS_MAP["draft_A"] == "approved"
+    assert DECISION_STATUS_MAP["draft_B"] == "approved"
+    assert DECISION_STATUS_MAP["draft_C"] == "approved"
+    assert DECISION_STATUS_MAP["draft_D"] == "approved"
+
+
+def test_draft_variants_storage(db):
+    import json
+    async def _test():
+        aid = await db.log_action(
+            action_type="curated_share",
+            platform="twitter",
+            content="first draft",
+            status="pending_approval",
+        )
+        variants = {"A": "Draft A text", "B": "Draft B text", "C": "Draft C text", "D": "Draft D text"}
+        await db.store_draft_variants(aid, json.dumps(variants))
+        result = await db.get_draft_variant(aid, "B")
+        assert result == "Draft B text"
+        result = await db.get_draft_variant(aid, "Z")
+        assert result is None
+    asyncio.get_event_loop().run_until_complete(_test())
 
 
 def test_format_curation_message():
@@ -455,3 +561,11 @@ def test_format_curation_message():
     assert "0.87" in msg
     assert "terminal file manager" in msg
     assert "Draft" in msg
+
+
+def test_curation_action_targets_both_platforms():
+    """Curated shares should need approval on both twitter and bluesky."""
+    tier_tw = ActionPicker.get_escalation_tier("curated_share", "twitter")
+    tier_bs = ActionPicker.get_escalation_tier("curated_share", "bluesky")
+    assert tier_tw == EscalationTier.BUTTONS
+    assert tier_bs == EscalationTier.BUTTONS

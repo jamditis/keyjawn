@@ -122,9 +122,30 @@ class ActionPicker:
                     "curation_url": curation["url"],
                     "curation_title": curation["title"],
                     "curation_source": curation["source"],
+                    "curation_author": curation.get("author", ""),
                     "curation_score": curation["final_score"],
                     "curation_reasoning": curation["sonnet_reasoning"] or "",
                     "tier": self.get_escalation_tier("curated_share", "twitter"),
+                })
+
+        # 4. Fill engagement slots from pending engagement opportunities
+        engagement_remaining = 3  # max engagement actions per session
+        if engagement_remaining > 0:
+            engagements = await self.db.get_pending_engagements(limit=engagement_remaining)
+            for eng in engagements:
+                tier = self.get_escalation_tier(
+                    eng["opportunity_type"], eng["platform"]
+                )
+                actions.append({
+                    "source": "engagement",
+                    "engagement_id": eng["id"],
+                    "action_type": eng["opportunity_type"],
+                    "platform": eng["platform"],
+                    "content": eng["text"] or "",
+                    "post_id": eng["post_id"],
+                    "post_url": eng["post_url"],
+                    "post_author": eng["author"],
+                    "tier": tier,
                 })
 
         return actions[:remaining]

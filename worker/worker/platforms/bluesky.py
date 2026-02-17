@@ -17,6 +17,9 @@ SEARCH_KEYWORDS = [
     "terminal keyboard phone",
     "Claude Code mobile",
     "SSH from phone",
+    "mobile terminal",
+    "remote terminal mobile",
+    "tmux mobile",
 ]
 
 
@@ -110,6 +113,25 @@ class BlueskyClient:
             return True
         except Exception:
             log.exception("bluesky like failed")
+            return False
+
+    async def repost(self, uri: str) -> bool:
+        """Repost a Bluesky post."""
+        try:
+            # Need to resolve the CID from the URI
+            parts = uri.split("/")
+            if len(parts) >= 5:
+                response = self.client.app.bsky.feed.get_posts(
+                    {"uris": [uri]}
+                )
+                if response.posts:
+                    post = response.posts[0]
+                    self.client.repost(post.uri, post.cid)
+                    log.info("reposted on bluesky: %s", uri)
+                    return True
+            return False
+        except Exception:
+            log.exception("bluesky repost failed")
             return False
 
 

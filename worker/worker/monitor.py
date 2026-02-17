@@ -18,11 +18,17 @@ HIGH_SIGNAL = [
     "ssh from phone",
     "ssh from mobile",
     "terminal on phone",
+    "terminal on mobile",
+    "mobile terminal",
+    "remote terminal",
     "claude code mobile",
     "claude code phone",
+    "claude code",
     "gemini cli mobile",
+    "gemini cli",
     "mobile cli keyboard",
     "android terminal keyboard",
+    "android terminal",
     "keyjawn",
 ]
 
@@ -36,9 +42,17 @@ MEDIUM_SIGNAL = [
     "ctrl key mobile",
     "escape key phone",
     "tab key android",
+    "tmux",
+    "terminal emulator",
+    "terminal from mobile",
+    "terminal recommendation",
+    "coding from phone",
+    "coding on phone",
+    "ssh on android",
+    "terminal app",
 ]
 
-BOOSTERS = ["android", "mobile", "phone", "keyboard", "typing"]
+BOOSTERS = ["android", "mobile", "phone", "keyboard", "typing", "terminal", "cli", "ssh"]
 
 
 class Monitor:

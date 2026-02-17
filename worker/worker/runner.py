@@ -111,6 +111,13 @@ class WorkerRunner:
         """Execute an auto-approved action."""
         content = action["content"]
 
+        # Handle engagement actions (like, repost, follow)
+        if action["source"] == "engagement":
+            success = await self._execute_engagement(action)
+            if success and action.get("engagement_id"):
+                await self.db.mark_engagement_done(action["engagement_id"])
+            return
+
         # Generate content if it's a calendar post
         if action["source"] == "calendar":
             generated = await generate_content(ContentRequest(
@@ -178,23 +185,41 @@ class WorkerRunner:
             finding_id=action.get("finding_id"),
         )
 
-        # Use curation-specific message format for curated shares
+        # Use batch curation format for curated shares (A/B/C/D draft selection)
         if action["action_type"] == "curated_share":
-            from worker.telegram import format_curation_message
+            import json
+            from worker.telegram import (
+                format_batch_curation_message,
+                build_batch_approval_keyboard,
+            )
+
+            drafts = action.get("drafts", {})
+            if not drafts:
+                # Fallback: single draft from legacy pipeline
+                drafts = {"A": content}
+
+            # Store variants for later retrieval on button tap
+            await self.db.store_draft_variants(action_id, json.dumps(drafts))
+
+            msg = format_batch_curation_message(
+                action_id=action_id,
+                source=action.get("curation_source", ""),
+                author=action.get("curation_author", ""),
+                title=action.get("curation_title", ""),
+                score=action.get("curation_score", 0.0),
+                reasoning=action.get("curation_reasoning", ""),
+                drafts=drafts,
+                platform=action["platform"],
+            )
+
             decision = await self.approvals.request_approval(
                 action_id=action_id,
                 action_type=action["action_type"],
                 platform=action["platform"],
                 draft=content,
-                context=None,
-                message_override=format_curation_message(
-                    action_id=action_id,
-                    source=f"{action.get('curation_source', '')} - {action.get('curation_title', '')}",
-                    title=action.get("curation_title", ""),
-                    score=action.get("curation_score", 0.0),
-                    reasoning=action.get("curation_reasoning", ""),
-                    draft=content,
-                    platform=action["platform"],
+                message_override=msg,
+                keyboard_override=build_batch_approval_keyboard(
+                    action_id, sorted(drafts.keys())
                 ),
             )
         else:
@@ -206,16 +231,66 @@ class WorkerRunner:
                 context=action.get("content") if action["source"] == "finding" else None,
             )
 
-        if decision == "approve":
+        # Handle draft selection (draft_A, draft_B, etc.) or legacy approve
+        if decision.startswith("draft_") or decision == "approve":
+            if decision.startswith("draft_"):
+                label = decision.split("_", 1)[1]
+                selected = await self.db.get_draft_variant(action_id, label)
+                if selected:
+                    content = selected
             post_url = await self._post_to_platform(
                 action["platform"], content, action["action_type"],
                 in_reply_to=action.get("source_url"),
             )
             await self.db._db.execute(
-                "UPDATE actions SET status = ?, post_url = ? WHERE id = ?",
-                ("posted" if post_url else "failed", post_url, action_id),
+                "UPDATE actions SET status = ?, post_url = ?, content = ? WHERE id = ?",
+                ("posted" if post_url else "failed", post_url, content, action_id),
             )
             await self.db._db.commit()
+
+            # For curated shares, cross-post to the other platform too
+            if action["action_type"] == "curated_share":
+                other_platform = "bluesky" if action["platform"] == "twitter" else "twitter"
+                other_url = await self._post_to_platform(
+                    other_platform, content, action["action_type"],
+                )
+                if other_url:
+                    await self.db.log_action(
+                        action_type="curated_share",
+                        platform=other_platform,
+                        content=content,
+                        status="posted",
+                        post_url=other_url,
+                    )
+
+    async def _execute_engagement(self, action: dict) -> bool:
+        """Execute an engagement action (like, repost, follow)."""
+        platform = action["platform"]
+        action_type = action["action_type"]
+        post_id = action.get("post_id", "")
+
+        if platform == "twitter":
+            if action_type == "like":
+                return await self.twitter.like(post_id)
+            elif action_type == "repost":
+                return await self.twitter.retweet(post_id)
+            else:
+                logger.warning("unhandled twitter engagement: %s", action_type)
+                return False
+        elif platform == "bluesky":
+            if action_type == "like":
+                # Bluesky like needs uri + cid; post_id stores the uri
+                # We'd need the cid too -- skip for now if not available
+                logger.info("bluesky like requires cid, skipping")
+                return False
+            elif action_type == "repost":
+                return await self.bluesky.repost(post_id)
+            else:
+                logger.warning("unhandled bluesky engagement: %s", action_type)
+                return False
+        else:
+            logger.warning("no engagement support for %s", platform)
+            return False
 
     async def _post_to_platform(
         self, platform: str, content: str, action_type: str,
@@ -232,6 +307,13 @@ class WorkerRunner:
         else:
             logger.warning("no posting support for %s", platform)
             return None
+
+    async def run_discovery_scan(self):
+        """Run on-platform discovery scan."""
+        from worker.discovery import DiscoveryEngine
+        engine = DiscoveryEngine(self.db)
+        found = await engine.scan_all(self.twitter, self.bluesky)
+        logger.info("discovery scan done: %d opportunities found", found)
 
     async def listen_for_decisions(self):
         """Listen for approval decisions via Redis pub/sub."""

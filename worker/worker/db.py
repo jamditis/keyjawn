@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS actions (
     acted_at TEXT NOT NULL,
     approval_decision TEXT,
     approval_timestamp TEXT,
+    draft_variants TEXT,
     FOREIGN KEY (finding_id) REFERENCES findings(id)
 );
 
@@ -79,6 +80,21 @@ CREATE TABLE IF NOT EXISTS curation_candidates (
 
 CREATE INDEX IF NOT EXISTS idx_curation_status ON curation_candidates(status);
 CREATE INDEX IF NOT EXISTS idx_curation_url ON curation_candidates(url);
+
+CREATE TABLE IF NOT EXISTS engagement_opportunities (
+    id TEXT PRIMARY KEY,
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    post_url TEXT NOT NULL,
+    author TEXT NOT NULL,
+    text TEXT,
+    opportunity_type TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at TEXT NOT NULL,
+    acted_at TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_engagement_post ON engagement_opportunities(platform, post_id);
 """
 
 
@@ -191,6 +207,26 @@ class Database:
         row = await cursor.fetchone()
         return row[0]
 
+    async def store_draft_variants(self, action_id: str, variants_json: str):
+        """Store draft variants JSON for an action."""
+        await self._db.execute(
+            "UPDATE actions SET draft_variants = ? WHERE id = ?",
+            (variants_json, action_id),
+        )
+        await self._db.commit()
+
+    async def get_draft_variant(self, action_id: str, label: str) -> str | None:
+        """Get a specific draft variant by label (A/B/C/D)."""
+        cursor = await self._db.execute(
+            "SELECT draft_variants FROM actions WHERE id = ?", (action_id,)
+        )
+        row = await cursor.fetchone()
+        if not row or not row["draft_variants"]:
+            return None
+        import json
+        variants = json.loads(row["draft_variants"])
+        return variants.get(label)
+
     # -- calendar --
 
     async def add_calendar_entry(
@@ -297,3 +333,54 @@ class Database:
         )
         row = await cursor.fetchone()
         return row[0]
+
+    # -- engagement --
+
+    async def insert_engagement(
+        self,
+        platform: str,
+        post_id: str,
+        post_url: str,
+        author: str,
+        text: str,
+        opportunity_type: str,
+    ) -> str | None:
+        """Insert engagement opportunity. Returns ID or None if already exists."""
+        cursor = await self._db.execute(
+            "SELECT 1 FROM engagement_opportunities WHERE platform = ? AND post_id = ?",
+            (platform, post_id),
+        )
+        if await cursor.fetchone():
+            return None
+        eid = _new_id()
+        await self._db.execute(
+            """INSERT INTO engagement_opportunities
+               (id, platform, post_id, post_url, author, text, opportunity_type, status, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
+            (eid, platform, post_id, post_url, author, text, opportunity_type, _now()),
+        )
+        await self._db.commit()
+        return eid
+
+    async def get_pending_engagements(
+        self, platform: str = None, limit: int = 10
+    ) -> list[dict]:
+        """Get pending engagement opportunities."""
+        if platform:
+            cursor = await self._db.execute(
+                "SELECT * FROM engagement_opportunities WHERE status = 'pending' AND platform = ? ORDER BY created_at ASC LIMIT ?",
+                (platform, limit),
+            )
+        else:
+            cursor = await self._db.execute(
+                "SELECT * FROM engagement_opportunities WHERE status = 'pending' ORDER BY created_at ASC LIMIT ?",
+                (limit,),
+            )
+        return [dict(row) for row in await cursor.fetchall()]
+
+    async def mark_engagement_done(self, eid: str, status: str = "done"):
+        await self._db.execute(
+            "UPDATE engagement_opportunities SET status = ?, acted_at = ? WHERE id = ?",
+            (status, _now(), eid),
+        )
+        await self._db.commit()

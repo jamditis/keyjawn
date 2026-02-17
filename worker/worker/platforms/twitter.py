@@ -20,6 +20,10 @@ SEARCH_KEYWORDS = [
     "SSH from phone",
     "Gemini CLI mobile",
     "aichat mobile keyboard",
+    "mobile terminal",
+    "remote terminal mobile",
+    "tmux mobile",
+    "terminal on phone",
 ]
 
 

@@ -74,6 +74,73 @@ async def test_dedup_findings(monitor, db):
     assert count_second == 0
 
 
+# --- real-world tweet regression tests ---
+
+
+def test_score_mobile_terminal_recommendations(monitor):
+    """@neomewtwo: 'who has good mobile terminal recommendations?'"""
+    score = monitor.score_relevance(
+        "who has good mobile terminal recommendations?", "twitter"
+    )
+    assert score >= 0.5, f"expected >= 0.5, got {score}"
+
+
+def test_score_claude_code_terminal_syncing(monitor):
+    """@gabefletcher: 'Recommendations for mobile-to-local terminal syncing for Claude Code?'"""
+    score = monitor.score_relevance(
+        "Recommendations for mobile-to-local terminal syncing for Claude Code?",
+        "twitter",
+    )
+    assert score >= 0.5, f"expected >= 0.5, got {score}"
+
+
+def test_score_remote_terminal_mobile(monitor):
+    """@byadhddev: 'built remote terminal... access from mobile'"""
+    score = monitor.score_relevance(
+        "built remote terminal that I can access from mobile", "twitter"
+    )
+    assert score >= 0.5, f"expected >= 0.5, got {score}"
+
+
+def test_score_tmux_mobile_access(monitor):
+    """@nummanali: 'Why should you use Tmux?... Access the same session from anywhere ie mobile'"""
+    score = monitor.score_relevance(
+        "Why should you use Tmux? Access the same session from anywhere ie mobile",
+        "twitter",
+    )
+    assert score >= 0.4, f"expected >= 0.4, got {score}"
+
+
+def test_score_phone_productivity_terminal_keyboard(monitor):
+    """@0xEljh: 'My phone is a productivity machine... mobile terminal... fuller keyboard'"""
+    score = monitor.score_relevance(
+        "My phone is a productivity machine with a mobile terminal and a fuller keyboard",
+        "twitter",
+    )
+    assert score >= 0.5, f"expected >= 0.5, got {score}"
+
+
+def test_score_nativephp_android_ssh(monitor):
+    """@PovilasKorop: 'Tried @nativephp Jump app on my Android phone... SSH sessions'"""
+    score = monitor.score_relevance(
+        "Tried NativePHP Jump app on my Android phone, and it handles SSH sessions",
+        "twitter",
+    )
+    assert score >= 0.4, f"expected >= 0.4, got {score}"
+
+
+def test_score_irrelevant_browser_agent(monitor):
+    """@iannuttall: browser agent question (tangential, should stay low)"""
+    score = monitor.score_relevance(
+        "what's the best agent browser skill that can use my actual chrome with logged in creds?",
+        "twitter",
+    )
+    assert score < 0.4, f"tangential tweet should score low, got {score}"
+
+
+# --- queue_new_findings ---
+
+
 @pytest.mark.asyncio
 async def test_low_relevance_filtered(monitor, db):
     findings = [

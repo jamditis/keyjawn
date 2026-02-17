@@ -62,6 +62,17 @@ async def main():
         id="curation_scan_twitch",
     )
 
+    # On-platform discovery: daily at 5pm ET (before action session at 7pm)
+    scheduler.add_job(
+        runner.run_discovery_scan,
+        "cron",
+        day_of_week="mon-fri",
+        hour=17,
+        minute=0,
+        id="discovery_scan",
+        replace_existing=True,
+    )
+
     scheduler.start()
 
     # Start Redis listener for approval decisions
