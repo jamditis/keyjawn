@@ -1,0 +1,19 @@
+KeyJawn is a keyboard built for using LLM CLI agents from your phone. It gives you the terminal keys that standard Android keyboards don't have: Esc, Tab, Ctrl, arrow keys, and more — all in a dedicated row above a standard QWERTY layout.
+
+Whether you're running Claude Code, Cursor, Warp, or any terminal-based AI agent, KeyJawn makes it possible to interact with them from your phone without fighting your keyboard.
+
+Features:
+
+- Terminal key row: Esc, Tab, Ctrl, up/down/left/right arrows, always visible above the keyboard
+- Ctrl modifier: Tap for one-shot (Ctrl+C), long-press for sticky lock (Ctrl+A, Ctrl+K, etc.)
+- Number row: Dedicated 0-9 row with long-press shifted symbols (!@#$%^&*())
+- Voice input: Built-in speech recognition for hands-free text entry
+- Slash commands: Quick-insert common CLI commands with the / key on the symbols layer
+- Alt characters: Long-press letters for accented characters and common variants
+- Clipboard history: Access your last 30 clipboard items with pinning support
+- Multiple themes: Dark, Light, OLED black, and Terminal color schemes
+- Per-app autocorrect: Toggle autocorrect on or off for each app individually
+
+KeyJawn lite is the free version with all core keyboard features. It does not include SCP file upload, which is available in the full version at keyjawn.amditis.tech.
+
+No data collection. No internet access. No ads. No tracking. Just a keyboard that does what you need.

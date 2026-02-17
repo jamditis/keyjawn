@@ -140,13 +140,19 @@ Astro static site at `website/`. Deployed to GitHub Pages at `keyjawn.amditis.te
 
 **Key pages:** index, features, pricing, privacy, manual, about, thanks (post-purchase redirect)
 
-## Google Play (pending)
+## Google Play
 
-- Developer account: `thejawnstars@gmail.com` — verification pending
-- Application IDs: `com.keyjawn` (full), `com.keyjawn.lite` (lite)
-- Once approved, the lite APK can be listed as a free download
-- The full version will continue to be sold via website/Stripe (not Play Store billing) to avoid the 15-30% cut
-- Play Store listing would supplement GitHub releases, not replace the website purchase flow
+- **Developer account:** `thejawnstars@gmail.com` (verified, account #5874742502246953529)
+- **Credentials:** `pass show claude/services/google-play-{email,password,account-id}`
+- **Application ID:** `com.keyjawn.lite` (lite only — full version stays on website/Stripe)
+- **CI publishing:** Gradle Play Publisher (GPP) 4.0.0 in `.github/workflows/build.yml`
+  - `publish-play-store` job runs on version tags after the `release` job
+  - Needs `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` GitHub secret (service account key JSON)
+  - `PLAY_TRACK` defaults to `internal` — change to `production` once verified
+  - Only publishes `publishLiteReleaseBundle` — full flavor is never uploaded to Play
+- **Store listing metadata:** `app/src/lite/play/listings/en-US/` (managed by GPP)
+- **Asset generation:** `scripts/generate-store-assets.py` (Selenium + Chromium snap → icon, feature graphic, screenshots)
+- **Manual setup required:** Create app in Play Console, upload first AAB manually, create service account, fill content rating/data safety forms
 
 ## Code style
 
