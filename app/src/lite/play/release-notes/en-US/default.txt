@@ -1,0 +1,3 @@
+Initial Play Store release of KeyJawn lite.
+
+All core keyboard features included: terminal key row (Esc, Tab, Ctrl, arrows), number row, voice input, slash commands, alt characters, clipboard history, themes, and per-app autocorrect.

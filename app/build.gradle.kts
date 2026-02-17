@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.github.triplet.play")
 }
 
 val localProps = Properties()
@@ -34,8 +35,8 @@ android {
         applicationId = "com.keyjawn"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.2.1"
+        versionCode = 9
+        versionName = "1.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -56,6 +57,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Sign debug builds with the release key when the keystore is available.
+            // This ensures all distributed APKs share the same signature so Android
+            // allows in-place updates without requiring uninstall first.
+            val releaseKeystore = signingConfigs.getByName("release").storeFile
+            if (releaseKeystore != null && releaseKeystore.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
@@ -90,6 +100,11 @@ android {
             isIncludeAndroidResources = true
         }
     }
+}
+
+play {
+    track.set(System.getenv("PLAY_TRACK") ?: "internal")
+    defaultToAppBundles.set(true)
 }
 
 dependencies {

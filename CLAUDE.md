@@ -29,7 +29,7 @@ adb install app/build/outputs/apk/full/debug/app-full-debug.apk
 
 ## Build environment
 
-- Gradle 8.11.1, AGP 8.7.3, Kotlin 2.1.0
+- Gradle 8.13, AGP 8.13.2, Kotlin 2.1.0
 - JDK 17, compileSdk 35, minSdk 26
 - CI runs on GitHub Actions (`.github/workflows/build.yml`) — builds both flavors, uploads APK artifacts, creates releases on version tags
 
@@ -183,13 +183,24 @@ Curation (RSS/YouTube/News) → Curation candidates → AI eval → Approved sha
 
 **Branch:** `strategy/social-media` (PR #11) has engagement actions, cross-posting, discovery scheduling, and keyword improvements.
 
-## Google Play (pending)
+## Google Play
 
-- Developer account: `thejawnstars@gmail.com` — verification pending
-- Application IDs: `com.keyjawn` (full), `com.keyjawn.lite` (lite)
-- Once approved, the lite APK can be listed as a free download
-- The full version will continue to be sold via website/Stripe (not Play Store billing) to avoid the 15-30% cut
-- Play Store listing would supplement GitHub releases, not replace the website purchase flow
+- **Developer account:** `thejawnstars@gmail.com` (verified, account #5874742502246953529)
+- **Credentials:** `pass show claude/services/google-play-{email,password,account-id}`
+- **Application ID:** `com.keyjawn.lite` (lite only — full version stays on website/Stripe)
+- **CI publishing:** Gradle Play Publisher (GPP) 3.13.0 in `.github/workflows/build.yml`
+  - `publish-play-store` job runs on version tags after the `release` job
+  - Needs `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` GitHub secret (service account key JSON)
+  - `PLAY_TRACK` defaults to `internal` — change to `production` once verified
+  - Only publishes `publishLiteReleaseBundle` — full flavor is never uploaded to Play
+- **Store listing metadata:** `app/src/lite/play/listings/en-US/` (managed by GPP)
+- **Asset generation:** `scripts/generate-store-assets.py` (Selenium + Chromium snap → icon, feature graphic, screenshots)
+- **Setup status (completed 2026-02-17):**
+  - App created in Play Console
+  - First AAB uploaded to internal testing (v1.3.0)
+  - Store listing, content rating, data safety, and all other forms complete
+  - 7 testers configured on internal track
+  - CI auto-publish ready (`publish-play-store` job) -- change track to `production` when ready
 
 ## Code style
 

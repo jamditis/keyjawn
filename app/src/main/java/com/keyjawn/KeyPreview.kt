@@ -46,6 +46,8 @@ class KeyPreview(
 
     fun show(anchor: View, label: String) {
         currentAnimator?.cancel()
+        updateBackground()
+        previewView.setTextColor(themeManager.keyText())
 
         previewView.text = label
 
