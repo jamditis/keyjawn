@@ -119,4 +119,79 @@ class RepeatTouchListenerTest {
         shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200))
         assertEquals(1, count)
     }
+
+    @Test
+    fun `accelerates after threshold repeats`() {
+        var count = 0
+        val listener = RepeatTouchListener(
+            initialDelayMs = 100,
+            repeatIntervalMs = 50,
+            fastIntervalMs = 25,
+            accelerateAfter = 3
+        ) { count++ }
+        val view = makeView()
+
+        listener.onTouch(view, downEvent())
+        assertEquals(1, count) // immediate fire
+
+        // After initial delay: first repeat
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(100))
+        assertEquals(2, count) // repeatCount=1
+
+        // 3 more repeats at 50ms each (repeatCount 2, 3, 4 -- accelerates after 3)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(50))
+        assertEquals(3, count)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(50))
+        assertEquals(4, count)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(50))
+        assertEquals(5, count) // repeatCount=4, which is > 3, so next uses fast interval
+
+        // Now at fast interval (25ms)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(25))
+        assertEquals(6, count)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(25))
+        assertEquals(7, count)
+
+        listener.onTouch(view, upEvent())
+    }
+
+    @Test
+    fun `resets repeat count on new touch down`() {
+        var count = 0
+        val listener = RepeatTouchListener(
+            initialDelayMs = 100,
+            repeatIntervalMs = 50,
+            fastIntervalMs = 25,
+            accelerateAfter = 2
+        ) { count++ }
+        val view = makeView()
+
+        // First touch: accelerate past threshold
+        listener.onTouch(view, downEvent())
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(100))
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(50))
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(50))
+        // Should be accelerated now
+        listener.onTouch(view, upEvent())
+
+        val countBefore = count
+
+        // Second touch: should start fresh at slow interval
+        listener.onTouch(view, downEvent())
+        assertEquals(countBefore + 1, count) // immediate fire
+
+        // Should use slow interval again (50ms), not fast (25ms)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(100))
+        assertEquals(countBefore + 2, count)
+
+        // At 25ms nothing should fire (still in slow mode)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(25))
+        assertEquals(countBefore + 2, count)
+
+        // At 50ms total, next repeat fires
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(25))
+        assertEquals(countBefore + 3, count)
+
+        listener.onTouch(view, upEvent())
+    }
 }

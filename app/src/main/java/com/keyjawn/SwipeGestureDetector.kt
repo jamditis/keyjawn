@@ -17,11 +17,15 @@ class SwipeGestureDetector(
 
     private val minDistanceDp = 60f
     private val minVelocityDp = 200f
+    private val minVerticalDistanceDp = 90f
+    private val minVerticalVelocityDp = 300f
 
     override fun onTouch(view: View, event: MotionEvent): Boolean {
         val density = view.context.resources.displayMetrics.density
         val minDistancePx = minDistanceDp * density
         val minVelocityPx = minVelocityDp * density
+        val minVerticalDistancePx = minVerticalDistanceDp * density
+        val minVerticalVelocityPx = minVerticalVelocityDp * density
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -56,7 +60,7 @@ class SwipeGestureDetector(
                 val direction: SwipeDirection?
                 if (absDx > absDy && absDx > minDistancePx && kotlin.math.abs(vx) > minVelocityPx) {
                     direction = if (dx < 0) SwipeDirection.LEFT else SwipeDirection.RIGHT
-                } else if (absDy > absDx && absDy > minDistancePx && kotlin.math.abs(vy) > minVelocityPx) {
+                } else if (absDy > absDx * 1.5f && absDy > minVerticalDistancePx && kotlin.math.abs(vy) > minVerticalVelocityPx) {
                     direction = if (dy < 0) SwipeDirection.UP else SwipeDirection.DOWN
                 } else {
                     direction = null
