@@ -167,6 +167,53 @@ REASONING: [one line why]
 DRAFT: [post text, only if SHARE]"""
 
 
+def build_batch_draft_prompt(
+    candidate: CurationCandidate,
+    evaluation: dict,
+    platform: str = "twitter",
+) -> str:
+    """Build a prompt that asks for 4 draft variants (A/B/C/D).
+
+    Each variant takes a different angle or framing. All must respect
+    platform character limits and voice rules.
+    """
+    from worker.content import PLATFORM_LIMITS
+    char_limit = PLATFORM_LIMITS.get(platform, 280)
+
+    return f"""You are drafting social media posts for @KeyJawn, a developer tools curation account.
+
+Voice: developer-to-developer. Short sentences. No hype. No exclamation marks. No hashtag spam. Contractions are fine.
+
+STRICT RULES — violating any of these means the draft will be rejected:
+- ZERO emojis. Not one. No fire, no rocket, no checkmark, no pointing finger, nothing.
+- No hashtags unless the content creator uses one as a brand name.
+- No "thread" or "1/" numbering.
+- Sentence case only. Never Title Case.
+- No filler phrases ("check this out", "you need to see this", "this is amazing").
+- No "it's not just X — it's Y" patterns.
+
+Content to share:
+Title: {candidate.title}
+Author: {candidate.author}
+Source: {candidate.source}
+URL: {candidate.url}
+
+Evaluation: {evaluation.get('reasoning', '')}
+Quality: {evaluation.get('quality_score', 0)}/10
+
+Should we share this? SHARE if it's genuinely useful or interesting to developers who use CLI tools and terminals. SKIP if it's low effort, clickbaity, overly promotional, or not interesting enough to warrant a post.
+
+If SHARE, write 4 different {platform} posts (each max {char_limit} chars). Each variant should take a different angle: one might focus on the tech, another on the creator, another on the use case, another on what makes it stand out. All must add context, credit the creator, and put the link at the end. Keep them dry and matter-of-fact.
+
+Format your response exactly like this:
+DECISION: SHARE or SKIP
+REASONING: [one line why]
+DRAFT_A: [variant A text, only if SHARE]
+DRAFT_B: [variant B text, only if SHARE]
+DRAFT_C: [variant C text, only if SHARE]
+DRAFT_D: [variant D text, only if SHARE]"""
+
+
 def _strip_emojis(text: str) -> str:
     """Remove all emoji characters from text as a safety net."""
     # Covers all major Unicode emoji ranges
@@ -224,6 +271,59 @@ def parse_draft_response(text: str) -> dict:
     }
 
 
+def parse_batch_draft_response(text: str) -> dict:
+    """Parse a batch draft response with up to 4 variants.
+
+    Returns {"share": bool, "reasoning": str, "drafts": {"A": str, ...}}.
+    Handles partial responses (fewer than 4 drafts). Strips emojis from
+    all draft text.
+    """
+    lines = text.strip().split("\n")
+
+    decision = "skip"
+    reasoning = ""
+    drafts: dict[str, str] = {}
+    current_label: str | None = None
+    current_lines: list[str] = []
+
+    draft_labels = {"DRAFT_A", "DRAFT_B", "DRAFT_C", "DRAFT_D"}
+
+    def _flush_draft():
+        nonlocal current_label, current_lines
+        if current_label and current_lines:
+            key = current_label.split("_")[1]  # "A", "B", "C", or "D"
+            draft_text = _strip_emojis("\n".join(current_lines).strip())
+            if draft_text:
+                drafts[key] = draft_text
+        current_label = None
+        current_lines = []
+
+    for line in lines:
+        upper = line.upper().strip()
+        if upper.startswith("DECISION:"):
+            _flush_draft()
+            val = line.split(":", 1)[1].strip().upper()
+            decision = "share" if "SHARE" in val else "skip"
+        elif upper.startswith("REASONING:"):
+            _flush_draft()
+            reasoning = line.split(":", 1)[1].strip()
+        elif any(upper.startswith(f"{label}:") for label in draft_labels):
+            _flush_draft()
+            label = upper.split(":")[0]
+            current_label = label
+            current_lines.append(line.split(":", 1)[1].strip())
+        elif current_label:
+            current_lines.append(line)
+
+    _flush_draft()
+
+    return {
+        "share": decision == "share",
+        "reasoning": reasoning,
+        "drafts": drafts if decision == "share" else {},
+    }
+
+
 async def evaluate_candidate(
     candidate: CurationCandidate, platform: str = "twitter"
 ) -> dict:
@@ -249,15 +349,19 @@ async def evaluate_candidate(
     if evaluation["quality_score"] < 5.0:
         return evaluation
 
-    # Step 2: Draft post (only for candidates that pass evaluation)
-    draft_prompt = build_draft_prompt(candidate, evaluation, platform)
-    draft_text = await _run_claude(draft_prompt, model="sonnet")
+    # Step 2: Batch draft (4 variants via Opus)
+    draft_prompt = build_batch_draft_prompt(candidate, evaluation, platform)
+    draft_text = await _run_claude(draft_prompt, model="opus")
     if not draft_text:
         evaluation["share"] = False
         return evaluation
 
-    draft_result = parse_draft_response(draft_text)
+    draft_result = parse_batch_draft_response(draft_text)
     evaluation.update(draft_result)
+    # Backward compat: set "draft" to the first variant
+    if draft_result.get("drafts"):
+        first_key = sorted(draft_result["drafts"].keys())[0]
+        evaluation["draft"] = draft_result["drafts"][first_key]
     return evaluation
 
 
@@ -287,7 +391,7 @@ async def evaluate_batch(
             log.error("Evaluation error: %s", r)
             continue
         candidate, result = r
-        if result.get("share") and result.get("draft"):
+        if result.get("share") and result.get("drafts"):
             approved.append((candidate, result))
 
     log.info("Batch evaluation: %d/%d approved", len(approved), len(candidates))
