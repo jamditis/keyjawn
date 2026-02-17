@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS actions (
     acted_at TEXT NOT NULL,
     approval_decision TEXT,
     approval_timestamp TEXT,
+    draft_variants TEXT,
     FOREIGN KEY (finding_id) REFERENCES findings(id)
 );
 
@@ -205,6 +206,26 @@ class Database:
             )
         row = await cursor.fetchone()
         return row[0]
+
+    async def store_draft_variants(self, action_id: str, variants_json: str):
+        """Store draft variants JSON for an action."""
+        await self._db.execute(
+            "UPDATE actions SET draft_variants = ? WHERE id = ?",
+            (variants_json, action_id),
+        )
+        await self._db.commit()
+
+    async def get_draft_variant(self, action_id: str, label: str) -> str | None:
+        """Get a specific draft variant by label (A/B/C/D)."""
+        cursor = await self._db.execute(
+            "SELECT draft_variants FROM actions WHERE id = ?", (action_id,)
+        )
+        row = await cursor.fetchone()
+        if not row or not row["draft_variants"]:
+            return None
+        import json
+        variants = json.loads(row["draft_variants"])
+        return variants.get(label)
 
     # -- calendar --
 

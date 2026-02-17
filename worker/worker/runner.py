@@ -178,23 +178,41 @@ class WorkerRunner:
             finding_id=action.get("finding_id"),
         )
 
-        # Use curation-specific message format for curated shares
+        # Use batch curation format for curated shares (A/B/C/D draft selection)
         if action["action_type"] == "curated_share":
-            from worker.telegram import format_curation_message
+            import json
+            from worker.telegram import (
+                format_batch_curation_message,
+                build_batch_approval_keyboard,
+            )
+
+            drafts = action.get("drafts", {})
+            if not drafts:
+                # Fallback: single draft from legacy pipeline
+                drafts = {"A": content}
+
+            # Store variants for later retrieval on button tap
+            await self.db.store_draft_variants(action_id, json.dumps(drafts))
+
+            msg = format_batch_curation_message(
+                action_id=action_id,
+                source=action.get("curation_source", ""),
+                author=action.get("curation_author", ""),
+                title=action.get("curation_title", ""),
+                score=action.get("curation_score", 0.0),
+                reasoning=action.get("curation_reasoning", ""),
+                drafts=drafts,
+                platform=action["platform"],
+            )
+
             decision = await self.approvals.request_approval(
                 action_id=action_id,
                 action_type=action["action_type"],
                 platform=action["platform"],
                 draft=content,
-                context=None,
-                message_override=format_curation_message(
-                    action_id=action_id,
-                    source=f"{action.get('curation_source', '')} - {action.get('curation_title', '')}",
-                    title=action.get("curation_title", ""),
-                    score=action.get("curation_score", 0.0),
-                    reasoning=action.get("curation_reasoning", ""),
-                    draft=content,
-                    platform=action["platform"],
+                message_override=msg,
+                keyboard_override=build_batch_approval_keyboard(
+                    action_id, sorted(drafts.keys())
                 ),
             )
         else:
@@ -206,14 +224,20 @@ class WorkerRunner:
                 context=action.get("content") if action["source"] == "finding" else None,
             )
 
-        if decision == "approve":
+        # Handle draft selection (draft_A, draft_B, etc.) or legacy approve
+        if decision.startswith("draft_") or decision == "approve":
+            if decision.startswith("draft_"):
+                label = decision.split("_", 1)[1]
+                selected = await self.db.get_draft_variant(action_id, label)
+                if selected:
+                    content = selected
             post_url = await self._post_to_platform(
                 action["platform"], content, action["action_type"],
                 in_reply_to=action.get("source_url"),
             )
             await self.db._db.execute(
-                "UPDATE actions SET status = ?, post_url = ? WHERE id = ?",
-                ("posted" if post_url else "failed", post_url, action_id),
+                "UPDATE actions SET status = ?, post_url = ?, content = ? WHERE id = ?",
+                ("posted" if post_url else "failed", post_url, content, action_id),
             )
             await self.db._db.commit()
 

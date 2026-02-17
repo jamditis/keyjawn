@@ -119,3 +119,15 @@ def test_build_batch_approval_keyboard():
 def test_build_batch_approval_keyboard_partial():
     kb = build_batch_approval_keyboard("abc123", ["A", "B"])
     assert len(kb[0]) == 2  # only A B
+
+
+def test_parse_callback_draft_selection():
+    result = parse_callback_data("kw:draft_A:abc123")
+    assert result["action"] == "draft_A"
+    assert result["action_id"] == "abc123"
+
+
+def test_parse_callback_draft_b():
+    result = parse_callback_data("kw:draft_B:xyz789")
+    assert result["action"] == "draft_B"
+    assert result["action_id"] == "xyz789"

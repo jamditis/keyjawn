@@ -19,6 +19,10 @@ DECISION_STATUS_MAP = {
     "deny": "denied",
     "backlog": "backlogged",
     "rethink": "pending_rethink",
+    "draft_A": "approved",
+    "draft_B": "approved",
+    "draft_C": "approved",
+    "draft_D": "approved",
 }
 
 
@@ -36,6 +40,7 @@ class ApprovalManager:
         draft: str,
         context: str | None = None,
         message_override: str | None = None,
+        keyboard_override: list[list[dict]] | None = None,
     ) -> str:
         """Send a Telegram approval prompt and wait for a decision.
 
@@ -61,7 +66,10 @@ class ApprovalManager:
                 context=context,
                 draft=draft,
             )
-        keyboard = build_approval_keyboard(action_id)
+        if keyboard_override:
+            keyboard = keyboard_override
+        else:
+            keyboard = build_approval_keyboard(action_id)
 
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         payload = {

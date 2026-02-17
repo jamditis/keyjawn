@@ -517,7 +517,33 @@ def test_curation_config_custom():
     assert config.max_curated_shares_per_day == 3
 
 
+from worker.approvals import DECISION_STATUS_MAP
 from worker.telegram import format_curation_message
+
+
+def test_draft_selections_map_to_approved():
+    assert DECISION_STATUS_MAP["draft_A"] == "approved"
+    assert DECISION_STATUS_MAP["draft_B"] == "approved"
+    assert DECISION_STATUS_MAP["draft_C"] == "approved"
+    assert DECISION_STATUS_MAP["draft_D"] == "approved"
+
+
+def test_draft_variants_storage(db):
+    import json
+    async def _test():
+        aid = await db.log_action(
+            action_type="curated_share",
+            platform="twitter",
+            content="first draft",
+            status="pending_approval",
+        )
+        variants = {"A": "Draft A text", "B": "Draft B text", "C": "Draft C text", "D": "Draft D text"}
+        await db.store_draft_variants(aid, json.dumps(variants))
+        result = await db.get_draft_variant(aid, "B")
+        assert result == "Draft B text"
+        result = await db.get_draft_variant(aid, "Z")
+        assert result is None
+    asyncio.get_event_loop().run_until_complete(_test())
 
 
 def test_format_curation_message():
