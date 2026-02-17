@@ -69,6 +69,49 @@ def format_curation_message(
     return "\n".join(lines)
 
 
+def format_batch_curation_message(
+    action_id: str,
+    source: str,
+    author: str,
+    title: str,
+    score: float,
+    reasoning: str,
+    drafts: dict[str, str],
+    platform: str,
+) -> str:
+    """Format a curation share with multiple draft variants for A/B/C/D selection."""
+    lines = [
+        f"<b>[CURATE] {_escape_html(source)} -- {_escape_html(author)}</b>",
+        f"{_escape_html(title)} (score: {score:.2f})",
+        "",
+    ]
+
+    for label in sorted(drafts.keys()):
+        lines.append(f"<b>{label}:</b> {_escape_html(drafts[label])}")
+        lines.append("")
+
+    if reasoning:
+        lines.append(f"<i>{_escape_html(reasoning)}</i>")
+
+    return "\n".join(lines)
+
+
+def build_batch_approval_keyboard(
+    action_id: str, draft_labels: list[str]
+) -> list[list[dict]]:
+    """Build inline keyboard with A/B/C/D draft selection + Deny/Backlog/Rethink."""
+    draft_row = [
+        {"text": label, "callback_data": f"kw:draft_{label}:{action_id}"}
+        for label in draft_labels
+    ]
+    control_row = [
+        {"text": "Deny", "callback_data": f"kw:deny:{action_id}"},
+        {"text": "Backlog", "callback_data": f"kw:backlog:{action_id}"},
+        {"text": "Rethink", "callback_data": f"kw:rethink:{action_id}"},
+    ]
+    return [draft_row, control_row]
+
+
 def parse_callback_data(data: str) -> dict:
     """Parse a 'kw:action:id' callback string into its parts."""
     _, action, action_id = data.split(":", 2)

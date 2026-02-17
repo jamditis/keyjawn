@@ -3,6 +3,8 @@ from worker.telegram import (
     build_approval_keyboard,
     parse_callback_data,
     _escape_html,
+    format_batch_curation_message,
+    build_batch_approval_keyboard,
 )
 
 
@@ -61,3 +63,59 @@ def test_escape_html():
     assert _escape_html("<script>") == "&lt;script&gt;"
     assert _escape_html("no special chars") == "no special chars"
     assert _escape_html("A < B & C > D") == "A &lt; B &amp; C &gt; D"
+
+
+def test_format_batch_curation_message():
+    msg = format_batch_curation_message(
+        action_id="abc123",
+        source="youtube",
+        author="Dreams of Code",
+        title="Terminal file manager in Rust",
+        score=0.87,
+        reasoning="Open source Rust CLI tool, solo dev",
+        drafts={
+            "A": "Terminal file managers are underrated. youtube.com/abc",
+            "B": "Solid Rust TUI project. youtube.com/abc",
+            "C": "Clean walkthrough of terminal file manager. youtube.com/abc",
+            "D": "ratatui keeps producing good projects. youtube.com/abc",
+        },
+        platform="twitter",
+    )
+    assert "[CURATE]" in msg
+    assert "Dreams of Code" in msg
+    assert "0.87" in msg
+    assert "<b>A:</b>" in msg
+    assert "<b>B:</b>" in msg
+    assert "<b>C:</b>" in msg
+    assert "<b>D:</b>" in msg
+
+
+def test_format_batch_curation_message_partial_drafts():
+    msg = format_batch_curation_message(
+        action_id="abc123",
+        source="youtube",
+        author="dev",
+        title="Test",
+        score=0.5,
+        reasoning="test",
+        drafts={"A": "First draft", "B": "Second draft"},
+        platform="twitter",
+    )
+    assert "<b>A:</b>" in msg
+    assert "<b>B:</b>" in msg
+    assert "<b>C:</b>" not in msg
+
+
+def test_build_batch_approval_keyboard():
+    kb = build_batch_approval_keyboard("abc123", ["A", "B", "C", "D"])
+    assert len(kb) == 2  # two rows
+    assert len(kb[0]) == 4  # A B C D
+    assert len(kb[1]) == 3  # Deny Backlog Rethink
+    assert kb[0][0]["callback_data"] == "kw:draft_A:abc123"
+    assert kb[0][3]["callback_data"] == "kw:draft_D:abc123"
+    assert kb[1][0]["text"] == "Deny"
+
+
+def test_build_batch_approval_keyboard_partial():
+    kb = build_batch_approval_keyboard("abc123", ["A", "B"])
+    assert len(kb[0]) == 2  # only A B
