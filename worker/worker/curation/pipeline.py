@@ -70,11 +70,17 @@ class CurationPipeline:
             candidate.sonnet_draft = result.get("draft", "")
             candidate.sonnet_reasoning = result.get("reasoning", "")
             candidate.gemini_score = result.get("quality_score", 0.0)
-            candidate.final_score = round(
-                (candidate.keyword_score * 0.3)
-                + ((result.get("quality_score", 0.0) / 10.0) * 0.7),
-                2,
-            )
+            quality_norm = result.get("quality_score", 0.0) / 10.0
+            score = (candidate.keyword_score * 0.3) + (quality_norm * 0.7)
+            # Clickbait penalty (scoring factor, not hard gate)
+            if result.get("is_clickbait"):
+                score *= 0.7
+            # Open source + indie boost
+            if result.get("is_oss"):
+                score = min(score + 0.05, 1.0)
+            if result.get("is_indie"):
+                score = min(score + 0.05, 1.0)
+            candidate.final_score = round(score, 2)
             approved.append(candidate)
 
         approved.sort(key=lambda c: c.final_score, reverse=True)

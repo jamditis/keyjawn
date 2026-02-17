@@ -92,7 +92,7 @@ REASONING: one-line explanation
 OPEN_SOURCE: yes or no or unknown
 INDIE: yes or no or unknown (is the creator a solo/indie dev or small team?)
 CORPORATE: yes or no (is this a large company product launch?)
-CLICKBAIT: yes or no
+CLICKBAIT: yes or no (only if the title is actively deceptive or misleading — standard YouTube SEO like "Best X" or "Free Y" does NOT count as clickbait)
 QUALITY: N/10 (overall quality and relevance score)"""
 
 
@@ -157,9 +157,9 @@ URL: {candidate.url}
 Evaluation: {evaluation.get('reasoning', '')}
 Quality: {evaluation.get('quality_score', 0)}/10
 
-Should we share this? Answer on the first line.
+Should we share this? SHARE if it's genuinely useful or interesting to developers who use CLI tools and terminals. SKIP if it's low effort, clickbaity, overly promotional, or not interesting enough to warrant a post.
 
-If yes, write a {platform} post (max {char_limit} chars) that adds a brief take or context, credits the creator, and puts the link at the end.
+If yes, write a {platform} post (max {char_limit} chars) that adds a brief take or context, credits the creator, and puts the link at the end. Keep it dry and matter-of-fact. Imagine a developer you respect shared this in a group chat with one line of context.
 
 Format:
 DECISION: SHARE or SKIP
@@ -244,9 +244,9 @@ async def evaluate_candidate(
     evaluation = parse_evaluate_response(eval_text)
 
     # Early exit if not relevant or low quality
-    if not evaluation["relevant"] or evaluation["is_clickbait"]:
+    if not evaluation["relevant"]:
         return evaluation
-    if evaluation["quality_score"] < 6.0:
+    if evaluation["quality_score"] < 5.0:
         return evaluation
 
     # Step 2: Draft post (only for candidates that pass evaluation)
