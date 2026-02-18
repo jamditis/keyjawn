@@ -13,10 +13,9 @@ extension TTYStdinWriter: @unchecked @retroactive Sendable {}
 ///
 /// All public APIs are @MainActor isolated. To stay clean under Swift 6's
 /// region-based isolation rules, the actual SSH work runs in a Task.detached
-/// with no direct reference to `self`. Instead, two @Sendable callbacks
-/// (created on the main actor before the task launches) are passed in — they
-/// close over `self` weakly and hop back to the main actor via
-/// `Task { @MainActor in }` when state or output needs updating.
+/// with no direct reference to `self`. Instead, @Sendable callbacks created
+/// on the main actor before the task launches close over `self` weakly and
+/// hop back to the main actor via `Task { @MainActor in }`.
 @MainActor
 final class SSHSession: ObservableObject {
 
@@ -34,6 +33,7 @@ final class SSHSession: ObservableObject {
 
     private var sessionTask: Task<Void, Never>?
     private var inputContinuation: AsyncStream<[UInt8]>.Continuation?
+    private var resizeContinuation: AsyncStream<(Int, Int)>.Continuation?
 
     // MARK: - Connect
 
@@ -41,8 +41,6 @@ final class SSHSession: ObservableObject {
         guard connectionState == .disconnected else { return }
         connectionState = .connecting
 
-        // Capture callbacks as @Sendable closures here, in @MainActor scope,
-        // so 'self' never crosses a region boundary inside the detached task.
         let onReceive: @Sendable ([UInt8]) -> Void = { [weak self] bytes in
             Task { @MainActor in self?.onData?(bytes) }
         }
@@ -50,10 +48,12 @@ final class SSHSession: ObservableObject {
             Task { @MainActor in self?.connectionState = state }
         }
 
-        let (inputStream, continuation) = AsyncStream<[UInt8]>.makeStream()
-        inputContinuation = continuation
+        let (inputStream, inputCont) = AsyncStream<[UInt8]>.makeStream()
+        let (resizeStream, resizeCont) = AsyncStream<(Int, Int)>.makeStream()
+        inputContinuation = inputCont
+        resizeContinuation = resizeCont
 
-        sessionTask = Task.detached { [host, password, inputStream, onReceive, onStateChange] in
+        sessionTask = Task.detached { [host, password, inputStream, resizeStream, onReceive, onStateChange] in
             do {
                 let client = try await SSHClient.connect(
                     host: host.hostname,
@@ -95,7 +95,16 @@ final class SSHSession: ObservableObject {
                                 try await stdinWriter.write(buf)
                             }
                         }
-                        // Stop when either stream closes
+                        // Handle terminal resize requests
+                        group.addTask {
+                            for await (cols, rows) in resizeStream {
+                                try await stdinWriter.changeSize(
+                                    cols: cols, rows: rows,
+                                    pixelWidth: 0, pixelHeight: 0
+                                )
+                            }
+                        }
+                        // Stop when any stream closes
                         _ = try? await group.next()
                         group.cancelAll()
                     }
@@ -110,16 +119,22 @@ final class SSHSession: ObservableObject {
         }
     }
 
-    // MARK: - Send / Disconnect
+    // MARK: - Send / Resize / Disconnect
 
-    /// Write raw bytes to the SSH shell (e.g. a keypress or ANSI sequence).
     func send(_ bytes: [UInt8]) {
         inputContinuation?.yield(bytes)
     }
 
+    /// Notify the remote PTY of a terminal dimension change.
+    func resize(cols: Int, rows: Int) {
+        resizeContinuation?.yield((cols, rows))
+    }
+
     func disconnect() {
         inputContinuation?.finish()
+        resizeContinuation?.finish()
         inputContinuation = nil
+        resizeContinuation = nil
         sessionTask?.cancel()
         sessionTask = nil
         connectionState = .disconnected
