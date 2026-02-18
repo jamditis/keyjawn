@@ -1,0 +1,11 @@
+[
+  {
+    "id":       "macbook",
+    "label":    "MacBook (local)",
+    "host":     "127.0.0.1",
+    "port":     22,
+    "username": "jamditis",
+    "auth":     "key",
+    "keyPath":  "/Users/jamditis/.ssh/id_ed25519"
+  }
+]

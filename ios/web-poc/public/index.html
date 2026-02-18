@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>KeyJawn</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="lib/xterm.css">
+  <script src="lib/xterm.js"></script>
+  <script src="lib/xterm-addon-fit.js"></script>
+  <script src="lib/xterm-addon-web-links.js"></script>
+</head>
+<body>
+
+<!-- Connect dialog (shown first) -->
+<div id="connect-screen">
+  <div class="connect-card">
+    <div class="connect-logo">KeyJawn</div>
+    <p class="connect-sub">terminal keyboard for CLI agents</p>
+    <div id="host-list"></div>
+    <div class="connect-status" id="connect-status"></div>
+  </div>
+</div>
+
+<!-- Terminal screen (hidden until connected) -->
+<div id="terminal-screen" hidden>
+  <div id="terminal-container"></div>
+  <div id="extra-row" role="toolbar" aria-label="Terminal keys">
+    <!-- populated by keyboard.js -->
+  </div>
+</div>
+
+<script src="keyboard.js"></script>
+<script>
+(async function () {
+  // ── Fetch preset hosts from relay ──────────────────────────────────────────
+  let hosts = [];
+  try {
+    const res = await fetch('/api/hosts');
+    hosts = await res.json();
+  } catch {
+    document.getElementById('connect-status').textContent = 'Cannot reach relay server.';
+    return;
+  }
+
+  const hostListEl = document.getElementById('host-list');
+  hosts.forEach((h) => {
+    const btn = document.createElement('button');
+    btn.className = 'host-btn';
+    btn.textContent = h.label;
+    btn.addEventListener('click', () => connectTo(h.id, h.label));
+    hostListEl.appendChild(btn);
+  });
+
+  if (hosts.length === 0) {
+    document.getElementById('connect-status').textContent = 'No hosts configured on relay.';
+  }
+
+  // ── Terminal setup ─────────────────────────────────────────────────────────
+  const term = new Terminal({
+    theme: {
+      background:   '#1a1a1a',
+      foreground:   '#ffffff',
+      cursor:       '#ffffff',
+      cursorAccent: '#1a1a1a',
+      black:        '#1a1a1a',
+      brightBlack:  '#666666',
+      red:          '#cc4444',
+      brightRed:    '#ff6666',
+      green:        '#44cc44',
+      brightGreen:  '#66ff66',
+      yellow:       '#ccaa44',
+      brightYellow: '#ffdd66',
+      blue:         '#4477cc',
+      brightBlue:   '#6699ff',
+      magenta:      '#cc44aa',
+      brightMagenta:'#ff66cc',
+      cyan:         '#44aacc',
+      brightCyan:   '#66ccff',
+      white:        '#cccccc',
+      brightWhite:  '#ffffff',
+    },
+    fontFamily: '"SF Mono", "Menlo", "Monaco", "Courier New", monospace',
+    fontSize: 14,
+    lineHeight: 1.2,
+    cursorBlink: true,
+    cursorStyle: 'block',
+    scrollback: 1000,
+    allowProposedApi: true,
+    // Disable xterm's built-in macOS option key behavior
+    macOptionIsMeta: false,
+  });
+
+  const fitAddon = new FitAddon.FitAddon();
+  const linksAddon = new WebLinksAddon.WebLinksAddon();
+  term.loadAddon(fitAddon);
+  term.loadAddon(linksAddon);
+
+  // ── WebSocket connection ────────────────────────────────────────────────────
+  let ws = null;
+  let connected = false;
+
+  function connectTo(hostId, label) {
+    const statusEl = document.getElementById('connect-status');
+    statusEl.textContent = `Connecting to ${label}…`;
+
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}`);
+
+    ws.binaryType = 'arraybuffer';
+
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({ type: 'connect', hostId }));
+    });
+
+    ws.addEventListener('message', (evt) => {
+      if (typeof evt.data === 'string') {
+        const msg = JSON.parse(evt.data);
+
+        if (msg.type === 'connected') {
+          connected = true;
+          showTerminal();
+
+        } else if (msg.type === 'disconnected') {
+          term.writeln('\r\n\x1b[33m[disconnected]\x1b[0m');
+          connected = false;
+
+        } else if (msg.type === 'error') {
+          statusEl.textContent = `Error: ${msg.message}`;
+        }
+      } else {
+        // Binary = raw terminal data
+        term.write(new Uint8Array(evt.data));
+      }
+    });
+
+    ws.addEventListener('close', () => {
+      if (connected) term.writeln('\r\n\x1b[33m[connection closed]\x1b[0m');
+      connected = false;
+    });
+
+    ws.addEventListener('error', () => {
+      statusEl.textContent = 'WebSocket error — check relay.';
+    });
+  }
+
+  // ── Show terminal and mount keyboard ───────────────────────────────────────
+  function showTerminal() {
+    document.getElementById('connect-screen').hidden = true;
+    const termScreen = document.getElementById('terminal-screen');
+    termScreen.hidden = false;
+
+    term.open(document.getElementById('terminal-container'));
+    fitAddon.fit();
+
+    // Wire terminal input -> SSH
+    term.onData((data) => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'data', data }));
+      }
+    });
+
+    // Mount the KeyJawn extra row
+    mountExtraRow(document.getElementById('extra-row'), {
+      sendRaw(bytes) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(new Uint8Array(bytes));
+        }
+      },
+      sendText(text) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'data', data: text }));
+        }
+      },
+      focus() {
+        term.focus();
+      },
+    });
+
+    // ── Resize handling ────────────────────────────────────────────────────
+    // Use visualViewport so the terminal shrinks when the iOS keyboard appears
+    function resizeTerminal() {
+      const vv = window.visualViewport;
+      const extraRowHeight = document.getElementById('extra-row').offsetHeight;
+      const availableHeight = (vv ? vv.height : window.innerHeight) - extraRowHeight;
+      const container = document.getElementById('terminal-container');
+      container.style.height = availableHeight + 'px';
+      fitAddon.fit();
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'resize',
+          cols: term.cols,
+          rows: term.rows,
+        }));
+      }
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', resizeTerminal);
+      window.visualViewport.addEventListener('scroll', resizeTerminal);
+    }
+    window.addEventListener('resize', resizeTerminal);
+    resizeTerminal();
+
+    // Focus terminal so iOS keyboard appears on tap
+    term.focus();
+  }
+})();
+</script>
+</body>
+</html>
