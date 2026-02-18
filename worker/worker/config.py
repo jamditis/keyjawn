@@ -70,6 +70,41 @@ class CurationConfig:
 
 
 @dataclass(frozen=True)
+class SocialScrollerConfig:
+    enabled: bool = True
+    ssh_host: str = ""  # empty = run locally (worker and DISPLAY=:99 are both on officejawn)
+    script_path: str = "~/social-scroller.py"
+    scroll_duration: int = 15
+    search_platforms: tuple[str, ...] = ("reddit", "youtube")
+    feed_platforms: tuple[str, ...] = (
+        "twitter", "reddit", "bluesky", "youtube",
+    )
+    # Subreddits to search (scoped searches, not global Reddit search)
+    reddit_subreddits: tuple[str, ...] = (
+        "commandline", "androidapps", "android", "selfhosted",
+        "termux", "linux", "sysadmin", "ssh",
+    )
+    # Per-platform search keywords (adapted to each platform's search algo)
+    # These supplement the global HIGH_SIGNAL list in monitor.py
+    platform_keywords: dict = field(default_factory=lambda: {
+        "reddit": [
+            "SSH from phone",
+            "terminal keyboard android",
+            "mobile CLI tool",
+            "Claude Code mobile",
+            "coding from phone",
+        ],
+        "youtube": [
+            "SSH from phone",
+            "mobile terminal app review",
+            "android terminal keyboard",
+            "Claude Code tutorial",
+            "coding on phone",
+        ],
+    })
+
+
+@dataclass(frozen=True)
 class Config:
     twitter: TwitterConfig
     bluesky: BlueskyConfig
@@ -77,6 +112,9 @@ class Config:
     redis: RedisConfig
     producthunt: ProductHuntConfig = field(default_factory=ProductHuntConfig)
     curation: CurationConfig = field(default_factory=CurationConfig)
+    social_scroller: SocialScrollerConfig = field(
+        default_factory=SocialScrollerConfig,
+    )
     db_path: str = "keyjawn-worker.db"
     action_window_start_hour: int = 18
     action_window_end_hour: int = 21
@@ -145,6 +183,7 @@ class Config:
                 twitch_client_id=twitch_id,
                 twitch_client_secret=twitch_secret,
             ),
+            social_scroller=SocialScrollerConfig(),
         )
 
     @classmethod
@@ -171,5 +210,6 @@ class Config:
                 developer_token="test-ph-token",
             ),
             curation=CurationConfig(),
+            social_scroller=SocialScrollerConfig(),
             db_path=":memory:",
         )

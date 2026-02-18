@@ -367,6 +367,76 @@ async def curation_status(config):
     await db.close()
 
 
+async def scan_feeds_cmd(config, query=None, platform=None, subreddit=None,
+                         strategy=False):
+    """Run social-scroller to scan feeds or search a platform."""
+    from worker.db import Database
+    from worker.monitor import Monitor
+    from worker.platforms.social_scroller import SocialScrollerClient
+
+    if not config.social_scroller.enabled:
+        log.error("social-scroller is disabled in config")
+        return
+
+    client = SocialScrollerClient(config.social_scroller)
+
+    if strategy:
+        log.info("running platform-specific search strategies...")
+        results = await client.search_with_strategy()
+        log.info("strategy search found %d posts", len(results))
+        for r in results:
+            log.info(
+                "  [%s] @%s: %s",
+                r["platform"],
+                r["author"][:30],
+                r["text"][:80],
+            )
+
+        db = Database(config.db_path)
+        await db.init()
+        monitor = Monitor(config, db)
+        queued = await monitor.queue_new_findings(results)
+        log.info("queued %d findings (above relevance threshold)", queued)
+        await db.close()
+    elif query and platform:
+        log.info("searching %s for: %s%s", platform, query,
+                 f" (r/{subreddit})" if subreddit else "")
+        results = await client.search(query, platform, subreddit=subreddit)
+        log.info("found %d posts", len(results))
+        for r in results:
+            log.info(
+                "  @%s: %s [%s]",
+                r["author"][:30],
+                r["text"][:80],
+                r["url"][:60],
+            )
+
+        db = Database(config.db_path)
+        await db.init()
+        monitor = Monitor(config, db)
+        queued = await monitor.queue_new_findings(results)
+        log.info("queued %d findings (above relevance threshold)", queued)
+        await db.close()
+    else:
+        log.info("scanning open feed tabs...")
+        results = await client.scan_feeds()
+        log.info("extracted %d posts from feeds", len(results))
+        for r in results:
+            log.info(
+                "  [%s] @%s: %s",
+                r["platform"],
+                r["author"][:30],
+                r["text"][:80],
+            )
+
+        db = Database(config.db_path)
+        await db.init()
+        monitor = Monitor(config, db)
+        queued = await monitor.queue_new_findings(results)
+        log.info("queued %d findings (above relevance threshold)", queued)
+        await db.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description="keyjawn-worker management commands")
     sub = parser.add_subparsers(dest="command")
@@ -378,6 +448,17 @@ def main():
     sub.add_parser("curation-scan", help="Run one-shot curation scan and evaluation")
     sub.add_parser("curation-status", help="Show curation pipeline status")
     sub.add_parser("discovery-scan", help="Run on-platform discovery scan")
+
+    p_scan = sub.add_parser("scan-feeds", help="Run social-scroller scan (feeds or search)")
+    p_scan.add_argument("--query", "-q", help="Search query (requires --platform)")
+    p_scan.add_argument(
+        "--platform", "-p",
+        choices=["twitter", "reddit", "bluesky", "youtube", "instagram"],
+        help="Platform to search",
+    )
+    p_scan.add_argument("--subreddit", "-s", help="Reddit subreddit to scope search to")
+    p_scan.add_argument("--strategy", action="store_true",
+                        help="Run full platform-specific search strategies")
 
     args = parser.parse_args()
 
@@ -410,6 +491,14 @@ def main():
             await runner.run_discovery_scan()
             await runner.stop()
         asyncio.run(_scan())
+    elif args.command == "scan-feeds":
+        asyncio.run(scan_feeds_cmd(
+            config,
+            query=getattr(args, "query", None),
+            platform=getattr(args, "platform", None),
+            subreddit=getattr(args, "subreddit", None),
+            strategy=getattr(args, "strategy", False),
+        ))
 
 
 if __name__ == "__main__":

@@ -83,9 +83,16 @@ def build_generation_prompt(req: ContentRequest) -> str:
         lines.append(f"This is a reply. Context: {req.context}")
 
     lines.append(
-        "About KeyJawn: Android keyboard for CLI/LLM agents. "
-        "Permanent Esc/Tab/Ctrl/arrow row, voice input, SCP image upload, "
-        "slash commands. $4 one-time purchase, free lite version. "
+        "About KeyJawn: keyboard app for CLI/LLM agents. "
+        "Android: permanent Esc/Tab/Ctrl/arrow row, voice input, SCP image upload, slash commands, "
+        "$4 one-time purchase, free lite version. "
+        "Recent Android UX additions: backspace acceleration (two-stage, faster the longer you hold), "
+        "spacebar cursor movement (hold spacebar + drag horizontally to reposition cursor), "
+        "adaptive Enter key (label and action change to Go/Send/Search/Next/Done based on context), "
+        "double-tap space inserts period+space, auto-capitalize after sentence-ending punctuation, "
+        "differentiated haptic feedback per key type (Enter/Shift/Ctrl/swipe each feel different). "
+        "iOS: actively in development, currently in private beta testing (not yet publicly available). "
+        "Building a SwiftUI app with a built-in SSH terminal and keyboard extension. App Store launch TBD. "
         f"Link: {tracked_url}"
     )
 

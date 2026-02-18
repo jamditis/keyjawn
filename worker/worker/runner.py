@@ -18,6 +18,7 @@ from worker.executor import ActionPicker, EscalationTier
 from worker.monitor import Monitor
 from worker.platforms.bluesky import BlueskyClient
 from worker.platforms.producthunt import ProductHuntClient
+from worker.platforms.social_scroller import SocialScrollerClient
 from worker.platforms.twitter import TwitterClient
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class WorkerRunner:
         self.twitter: TwitterClient = None
         self.bluesky: BlueskyClient = None
         self.producthunt: ProductHuntClient = None
+        self.social_scroller: SocialScrollerClient = None
         self.monitor: Monitor = None
         self.picker: ActionPicker = None
         self.approvals: ApprovalManager = None
@@ -46,6 +48,10 @@ class WorkerRunner:
         if self.config.producthunt.developer_token:
             self.producthunt = ProductHuntClient(
                 self.config.producthunt.developer_token
+            )
+        if self.config.social_scroller.enabled:
+            self.social_scroller = SocialScrollerClient(
+                self.config.social_scroller,
             )
         self.monitor = Monitor(self.config, self.db)
         self.picker = ActionPicker(self.config, self.db)
@@ -76,7 +82,8 @@ class WorkerRunner:
         """Run one monitor scan cycle."""
         logger.info("starting monitor scan")
         queued = await self.monitor.scan_all_platforms(
-            self.twitter, self.bluesky, self.producthunt
+            self.twitter, self.bluesky, self.producthunt,
+            self.social_scroller,
         )
         logger.info("monitor scan done: %d new findings queued", queued)
 

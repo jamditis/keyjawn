@@ -114,13 +114,19 @@ class Monitor:
         return queued
 
     async def scan_all_platforms(
-        self, twitter_client, bluesky_client, producthunt_client=None
+        self, twitter_client, bluesky_client, producthunt_client=None,
+        social_scroller_client=None,
     ) -> int:
-        """Scan Twitter, Bluesky, and Product Hunt for relevant conversations.
+        """Scan all platforms for relevant conversations.
+
+        Uses API clients (Twitter, Bluesky, Product Hunt) and browser-based
+        scanning via social-scroller for additional platforms.
 
         Returns total count of newly queued findings.
         """
         all_findings = []
+
+        # --- API client searches ---
 
         # Search Twitter for all high-signal keywords
         try:
@@ -163,6 +169,31 @@ class Monitor:
                     })
             except Exception:
                 log.exception("producthunt scan failed")
+
+        # --- Browser-based scanning via social-scroller ---
+
+        if social_scroller_client:
+            # Targeted keyword searches with platform-specific strategies
+            try:
+                strategy_results = await social_scroller_client.search_with_strategy()
+                all_findings.extend(strategy_results)
+                log.info(
+                    "social-scroller strategy search: %d posts",
+                    len(strategy_results),
+                )
+            except Exception:
+                log.exception("social-scroller strategy search failed")
+
+            # Passive feed scan — scroll open tabs and extract posts
+            try:
+                feed_posts = await social_scroller_client.scan_feeds()
+                all_findings.extend(feed_posts)
+                log.info(
+                    "social-scroller feed scan: %d posts extracted",
+                    len(feed_posts),
+                )
+            except Exception:
+                log.exception("social-scroller feed scan failed")
 
         count = await self.queue_new_findings(all_findings)
         log.info("scan complete: %d findings queued from %d candidates", count, len(all_findings))

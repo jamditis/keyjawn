@@ -184,13 +184,17 @@ Astro static site at `website/`. Deployed to GitHub Pages at `keyjawn.amditis.te
 
 ## Worker (social media automation)
 
-Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, and Product Hunt for relevant conversations, curates dev tool content, and posts/engages with Telegram approval.
+Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, Product Hunt, Reddit, and YouTube for relevant conversations, curates dev tool content, and posts/engages with Telegram approval.
 
-**Stack:** Python 3, asyncio, aiosqlite, twikit (Twitter), atproto (Bluesky), APScheduler, Redis pub/sub
+**Full operational reference:** `docs/claude/worker-readme.md`
+
+> **RUNS ON OFFICEJAWN ONLY.** The social-scroller uses Playwright + Chrome on officejawn's virtual desktop (DISPLAY=:99, CDP at 127.0.0.1:9222). It will silently fail if run on houseofjawn. `SocialScrollerConfig.ssh_host` must stay `""` (empty = local execution).
+
+**Stack:** Python 3, asyncio, aiosqlite, twikit (Twitter), atproto (Bluesky), APScheduler, Redis pub/sub, Playwright + social-scroller (browser-based feed monitoring)
 
 **Install:** `cd worker && pip install -e ".[dev]"`
 
-**Test:** `cd worker && python -m pytest tests/ -v` (145 tests)
+**Test:** `cd worker && python -m pytest tests/ -v`
 
 **Run:** `cd worker && python -m worker.main`
 
@@ -202,28 +206,18 @@ Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, and Product 
 - `curation-status` — show curation pipeline stats
 - `discovery-scan` — run on-platform discovery scan
 - `weekly-report` — generate metrics report
+- `scan-feeds` — social-scroller feed scan (requires virtual desktop + CDP)
+- `scan-feeds --strategy` — platform-specific keyword searches
+- `scan-feeds -p reddit -q "SSH from phone" -s commandline` — targeted search
 
-**Architecture:**
-```
-Monitor (keyword search) → Findings queue
-Discovery (engagement scan) → Engagement opportunities
-Curation (RSS/YouTube/News) → Curation candidates → AI eval → Approved shares
-          ↓
-    ActionPicker (daily budget) → EscalationTier
-          ↓
-    AUTO: like/repost/follow (no approval)
-    BUTTONS: replies/shares (Telegram inline buttons)
-          ↓
-    Runner → Twitter/Bluesky clients → post
-```
-
-**Key config:** `worker/worker/config.py` — all settings from env vars
+**Key config:** `worker/worker/config.py` — `SocialScrollerConfig.ssh_host = ""` (do not change)
 **DB:** `worker/keyjawn-worker.db` (aiosqlite, 6 tables)
 **Credentials:** `pass show claude/social/twitter-keyjawn`, `pass show claude/services/bluesky-keyjawn`
 
-**Twitter posting:** Twikit is Cloudflare-blocked as of Feb 2026. Use `claude --chrome` on Legion for authenticated posting until a fix is found.
+**Product description for posts:** `worker/worker/content.py:build_generation_prompt()` — update this when features ship.
+**Content topic pool:** `worker/worker/calendar_gen.py:TOPICS` — update when adding new demo material.
 
-**Branch:** `strategy/social-media` (PR #11) has engagement actions, cross-posting, discovery scheduling, and keyword improvements.
+**Twitter posting:** Twikit is Cloudflare-blocked as of Feb 2026. Use `claude --chrome` on Legion for authenticated posting until a fix is found.
 
 ## Google Play
 

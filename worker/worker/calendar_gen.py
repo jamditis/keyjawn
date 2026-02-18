@@ -15,12 +15,17 @@ TOPICS = {
         "Autocorrect mangling shell commands",
         "Missing Esc/Tab/Ctrl on mobile",
         "The pain of arrow keys on touch keyboards",
+        "Mobile keyboards that actually behave like real keyboards (auto-cap, double-space period, haptic feedback)",
+        "SSH from iPhone: what it actually takes to do it right",
     ],
     "demo": [
         "Voice input composing a Claude Code prompt",
         "Terminal key row in action",
         "SCP image upload mid-conversation",
         "Slash command shortcuts demo",
+        "Spacebar cursor movement — hold and drag to reposition without lifting",
+        "Adaptive Enter key switching between Go/Send/Search/Done by context",
+        "iOS version in development — what we're building (SSH terminal + keyboard extension)",
     ],
     "engagement": [
         "Reply to mobile SSH conversations",
@@ -31,11 +36,13 @@ TOPICS = {
         "Download/purchase milestone update",
         "Share user feedback or support resolution",
         "GitHub activity update",
+        "iOS version in private beta testing — progress update",
     ],
     "behind_scenes": [
         "What Joe is working on next",
         "Open source philosophy and $4 pricing",
         "Dev update on upcoming features",
+        "How the iOS version works around Apple's keyboard restrictions",
     ],
 }
 
