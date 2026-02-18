@@ -44,6 +44,8 @@ import TerminalBlock from '../components/TerminalBlock.astro';
         <!-- Getting started -->
         <section class="manual-section" id="getting-started">
           <h2>Getting started</h2>
+
+          <h3>Android</h3>
           <ol>
             <li>Download the APK from <a href="https://github.com/jamditis/keyjawn/releases">GitHub releases</a>.</li>
             <li>Install via ADB or by opening the APK on your phone:</li>
@@ -58,6 +60,16 @@ import TerminalBlock from '../components/TerminalBlock.astro';
           </ol>
 
           <p>On some devices, you can switch keyboards by long-pressing the spacebar in any text field, or by tapping the keyboard icon in the navigation bar.</p>
+
+          <h3>iOS (beta)</h3>
+          <p>The iOS version is a standalone app — not just a keyboard extension. It includes a built-in SSH terminal so you can connect directly to your servers without another app.</p>
+          <ol>
+            <li>Install via TestFlight (beta) or the App Store when it launches.</li>
+            <li>Open KeyJawn, tap <strong>+</strong> to add an SSH host (hostname, port, username).</li>
+            <li>Tap the host to connect. A terminal opens with the KeyJawn keyboard attached.</li>
+            <li>To use the keyboard in other apps: go to <strong>Settings &gt; General &gt; Keyboard &gt; Keyboards &gt; Add new keyboard</strong>, then select <strong>KeyJawn Keyboard</strong>.</li>
+          </ol>
+          <p>The iOS keyboard extension covers Esc, Tab, Ctrl, arrows, and slash commands. SSH terminal features (voice input, host management) live in the main app.</p>
         </section>
 
         <!-- Basic typing -->

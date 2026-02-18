@@ -4,7 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-KeyJawn is a custom Android keyboard (InputMethodService) for using LLM CLI agents from a phone. It provides terminal keys (Esc, Tab, Ctrl, arrows), voice-to-text, slash command shortcuts, and SCP image upload — all in a dedicated row above a standard QWERTY layout.
+KeyJawn is a custom keyboard for using LLM CLI agents from a phone. It provides terminal keys (Esc, Tab, Ctrl, arrows), voice-to-text, slash command shortcuts, and SCP image upload — all in a dedicated row above a standard QWERTY layout.
+
+- **Android**: `InputMethodService`-based keyboard extension. Two flavors: lite (free, Google Play) and full ($4, Stripe/website).
+- **iOS**: Standalone SwiftUI app with a built-in SSH terminal (SwiftTerm + SwiftNIO SSH via Citadel) and a companion `UIInputViewController` keyboard extension. Currently in TestFlight beta; App Store launch pending.
 
 ## Build commands
 
@@ -89,6 +92,45 @@ All source is in `com.keyjawn` — flat package, no sub-packages.
 - Feature gating uses `BuildConfig.FLAVOR == "full"` at build time. No runtime billing or license checks.
 - Overlay panels (MenuPanel, ClipboardPanel) are added as children of a FrameLayout wrapping the keyboard view. They overlay the keyboard rather than replacing it.
 - Tests use Robolectric for Android framework classes and Mockito-Kotlin for mocking. `isIncludeAndroidResources = true` is set in build.gradle.kts so Robolectric can load assets and layouts.
+
+## iOS app
+
+Source lives in `ios/`. Managed with XcodeGen — edit `ios/project.yml`, then run `xcodegen generate` to regenerate the `.xcodeproj`.
+
+**Build environment:** Xcode 26+, Swift 6.0, iOS 17+ deployment target, Team ID `5624SD289G`.
+
+**Build commands:**
+```bash
+# Regenerate xcodeproj after project.yml changes
+xcodegen generate
+
+# Simulator build
+xcodebuild -project KeyJawn.xcodeproj -scheme KeyJawn \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -configuration Debug build
+
+# Archive + export for TestFlight/App Store
+bash ios/scripts/build.sh
+```
+
+**Architecture:**
+- `KeyJawnKit/` — shared Swift package used by both the main app and the keyboard extension. Contains keyboard models (`KeyboardLayout`, `HostConfig`, `SlashCommand`, `CtrlState`) and UIKit views (`QwertyKeyboardView`, `ExtraRowView`, `SlashCommandPanel`).
+- `KeyJawn/` — main SwiftUI app. Host management (`HostListView`, `HostEditView`, `HostStore`), SSH terminal (`SSHSession` via Citadel/SwiftNIO SSH, `TerminalViewController` via SwiftTerm), settings (`SettingsView`, `SSHKeysView`), and `SSHKeyStore` (Keychain-backed Ed25519 identity key).
+- `KeyJawnKeyboard/` — `UIInputViewController` keyboard extension. Uses `QwertyKeyboardView` + `ExtraRowView` from KeyJawnKit. Communicates via `textDocumentProxy` only (no shared App Groups currently).
+
+**Key decisions:**
+- One Ed25519 identity key for the whole app (not per-host). Public key is shown in Settings → SSH keys for the user to copy to `authorized_keys`. Private key stored in Keychain under `com.keyjawn / ssh-identity-ed25519`.
+- Host key pinning via `NIOSSHPublicKey(openSSHPublicKey:)`. If no host key is stored, connects with `.acceptAnything()` (warns in UI).
+- Keyboard extension cannot use `present()`. Overlays (slash command panel) are added as `UIView` children of the extension root view.
+- Debug build uses automatic signing; Release build uses manual signing with App Store provisioning profiles (`KeyJawn AppStore`, `KeyJawn Keyboard AppStore`).
+
+**App Store Connect:**
+- App ID: `com.keyjawn` / keyboard extension: `com.keyjawn.keyboard`
+- First build (`v1`) in VALID state on TestFlight (internal testing track)
+- 5 screenshots uploaded (`APP_IPHONE_67`, 1290×2796) for en-US localization
+- Provisioning profiles managed via Apple Developer API (`ios/scripts/asc.py`)
+
+**Code style:** Swift 6 strict concurrency. Use `@MainActor` for UI classes. For Citadel types that lack `Sendable` conformance, add `@unchecked @retroactive Sendable` extensions (see `SSHSession.swift`). No emojis in source or UI.
 
 ## Store service
 
