@@ -10,7 +10,7 @@ struct HostEditView: View {
     @State private var hostname = ""
     @State private var port = "22"
     @State private var username = ""
-    @State private var authMethod = HostConfig.AuthMethod.key
+    @State private var authMethod = HostConfig.AuthMethod.password
     @State private var hostPublicKey = ""
 
     private var isValid: Bool {

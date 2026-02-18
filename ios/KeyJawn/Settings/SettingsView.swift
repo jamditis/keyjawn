@@ -8,6 +8,12 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("SSH") {
+                    NavigationLink("SSH keys") {
+                        SSHKeysView()
+                    }
+                }
+
                 Section("Keyboard") {
                     Toggle("Haptic feedback", isOn: $hapticEnabled)
                     Toggle("Autocorrect", isOn: $autocorrectEnabled)

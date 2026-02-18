@@ -4,10 +4,11 @@ import NIOCore
 @preconcurrency import NIOSSH
 import KeyJawnKit
 
-// Citadel 0.12.0 doesn't yet declare Sendable conformances for these types,
-// but the underlying NIO Channel and AsyncThrowingStream are both thread-safe.
+// Citadel doesn't yet declare Sendable conformances for these types,
+// but the underlying NIO Channel, AsyncThrowingStream, and auth delegate are thread-safe.
 extension TTYOutput: @unchecked @retroactive Sendable {}
 extension TTYStdinWriter: @unchecked @retroactive Sendable {}
+extension SSHAuthenticationMethod: @unchecked @retroactive Sendable {}
 
 /// Manages a single interactive SSH session via Citadel/NIO.
 ///
@@ -37,7 +38,22 @@ final class SSHSession: ObservableObject {
 
     // MARK: - Connect
 
+    /// Connects using password authentication.
     func connect(to host: HostConfig, password: String) {
+        let authMethod = SSHAuthenticationMethod.passwordBased(username: host.username, password: password)
+        connect(to: host, authenticationMethod: authMethod)
+    }
+
+    /// Connects using the app's Ed25519 identity key from the Keychain.
+    func connectWithKey(to host: HostConfig) {
+        let authMethod = SSHAuthenticationMethod.ed25519(
+            username: host.username,
+            privateKey: SSHKeyStore.shared.privateKey
+        )
+        connect(to: host, authenticationMethod: authMethod)
+    }
+
+    private func connect(to host: HostConfig, authenticationMethod: SSHAuthenticationMethod) {
         guard connectionState == .disconnected else { return }
         connectionState = .connecting
 
@@ -56,12 +72,12 @@ final class SSHSession: ObservableObject {
         let validator: SSHHostKeyValidator = hostPublicKey(from: host).map { .trustedKeys(Set([$0])) }
             ?? .acceptAnything()
 
-        sessionTask = Task.detached { [host, password, inputStream, resizeStream, onReceive, onStateChange, validator] in
+        sessionTask = Task.detached { [host, authenticationMethod, inputStream, resizeStream, onReceive, onStateChange, validator] in
             do {
                 let client = try await SSHClient.connect(
                     host: host.hostname,
                     port: Int(host.port),
-                    authenticationMethod: .passwordBased(username: host.username, password: password),
+                    authenticationMethod: authenticationMethod,
                     hostKeyValidator: validator,
                     reconnect: .never
                 )

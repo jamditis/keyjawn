@@ -20,9 +20,11 @@
 		7E2C29A442AE9E2630A2F301 /* HostStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC5405F0BD516F74C8E0EED5 /* HostStore.swift */; };
 		9DA97D841DD222F4BC99CFC9 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1BD7D5FD852EEF611DFEF3BA /* KeyJawnKit */; };
 		A9DB22FF0F4C815305CC6106 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = D3233B073CCE7B0FEFB818EA /* KeyJawnKit */; };
+		AA523563B70682B4341E113C /* SSHKeysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CC90B529187AE9DAFC1CDE6 /* SSHKeysView.swift */; };
 		B958AD522581630C2F77C218 /* NIOCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9319CFF9722F6941701039BF /* NIOCore */; };
 		BF99261856285D2DA591AEB2 /* KeyJawnKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 22D494658DBEB0D051FF4A8C /* KeyJawnKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C2F8D707F7F9F58DA50E2A7F /* NIOSSH in Frameworks */ = {isa = PBXBuildFile; productRef = 974D61CF6F7ADA4824D53DC7 /* NIOSSH */; };
+		C5D73FD296E1B9A8CD97626C /* SSHKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DE62DD6DE973B1FB26C0314 /* SSHKeyStore.swift */; };
 		CA738FCA57272508A304C827 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = DBC5B9DCB9FBC1D3E054CE8F /* SwiftTerm */; };
 		D833730B6D5B5B7CD1D39B17 /* TerminalInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F295D7985B88063D1F195088 /* TerminalInputView.swift */; };
 		EB892014C8DC6C2A3258F241 /* PasswordPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6274AD171FD2D143D7DFDAC /* PasswordPromptView.swift */; };
@@ -58,6 +60,8 @@
 		22D494658DBEB0D051FF4A8C /* KeyJawnKeyboard.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = KeyJawnKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		23A4B394C56787E8E05B58A1 /* SSHSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHSession.swift; sourceTree = "<group>"; };
 		2B92C187EB65640055598EB8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2CC90B529187AE9DAFC1CDE6 /* SSHKeysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHKeysView.swift; sourceTree = "<group>"; };
+		2DE62DD6DE973B1FB26C0314 /* SSHKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHKeyStore.swift; sourceTree = "<group>"; };
 		301482A615F90B93947563BC /* HostListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostListView.swift; sourceTree = "<group>"; };
 		62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		665662BFA6DECCD61154BEE8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -112,6 +116,7 @@
 			isa = PBXGroup;
 			children = (
 				BC5405F0BD516F74C8E0EED5 /* HostStore.swift */,
+				2DE62DD6DE973B1FB26C0314 /* SSHKeyStore.swift */,
 			);
 			path = Store;
 			sourceTree = "<group>";
@@ -145,6 +150,7 @@
 			isa = PBXGroup;
 			children = (
 				AEF300C5B755C35A8B51FED3 /* SettingsView.swift */,
+				2CC90B529187AE9DAFC1CDE6 /* SSHKeysView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -317,6 +323,8 @@
 				1F3BC0FB1DEE09CF9586840D /* HostTerminalView.swift in Sources */,
 				1F6BA06DD660C887B3E1F79C /* KeyJawnApp.swift in Sources */,
 				EB892014C8DC6C2A3258F241 /* PasswordPromptView.swift in Sources */,
+				C5D73FD296E1B9A8CD97626C /* SSHKeyStore.swift in Sources */,
+				AA523563B70682B4341E113C /* SSHKeysView.swift in Sources */,
 				32EB71B5DE76A94E371D71A0 /* SSHSession.swift in Sources */,
 				67B39BE35B75861A3813BF5C /* SettingsView.swift in Sources */,
 				D833730B6D5B5B7CD1D39B17 /* TerminalInputView.swift in Sources */,

@@ -46,7 +46,11 @@ struct HostTerminalView: View {
         }
         .onAppear {
             if session.connectionState == .disconnected {
-                showingPasswordPrompt = true
+                if host.authMethod == .key {
+                    session.connectWithKey(to: host)
+                } else {
+                    showingPasswordPrompt = true
+                }
             }
         }
         .sheet(isPresented: $showingPasswordPrompt) {
@@ -80,7 +84,11 @@ struct HostTerminalView: View {
                 .padding(.horizontal, 32)
             Button("Retry") {
                 session.disconnect()
-                showingPasswordPrompt = true
+                if host.authMethod == .key {
+                    session.connectWithKey(to: host)
+                } else {
+                    showingPasswordPrompt = true
+                }
             }
             .buttonStyle(.borderedProminent)
         }
