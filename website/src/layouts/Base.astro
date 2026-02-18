@@ -28,6 +28,13 @@ const ogImageURL = new URL(ogImage, Astro.site);
 ---
 
 <!DOCTYPE html>
+<!--
+  keyjawn — keyjawn.amditis.tech
+  the keyboard for the CLI renaissance. esc, tab, ctrl, voice, and SCP upload
+  for anyone doing serious work from a phone. "jawn" is philly slang for "thing".
+
+  built by: joe amditis  —  jamditis@gmail.com
+-->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -70,5 +77,10 @@ const ogImageURL = new URL(ogImage, Astro.site);
       <slot />
     </main>
     <Footer />
+    <script>
+      console.log('%c KEYJAWN ', 'background: #6cf2a8; color: #0a0a0f; font-weight: bold; font-size: 16px; padding: 4px 8px; border-radius: 4px;')
+      console.log('%c the keyboard for the CLI renaissance', 'color: #b0b0c4; font-style: italic; font-size: 13px;')
+      console.log('%c built by joe amditis  —  jamditis@gmail.com', 'color: #555577; font-size: 11px;')
+    </script>
   </body>
 </html>
