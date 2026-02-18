@@ -16,6 +16,12 @@ packages:
   Citadel:
     url: https://github.com/orlandos-nl/Citadel
     from: "0.11.1"
+  SwiftNIO:
+    url: https://github.com/apple/swift-nio
+    from: "2.0.0"
+  SwiftNIOSSH:
+    url: https://github.com/Joannis/swift-nio-ssh
+    from: "0.3.0"
 
 targets:
 
@@ -31,6 +37,12 @@ targets:
         product: KeyJawnKit
       - package: SwiftTerm
       - package: Citadel
+      - package: SwiftNIO
+        product: NIOCore
+      - package: SwiftNIOSSH
+        product: NIOSSH
+      - target: KeyJawnKeyboard
+        embed: true
     settings:
       base:
         SWIFT_VERSION: "6.0"
@@ -72,19 +84,18 @@ targets:
   KeyJawnKeyboard:
     type: app-extension
     platform: iOS
-    bundleId: com.keyjawn.keyboard
+    bundleId: com.keyjawn.KeyJawn.keyboard
     deploymentTarget: "17.0"
     sources:
       - path: KeyJawnKeyboard
     dependencies:
       - package: KeyJawnKit
         product: KeyJawnKit
-      - target: KeyJawn
-        embed: false
     settings:
       base:
         SWIFT_VERSION: "6.0"
         PRODUCT_NAME: KeyJawnKeyboard
+        PRODUCT_BUNDLE_IDENTIFIER: com.keyjawn.KeyJawn.keyboard
         INFOPLIST_FILE: KeyJawnKeyboard/Info.plist
         CODE_SIGN_ENTITLEMENTS: Configuration/KeyJawnKeyboard.entitlements
         DEVELOPMENT_TEAM: ""
@@ -92,6 +103,8 @@ targets:
     info:
       path: KeyJawnKeyboard/Info.plist
       properties:
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
         NSExtension:
           NSExtensionAttributes:
             IsASCIICapable: false

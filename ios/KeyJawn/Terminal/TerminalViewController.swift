@@ -3,21 +3,41 @@ import SwiftTerm
 import KeyJawnKit
 
 /// Full-screen terminal view controller.
-/// SwiftTerm's TerminalView renders VT100/ANSI output; a transparent
-/// TerminalInputView overlay captures keyboard + extra row input.
-/// Currently runs in local-echo mode — SSH via Citadel is the next step.
+///
+/// When `session` is nil, runs in local-echo mode (useful for testing the
+/// keyboard extension without an SSH connection). When a session is provided,
+/// all input is routed to the SSH channel and all output from the server is
+/// fed into SwiftTerm.
 @MainActor
 final class TerminalViewController: UIViewController {
 
     private var terminalView: TerminalView!
     private let inputSink = TerminalInputView()
+    private let session: SSHSession?
+
+    // MARK: - Init
+
+    init(session: SSHSession? = nil) {
+        self.session = session
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        self.session = nil
+        super.init(coder: coder)
+    }
+
+    // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1)
         setupTerminal()
         setupInputSink()
+        wireSession()
     }
+
+    // MARK: - Setup
 
     private func setupTerminal() {
         terminalView = TerminalView(frame: .zero)
@@ -32,12 +52,12 @@ final class TerminalViewController: UIViewController {
             terminalView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
         ])
 
-        terminalView.feed(text: "KeyJawn — tap to open keyboard\r\n")
+        if session == nil {
+            terminalView.feed(text: "KeyJawn — tap to open keyboard\r\n")
+        }
     }
 
     private func setupInputSink() {
-        // Transparent overlay on top of TerminalView. Receives all taps and
-        // keyboard events; routes raw bytes to SwiftTerm.
         inputSink.translatesAutoresizingMaskIntoConstraints = false
         inputSink.backgroundColor = .clear
         view.addSubview(inputSink)
@@ -51,9 +71,20 @@ final class TerminalViewController: UIViewController {
 
         inputSink.onRawInput = { [weak self] bytes in
             guard let self else { return }
-            // Local echo: feed bytes back to the terminal renderer.
-            // Replace this block with SSH channel write when wiring Citadel.
-            self.terminalView.feed(byteArray: ArraySlice(bytes))
+            if let session = self.session {
+                // SSH mode: send bytes to the remote shell
+                session.send(bytes)
+            } else {
+                // Local echo mode: show input directly in the terminal
+                self.terminalView.feed(byteArray: ArraySlice(bytes))
+            }
+        }
+    }
+
+    private func wireSession() {
+        guard let session else { return }
+        session.onData = { [weak self] bytes in
+            self?.terminalView.feed(byteArray: ArraySlice(bytes))
         }
     }
 }
@@ -61,9 +92,7 @@ final class TerminalViewController: UIViewController {
 // MARK: - TerminalViewDelegate
 
 extension TerminalViewController: @preconcurrency TerminalViewDelegate {
-    func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
-        // TODO: notify SSH channel of new window size
-    }
+    func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {}
     func setTerminalTitle(source: TerminalView, title: String) {}
     func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
     func scrolled(source: TerminalView, position: Double) {}
@@ -73,8 +102,11 @@ extension TerminalViewController: @preconcurrency TerminalViewDelegate {
     func rangeChanged(source: TerminalView, startY: Int, endY: Int) {}
 
     func send(source: TerminalView, data: ArraySlice<UInt8>) {
-        // Called if SwiftTerm somehow captures keyboard input directly.
-        // Route through local echo / SSH the same way.
-        terminalView.feed(byteArray: data)
+        // SwiftTerm captured keyboard input directly — route it the same way
+        if let session {
+            session.send(Array(data))
+        } else {
+            terminalView.feed(byteArray: data)
+        }
     }
 }

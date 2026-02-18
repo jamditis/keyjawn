@@ -65,8 +65,7 @@ struct HostListView: View {
             }
         }
         .navigationDestination(for: HostConfig.self) { host in
-            // TODO: navigate to terminal for this host
-            Text("Terminal for \(host.label)")
+            HostTerminalView(host: host)
         }
     }
 }

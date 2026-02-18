@@ -7,8 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1F3BC0FB1DEE09CF9586840D /* HostTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7588DD4C7951CF1F99C3A433 /* HostTerminalView.swift */; };
 		1F6BA06DD660C887B3E1F79C /* KeyJawnApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD9AC295E87CCA2D770BDB6A /* KeyJawnApp.swift */; };
 		30FBF6554FC7A6F5548299C1 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B581E797ADEF1572390A6096 /* KeyboardViewController.swift */; };
+		32EB71B5DE76A94E371D71A0 /* SSHSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23A4B394C56787E8E05B58A1 /* SSHSession.swift */; };
 		5A4CC73980A76F9DB9E5A5E2 /* TerminalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF6FA031277F874D263EF7AD /* TerminalViewController.swift */; };
 		5DF5361C7BE43FB5D0F34CA5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */; };
 		6350BC0215D4AF763D7B6A6B /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = CB9AD386707E3751FAD823A1 /* Citadel */; };
@@ -16,29 +18,50 @@
 		68B8A22CEFDB19DE99CA2EB5 /* HostListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 301482A615F90B93947563BC /* HostListView.swift */; };
 		9DA97D841DD222F4BC99CFC9 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1BD7D5FD852EEF611DFEF3BA /* KeyJawnKit */; };
 		A9DB22FF0F4C815305CC6106 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = D3233B073CCE7B0FEFB818EA /* KeyJawnKit */; };
+		B958AD522581630C2F77C218 /* NIOCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9319CFF9722F6941701039BF /* NIOCore */; };
+		BF99261856285D2DA591AEB2 /* KeyJawnKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 22D494658DBEB0D051FF4A8C /* KeyJawnKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C2F8D707F7F9F58DA50E2A7F /* NIOSSH in Frameworks */ = {isa = PBXBuildFile; productRef = 974D61CF6F7ADA4824D53DC7 /* NIOSSH */; };
 		CA738FCA57272508A304C827 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = DBC5B9DCB9FBC1D3E054CE8F /* SwiftTerm */; };
 		D833730B6D5B5B7CD1D39B17 /* TerminalInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F295D7985B88063D1F195088 /* TerminalInputView.swift */; };
+		EB892014C8DC6C2A3258F241 /* PasswordPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6274AD171FD2D143D7DFDAC /* PasswordPromptView.swift */; };
 		ED013FF5D11FE489D6798508 /* HostEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5418E5BFCD5CA8FE0DDDAC5 /* HostEditView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		59B8708FB5D4202B9AAC196D /* PBXContainerItemProxy */ = {
+		E4D89C23F9C0FA756FEF3DAF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = CCE8758E3FDE1B4AD2B13B6F /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 8DE24E0AF7D60F6E8E2BA73E;
-			remoteInfo = KeyJawn;
+			remoteGlobalIDString = D49A0F8A52046B2B5DB06FC5;
+			remoteInfo = KeyJawnKeyboard;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		1887A288A1730F24624F2071 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				BF99261856285D2DA591AEB2 /* KeyJawnKeyboard.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		1455FBB90189E98F89DA75E3 /* KeyJawn.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KeyJawn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		22D494658DBEB0D051FF4A8C /* KeyJawnKeyboard.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = KeyJawnKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		23A4B394C56787E8E05B58A1 /* SSHSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHSession.swift; sourceTree = "<group>"; };
 		2B92C187EB65640055598EB8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		301482A615F90B93947563BC /* HostListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostListView.swift; sourceTree = "<group>"; };
 		62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		665662BFA6DECCD61154BEE8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7588DD4C7951CF1F99C3A433 /* HostTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostTerminalView.swift; sourceTree = "<group>"; };
 		99A67662436F2C1180E1376F /* KeyJawnKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = KeyJawnKit; path = KeyJawnKit; sourceTree = SOURCE_ROOT; };
+		A6274AD171FD2D143D7DFDAC /* PasswordPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPromptView.swift; sourceTree = "<group>"; };
 		AD9AC295E87CCA2D770BDB6A /* KeyJawnApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyJawnApp.swift; sourceTree = "<group>"; };
 		AEF300C5B755C35A8B51FED3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B5418E5BFCD5CA8FE0DDDAC5 /* HostEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostEditView.swift; sourceTree = "<group>"; };
@@ -55,6 +78,8 @@
 				A9DB22FF0F4C815305CC6106 /* KeyJawnKit in Frameworks */,
 				CA738FCA57272508A304C827 /* SwiftTerm in Frameworks */,
 				6350BC0215D4AF763D7B6A6B /* Citadel in Frameworks */,
+				B958AD522581630C2F77C218 /* NIOCore in Frameworks */,
+				C2F8D707F7F9F58DA50E2A7F /* NIOSSH in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,6 +97,7 @@
 		156C691CD02ADC5BE9D37C37 /* Terminal */ = {
 			isa = PBXGroup;
 			children = (
+				23A4B394C56787E8E05B58A1 /* SSHSession.swift */,
 				F295D7985B88063D1F195088 /* TerminalInputView.swift */,
 				DF6FA031277F874D263EF7AD /* TerminalViewController.swift */,
 			);
@@ -95,6 +121,8 @@
 			children = (
 				B5418E5BFCD5CA8FE0DDDAC5 /* HostEditView.swift */,
 				301482A615F90B93947563BC /* HostListView.swift */,
+				7588DD4C7951CF1F99C3A433 /* HostTerminalView.swift */,
+				A6274AD171FD2D143D7DFDAC /* PasswordPromptView.swift */,
 			);
 			path = Hosts;
 			sourceTree = "<group>";
@@ -161,16 +189,20 @@
 			buildPhases = (
 				9716FCDCB5893D281E440D0B /* Sources */,
 				665CFC2E5492C3D48C05C775 /* Frameworks */,
+				1887A288A1730F24624F2071 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				73EE9FD7C88FD0DB3551B66B /* PBXTargetDependency */,
 			);
 			name = KeyJawn;
 			packageProductDependencies = (
 				D3233B073CCE7B0FEFB818EA /* KeyJawnKit */,
 				DBC5B9DCB9FBC1D3E054CE8F /* SwiftTerm */,
 				CB9AD386707E3751FAD823A1 /* Citadel */,
+				9319CFF9722F6941701039BF /* NIOCore */,
+				974D61CF6F7ADA4824D53DC7 /* NIOSSH */,
 			);
 			productName = KeyJawn;
 			productReference = 1455FBB90189E98F89DA75E3 /* KeyJawn.app */;
@@ -186,7 +218,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				915019EA8CE9D1BF1CFF46DB /* PBXTargetDependency */,
 			);
 			name = KeyJawnKeyboard;
 			packageProductDependencies = (
@@ -227,6 +258,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				4435EB56219D1AEF4C3147DE /* XCRemoteSwiftPackageReference "Citadel" */,
+				E40D541DF4CADBAB4CD9CCCB /* XCRemoteSwiftPackageReference "swift-nio" */,
+				1E63AA3983889C46E6005E9E /* XCRemoteSwiftPackageReference "swift-nio-ssh" */,
 				05B7D614E2AAC85421DE92CC /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 				110CA06B401C7ED704453078 /* XCLocalSwiftPackageReference "KeyJawnKit" */,
 			);
@@ -256,7 +289,10 @@
 				5DF5361C7BE43FB5D0F34CA5 /* ContentView.swift in Sources */,
 				ED013FF5D11FE489D6798508 /* HostEditView.swift in Sources */,
 				68B8A22CEFDB19DE99CA2EB5 /* HostListView.swift in Sources */,
+				1F3BC0FB1DEE09CF9586840D /* HostTerminalView.swift in Sources */,
 				1F6BA06DD660C887B3E1F79C /* KeyJawnApp.swift in Sources */,
+				EB892014C8DC6C2A3258F241 /* PasswordPromptView.swift in Sources */,
+				32EB71B5DE76A94E371D71A0 /* SSHSession.swift in Sources */,
 				67B39BE35B75861A3813BF5C /* SettingsView.swift in Sources */,
 				D833730B6D5B5B7CD1D39B17 /* TerminalInputView.swift in Sources */,
 				5A4CC73980A76F9DB9E5A5E2 /* TerminalViewController.swift in Sources */,
@@ -266,10 +302,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		915019EA8CE9D1BF1CFF46DB /* PBXTargetDependency */ = {
+		73EE9FD7C88FD0DB3551B66B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 8DE24E0AF7D60F6E8E2BA73E /* KeyJawn */;
-			targetProxy = 59B8708FB5D4202B9AAC196D /* PBXContainerItemProxy */;
+			target = D49A0F8A52046B2B5DB06FC5 /* KeyJawnKeyboard */;
+			targetProxy = E4D89C23F9C0FA756FEF3DAF /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -406,7 +442,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.KeyJawnKeyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.KeyJawn.keyboard;
 				PRODUCT_NAME = KeyJawnKeyboard;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
@@ -427,7 +463,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.KeyJawnKeyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.KeyJawn.keyboard;
 				PRODUCT_NAME = KeyJawnKeyboard;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
@@ -531,6 +567,14 @@
 				minimumVersion = 1.2.5;
 			};
 		};
+		1E63AA3983889C46E6005E9E /* XCRemoteSwiftPackageReference "swift-nio-ssh" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Joannis/swift-nio-ssh";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.3.0;
+			};
+		};
 		4435EB56219D1AEF4C3147DE /* XCRemoteSwiftPackageReference "Citadel" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/orlandos-nl/Citadel";
@@ -539,12 +583,30 @@
 				minimumVersion = 0.11.1;
 			};
 		};
+		E40D541DF4CADBAB4CD9CCCB /* XCRemoteSwiftPackageReference "swift-nio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-nio";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		1BD7D5FD852EEF611DFEF3BA /* KeyJawnKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = KeyJawnKit;
+		};
+		9319CFF9722F6941701039BF /* NIOCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E40D541DF4CADBAB4CD9CCCB /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOCore;
+		};
+		974D61CF6F7ADA4824D53DC7 /* NIOSSH */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1E63AA3983889C46E6005E9E /* XCRemoteSwiftPackageReference "swift-nio-ssh" */;
+			productName = NIOSSH;
 		};
 		CB9AD386707E3751FAD823A1 /* Citadel */ = {
 			isa = XCSwiftPackageProductDependency;

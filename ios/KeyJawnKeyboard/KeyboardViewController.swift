@@ -1,59 +1,77 @@
 import UIKit
 import KeyJawnKit
 
-public class KeyboardViewController: UIInputViewController, ExtraRowDelegate {
+public class KeyboardViewController: UIInputViewController {
 
     private var extraRow: ExtraRowView!
+    private var qwerty: QwertyKeyboardView!
+
+    // Total height: 52 (extra row) + 8 (gap) + 216 (4 key rows) = 276
+    private static let keyboardHeight: CGFloat = 276
 
     public override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1)
+        view.backgroundColor = UIColor(red: 0.145, green: 0.145, blue: 0.145, alpha: 1)
 
+        setupExtraRow()
+        setupQwerty()
+        setupHeightConstraint()
+    }
+
+    // MARK: - Setup
+
+    private func setupExtraRow() {
         extraRow = ExtraRowView()
         extraRow.delegate = self
         extraRow.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(extraRow)
 
-        // Globe button — required by App Store guideline 4.4.1
-        let globe = UIButton(type: .system)
-        globe.setImage(UIImage(systemName: "globe"), for: .normal)
-        globe.tintColor = .white
-        globe.translatesAutoresizingMaskIntoConstraints = false
-        globe.addTarget(self, action: #selector(advanceToNextInputMode), for: .touchUpInside)
-        view.addSubview(globe)
-
-        // Placeholder for the QWERTY grid (next milestone)
-        let placeholder = UILabel()
-        placeholder.text = "QWERTY keyboard coming soon"
-        placeholder.textColor = UIColor.white.withAlphaComponent(0.4)
-        placeholder.font = .systemFont(ofSize: 13)
-        placeholder.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(placeholder)
-
         NSLayoutConstraint.activate([
-            // Extra row sits at the top of the keyboard view
+            extraRow.topAnchor.constraint(equalTo: view.topAnchor),
             extraRow.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             extraRow.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            extraRow.topAnchor.constraint(equalTo: view.topAnchor),
-
-            // Placeholder below the extra row
-            placeholder.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            placeholder.topAnchor.constraint(equalTo: extraRow.bottomAnchor, constant: 20),
-
-            // Globe bottom-left
-            globe.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-            globe.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -8),
+            extraRow.heightAnchor.constraint(equalToConstant: 52),
         ])
     }
 
-    // MARK: - ExtraRowDelegate
+    private func setupQwerty() {
+        qwerty = QwertyKeyboardView()
+        qwerty.delegate = self
+        qwerty.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(qwerty)
+
+        NSLayoutConstraint.activate([
+            qwerty.topAnchor.constraint(equalTo: extraRow.bottomAnchor, constant: 4),
+            qwerty.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            qwerty.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            qwerty.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+    }
+
+    private func setupHeightConstraint() {
+        // Priority 999 avoids conflicting with the system's own height constraint during
+        // the animation when the keyboard appears.
+        let h = view.heightAnchor.constraint(equalToConstant: Self.keyboardHeight)
+        h.priority = UILayoutPriority(999)
+        h.isActive = true
+    }
+}
+
+// MARK: - ExtraRowDelegate
+
+extension KeyboardViewController: ExtraRowDelegate {
 
     public func extraRow(_ view: ExtraRowView, send output: KeyOutput, ctrlActive: Bool) {
-        guard let proxy = textDocumentProxy as? UITextDocumentProxy else { return }
+        let proxy = textDocumentProxy
 
         switch output {
         case .tab:
             proxy.insertText("\t")
+
+        case .escape:
+            // Esc is ignored by most text inputs; insert the escape character
+            // so apps that handle raw input (like terminal emulators) receive it.
+            proxy.insertText("\u{1b}")
 
         case .arrowLeft:
             proxy.adjustTextPosition(byCharacterOffset: -1)
@@ -63,19 +81,36 @@ public class KeyboardViewController: UIInputViewController, ExtraRowDelegate {
 
         case .slash:
             proxy.insertText("/")
-            // TODO: open slash command popup
+            // TODO: show slash command popup
 
         case .character(let s):
             proxy.insertText(s)
 
         default:
-            // Esc, Ctrl+C, arrows up/down — insertText("\u{1b}") is ignored
-            // by most apps. Document this limitation clearly in the UI.
+            // Ctrl+C, arrowUp/Down — not supported via UITextDocumentProxy.
+            // Document this limitation in the extension's help text.
             break
         }
     }
 
     public func extraRowDidTapClipboard(_ view: ExtraRowView) {
-        // TODO: open clipboard history panel
+        // TODO: clipboard history panel
+    }
+}
+
+// MARK: - QwertyKeyboardDelegate
+
+extension KeyboardViewController: QwertyKeyboardDelegate {
+
+    public func keyboard(_ keyboard: QwertyKeyboardView, insertText text: String) {
+        textDocumentProxy.insertText(text)
+    }
+
+    public func keyboardDeleteBackward(_ keyboard: QwertyKeyboardView) {
+        textDocumentProxy.deleteBackward()
+    }
+
+    public func keyboardAdvanceToNextInputMode(_ keyboard: QwertyKeyboardView) {
+        advanceToNextInputMode()
     }
 }
