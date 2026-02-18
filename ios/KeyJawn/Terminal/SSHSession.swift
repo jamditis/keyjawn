@@ -53,13 +53,16 @@ final class SSHSession: ObservableObject {
         inputContinuation = inputCont
         resizeContinuation = resizeCont
 
-        sessionTask = Task.detached { [host, password, inputStream, resizeStream, onReceive, onStateChange] in
+        let validator: SSHHostKeyValidator = hostPublicKey(from: host).map { .trustedKeys(Set([$0])) }
+            ?? .acceptAnything()
+
+        sessionTask = Task.detached { [host, password, inputStream, resizeStream, onReceive, onStateChange, validator] in
             do {
                 let client = try await SSHClient.connect(
                     host: host.hostname,
                     port: Int(host.port),
                     authenticationMethod: .passwordBased(username: host.username, password: password),
-                    hostKeyValidator: .acceptAnything(),
+                    hostKeyValidator: validator,
                     reconnect: .never
                 )
                 onStateChange(.connected)
@@ -139,4 +142,12 @@ final class SSHSession: ObservableObject {
         sessionTask = nil
         connectionState = .disconnected
     }
+}
+
+/// Parses a host's stored public key string into an NIOSSHPublicKey for host key pinning.
+/// Accepts OpenSSH format: "ssh-ed25519 <base64>" (from ssh-keyscan -t ed25519).
+/// Returns nil if no key is configured or the key cannot be parsed.
+private func hostPublicKey(from host: HostConfig) -> NIOSSHPublicKey? {
+    guard let keyString = host.hostPublicKey else { return nil }
+    return try? NIOSSHPublicKey(openSSHPublicKey: keyString)
 }

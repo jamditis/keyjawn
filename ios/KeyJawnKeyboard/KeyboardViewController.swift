@@ -5,6 +5,7 @@ public class KeyboardViewController: UIInputViewController {
 
     private var extraRow: ExtraRowView!
     private var qwerty: QwertyKeyboardView!
+    private var slashPanel: SlashCommandPanel?
 
     // Total height: 52 (extra row) + 8 (gap) + 216 (4 key rows) = 276
     private static let keyboardHeight: CGFloat = 276
@@ -80,8 +81,7 @@ extension KeyboardViewController: ExtraRowDelegate {
             proxy.adjustTextPosition(byCharacterOffset: 1)
 
         case .slash:
-            proxy.insertText("/")
-            // TODO: show slash command popup
+            showSlashPanel()
 
         case .character(let s):
             proxy.insertText(s)
@@ -95,6 +95,30 @@ extension KeyboardViewController: ExtraRowDelegate {
 
     public func extraRowDidTapClipboard(_ view: ExtraRowView) {
         // TODO: clipboard history panel
+    }
+
+    // MARK: - Slash command panel
+
+    private func showSlashPanel() {
+        guard slashPanel == nil else { return }
+
+        let panel = SlashCommandPanel()
+        panel.frame = view.bounds
+        panel.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        panel.onSelect = { [weak self] command in
+            self?.textDocumentProxy.insertText(command.trigger)
+            self?.hideSlashPanel()
+        }
+        panel.onDismiss = { [weak self] in
+            self?.hideSlashPanel()
+        }
+        view.addSubview(panel)
+        slashPanel = panel
+    }
+
+    private func hideSlashPanel() {
+        slashPanel?.removeFromSuperview()
+        slashPanel = nil
     }
 }
 

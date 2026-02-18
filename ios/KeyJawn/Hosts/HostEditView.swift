@@ -11,6 +11,7 @@ struct HostEditView: View {
     @State private var port = "22"
     @State private var username = ""
     @State private var authMethod = HostConfig.AuthMethod.key
+    @State private var hostPublicKey = ""
 
     private var isValid: Bool {
         !label.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -48,6 +49,19 @@ struct HostEditView: View {
                     }
                 }
 
+                Section {
+                    TextField("ssh-ed25519 AAAA...", text: $hostPublicKey, axis: .vertical)
+                        .lineLimit(3...)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .font(.caption.monospaced())
+                } header: {
+                    Text("Host key (optional)")
+                } footer: {
+                    Text("Paste output of: ssh-keyscan -t ed25519 <hostname>\nIf omitted, the server's key is not verified.")
+                        .font(.caption)
+                }
+
                 Section("Auth") {
                     Picker("Method", selection: $authMethod) {
                         Text("SSH key").tag(HostConfig.AuthMethod.key)
@@ -71,12 +85,14 @@ struct HostEditView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
+                        let trimmedKey = hostPublicKey.trimmingCharacters(in: .whitespacesAndNewlines)
                         let host = HostConfig(
                             label: label.trimmingCharacters(in: .whitespaces),
                             hostname: hostname.trimmingCharacters(in: .whitespaces),
                             port: UInt16(port) ?? 22,
                             username: username.trimmingCharacters(in: .whitespaces),
-                            authMethod: authMethod
+                            authMethod: authMethod,
+                            hostPublicKey: trimmedKey.isEmpty ? nil : trimmedKey
                         )
                         onSave(host)
                         dismiss()

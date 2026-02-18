@@ -11,11 +11,9 @@ echo "==> Setting up KeyJawn web PoC on $(hostname)"
 
 # ── 1. Check Node.js ───────────────────────────────────────────────────────────
 if ! command -v node &>/dev/null; then
-  echo "Node.js not found. Installing via nvm..."
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-  export NVM_DIR="$HOME/.nvm"
-  source "$NVM_DIR/nvm.sh"
-  nvm install --lts
+  echo "Node.js not found. Installing via apt..."
+  sudo apt-get update -qq
+  sudo apt-get install -y nodejs npm
 fi
 echo "Node $(node --version), npm $(npm --version)"
 

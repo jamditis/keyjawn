@@ -7,6 +7,10 @@ public struct HostConfig: Sendable, Identifiable, Codable, Hashable {
     public var port: UInt16
     public var username: String
     public var authMethod: AuthMethod
+    /// Server public key in OpenSSH authorized_keys format (e.g. "ssh-ed25519 AAAA...").
+    /// Obtain with: ssh-keyscan -t ed25519 <hostname>
+    /// If nil, host key verification is skipped — vulnerable to MitM attacks.
+    public var hostPublicKey: String?
 
     public enum AuthMethod: String, Sendable, Codable, CaseIterable {
         case password   = "password"
@@ -19,7 +23,8 @@ public struct HostConfig: Sendable, Identifiable, Codable, Hashable {
         hostname: String,
         port: UInt16 = 22,
         username: String,
-        authMethod: AuthMethod = .key
+        authMethod: AuthMethod = .key,
+        hostPublicKey: String? = nil
     ) {
         self.id = id
         self.label = label
@@ -27,6 +32,7 @@ public struct HostConfig: Sendable, Identifiable, Codable, Hashable {
         self.port = port
         self.username = username
         self.authMethod = authMethod
+        self.hostPublicKey = hostPublicKey
     }
 
     public var isValid: Bool {

@@ -11,11 +11,13 @@
 		1F6BA06DD660C887B3E1F79C /* KeyJawnApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD9AC295E87CCA2D770BDB6A /* KeyJawnApp.swift */; };
 		30FBF6554FC7A6F5548299C1 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B581E797ADEF1572390A6096 /* KeyboardViewController.swift */; };
 		32EB71B5DE76A94E371D71A0 /* SSHSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23A4B394C56787E8E05B58A1 /* SSHSession.swift */; };
+		35BA636F86655A1E133B3BB2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 98623C822345E60C48D7464D /* Assets.xcassets */; };
 		5A4CC73980A76F9DB9E5A5E2 /* TerminalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF6FA031277F874D263EF7AD /* TerminalViewController.swift */; };
 		5DF5361C7BE43FB5D0F34CA5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */; };
 		6350BC0215D4AF763D7B6A6B /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = CB9AD386707E3751FAD823A1 /* Citadel */; };
 		67B39BE35B75861A3813BF5C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEF300C5B755C35A8B51FED3 /* SettingsView.swift */; };
 		68B8A22CEFDB19DE99CA2EB5 /* HostListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 301482A615F90B93947563BC /* HostListView.swift */; };
+		7E2C29A442AE9E2630A2F301 /* HostStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC5405F0BD516F74C8E0EED5 /* HostStore.swift */; };
 		9DA97D841DD222F4BC99CFC9 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1BD7D5FD852EEF611DFEF3BA /* KeyJawnKit */; };
 		A9DB22FF0F4C815305CC6106 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = D3233B073CCE7B0FEFB818EA /* KeyJawnKit */; };
 		B958AD522581630C2F77C218 /* NIOCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9319CFF9722F6941701039BF /* NIOCore */; };
@@ -60,12 +62,14 @@
 		62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		665662BFA6DECCD61154BEE8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7588DD4C7951CF1F99C3A433 /* HostTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostTerminalView.swift; sourceTree = "<group>"; };
+		98623C822345E60C48D7464D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		99A67662436F2C1180E1376F /* KeyJawnKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = KeyJawnKit; path = KeyJawnKit; sourceTree = SOURCE_ROOT; };
 		A6274AD171FD2D143D7DFDAC /* PasswordPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPromptView.swift; sourceTree = "<group>"; };
 		AD9AC295E87CCA2D770BDB6A /* KeyJawnApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyJawnApp.swift; sourceTree = "<group>"; };
 		AEF300C5B755C35A8B51FED3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B5418E5BFCD5CA8FE0DDDAC5 /* HostEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostEditView.swift; sourceTree = "<group>"; };
 		B581E797ADEF1572390A6096 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
+		BC5405F0BD516F74C8E0EED5 /* HostStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostStore.swift; sourceTree = "<group>"; };
 		DF6FA031277F874D263EF7AD /* TerminalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalViewController.swift; sourceTree = "<group>"; };
 		F295D7985B88063D1F195088 /* TerminalInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalInputView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -104,13 +108,23 @@
 			path = Terminal;
 			sourceTree = "<group>";
 		};
+		5503FF00C9C11DFDC8F1798D /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				BC5405F0BD516F74C8E0EED5 /* HostStore.swift */,
+			);
+			path = Store;
+			sourceTree = "<group>";
+		};
 		5FAE6907FF19D4FF99CBBFEE /* KeyJawn */ = {
 			isa = PBXGroup;
 			children = (
 				D6EA56F0196ABB9D8094E703 /* App */,
 				7BCD4795F9E1ACD944294130 /* Hosts */,
 				8E4EBFABD25F91780E7231E1 /* Settings */,
+				5503FF00C9C11DFDC8F1798D /* Store */,
 				156C691CD02ADC5BE9D37C37 /* Terminal */,
+				98623C822345E60C48D7464D /* Assets.xcassets */,
 				665662BFA6DECCD61154BEE8 /* Info.plist */,
 			);
 			path = KeyJawn;
@@ -188,6 +202,7 @@
 			buildConfigurationList = E00B304EAF9FA63522412A8B /* Build configuration list for PBXNativeTarget "KeyJawn" */;
 			buildPhases = (
 				9716FCDCB5893D281E440D0B /* Sources */,
+				EB0779E2B1771FDE9FDDBEDC /* Resources */,
 				665CFC2E5492C3D48C05C775 /* Frameworks */,
 				1887A288A1730F24624F2071 /* Embed Foundation Extensions */,
 			);
@@ -237,12 +252,10 @@
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					8DE24E0AF7D60F6E8E2BA73E = {
-						DevelopmentTeam = "";
-						ProvisioningStyle = Automatic;
+						DevelopmentTeam = 5624SD289G;
 					};
 					D49A0F8A52046B2B5DB06FC5 = {
-						DevelopmentTeam = "";
-						ProvisioningStyle = Automatic;
+						DevelopmentTeam = 5624SD289G;
 					};
 				};
 			};
@@ -273,6 +286,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		EB0779E2B1771FDE9FDDBEDC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				35BA636F86655A1E133B3BB2 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		237E92B592B1ABCED91EE6C6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -289,6 +313,7 @@
 				5DF5361C7BE43FB5D0F34CA5 /* ContentView.swift in Sources */,
 				ED013FF5D11FE489D6798508 /* HostEditView.swift in Sources */,
 				68B8A22CEFDB19DE99CA2EB5 /* HostListView.swift in Sources */,
+				7E2C29A442AE9E2630A2F301 /* HostStore.swift in Sources */,
 				1F3BC0FB1DEE09CF9586840D /* HostTerminalView.swift in Sources */,
 				1F6BA06DD660C887B3E1F79C /* KeyJawnApp.swift in Sources */,
 				EB892014C8DC6C2A3258F241 /* PasswordPromptView.swift in Sources */,
@@ -434,7 +459,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Configuration/KeyJawnKeyboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 5624SD289G;
 				INFOPLIST_FILE = KeyJawnKeyboard/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -442,7 +467,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.KeyJawn.keyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.keyboard;
 				PRODUCT_NAME = KeyJawnKeyboard;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
@@ -454,8 +479,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Configuration/KeyJawnKeyboard.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = 5624SD289G;
 				INFOPLIST_FILE = KeyJawnKeyboard/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -463,8 +489,9 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.KeyJawn.keyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.keyboard;
 				PRODUCT_NAME = KeyJawnKeyboard;
+				PROVISIONING_PROFILE_SPECIFIER = "KeyJawn Keyboard AppStore";
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -475,11 +502,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Configuration/KeyJawn.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 5624SD289G;
 				INFOPLIST_FILE = KeyJawn/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -487,7 +515,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.KeyJawn;
+				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn;
 				PRODUCT_NAME = KeyJawn;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
@@ -499,11 +527,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Configuration/KeyJawn.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 5624SD289G;
 				INFOPLIST_FILE = KeyJawn/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -511,8 +540,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.KeyJawn;
+				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn;
 				PRODUCT_NAME = KeyJawn;
+				PROVISIONING_PROFILE_SPECIFIER = "KeyJawn AppStore";
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

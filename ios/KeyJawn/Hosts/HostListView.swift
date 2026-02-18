@@ -2,14 +2,13 @@ import SwiftUI
 import KeyJawnKit
 
 struct HostListView: View {
-    @State private var hosts: [HostConfig] = []
+    @EnvironmentObject private var hostStore: HostStore
     @State private var showingAddHost = false
-    @State private var selectedHost: HostConfig?
 
     var body: some View {
         NavigationStack {
             Group {
-                if hosts.isEmpty {
+                if hostStore.hosts.isEmpty {
                     emptyState
                 } else {
                     list
@@ -28,7 +27,7 @@ struct HostListView: View {
             }
             .sheet(isPresented: $showingAddHost) {
                 HostEditView { newHost in
-                    hosts.append(newHost)
+                    hostStore.add(newHost)
                 }
             }
         }
@@ -55,13 +54,13 @@ struct HostListView: View {
 
     private var list: some View {
         List {
-            ForEach(hosts) { host in
+            ForEach(hostStore.hosts) { host in
                 NavigationLink(value: host) {
                     HostRow(host: host)
                 }
             }
             .onDelete { indices in
-                hosts.remove(atOffsets: indices)
+                hostStore.delete(at: indices)
             }
         }
         .navigationDestination(for: HostConfig.self) { host in
