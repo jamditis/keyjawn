@@ -18,6 +18,7 @@ local.properties
 keyjawn-site-*.png
 *.jks
 *.keystore
+*.p8
 play-service-account.json
 
 # Store service
@@ -26,3 +27,9 @@ __pycache__/
 store/keyjawn-store.db
 store/venv/
 store/gunicorn.ctl
+
+# iOS / Xcode
+xcuserdata/
+ios/KeyJawnKit/.build/
+ios/web-poc/node_modules/
+ios/web-poc/hosts.json
