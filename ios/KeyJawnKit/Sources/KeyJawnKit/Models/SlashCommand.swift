@@ -37,15 +37,15 @@ public extension SlashCommand {
         SlashCommand(id: "cost",      trigger: "/cost",      description: "Show session cost",         category: .session),
     ]
 
-    /// Pre-loaded Aider commands.
-    static let aider: [SlashCommand] = [
-        SlashCommand(id: "aider-add",  trigger: "/add",   description: "Add file to context", category: .context),
-        SlashCommand(id: "aider-drop", trigger: "/drop",  description: "Remove file",         category: .context),
-        SlashCommand(id: "aider-run",  trigger: "/run",   description: "Run a shell command", category: .shell),
-        SlashCommand(id: "aider-ask",  trigger: "/ask",   description: "Ask a question",      category: .context),
-        SlashCommand(id: "aider-code", trigger: "/code",  description: "Request code change", category: .context),
-        SlashCommand(id: "aider-git",  trigger: "/git",   description: "Run git command",     category: .shell),
+    /// Pre-loaded Gemini CLI commands.
+    static let gemini: [SlashCommand] = [
+        SlashCommand(id: "gemini-help",  trigger: "/help",   description: "Show help",             category: .session),
+        SlashCommand(id: "gemini-clear", trigger: "/clear",  description: "Clear conversation",    category: .session),
+        SlashCommand(id: "gemini-chat",  trigger: "/chat",   description: "Switch to chat mode",   category: .session),
+        SlashCommand(id: "gemini-code",  trigger: "/code",   description: "Switch to code mode",   category: .session),
+        SlashCommand(id: "gemini-quit",  trigger: "/quit",   description: "Quit",                  category: .session),
+        SlashCommand(id: "gemini-tools", trigger: "/tools",  description: "List available tools",  category: .session),
     ]
 
-    static let all: [SlashCommand] = claudeCode + aider
+    static let all: [SlashCommand] = claudeCode + gemini
 }
