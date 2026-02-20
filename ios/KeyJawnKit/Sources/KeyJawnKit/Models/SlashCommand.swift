@@ -41,10 +41,10 @@ public extension SlashCommand {
     static let aider: [SlashCommand] = [
         SlashCommand(id: "aider-add",  trigger: "/add",   description: "Add file to context", category: .context),
         SlashCommand(id: "aider-drop", trigger: "/drop",  description: "Remove file",         category: .context),
-        SlashCommand(id: "aider-run",  trigger: "/run",   description: "Run a shell command", category: .context),
+        SlashCommand(id: "aider-run",  trigger: "/run",   description: "Run a shell command", category: .shell),
         SlashCommand(id: "aider-ask",  trigger: "/ask",   description: "Ask a question",      category: .context),
         SlashCommand(id: "aider-code", trigger: "/code",  description: "Request code change", category: .context),
-        SlashCommand(id: "aider-git",  trigger: "/git",   description: "Run git command",     category: .context),
+        SlashCommand(id: "aider-git",  trigger: "/git",   description: "Run git command",     category: .shell),
     ]
 
     static let all: [SlashCommand] = claudeCode + aider
