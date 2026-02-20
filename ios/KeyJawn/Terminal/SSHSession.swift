@@ -69,8 +69,13 @@ final class SSHSession: ObservableObject {
         inputContinuation = inputCont
         resizeContinuation = resizeCont
 
-        let validator: SSHHostKeyValidator = hostPublicKey(from: host).map { .trustedKeys(Set([$0])) }
-            ?? .acceptAnything()
+        let validator: SSHHostKeyValidator
+        do {
+            validator = try hostPublicKey(from: host).map { .trustedKeys(Set([$0])) } ?? .acceptAnything()
+        } catch {
+            connectionState = .failed("Saved host key is invalid. Edit the host and re-enter the key from ssh-keyscan.")
+            return
+        }
 
         sessionTask = Task.detached { [host, authenticationMethod, inputStream, resizeStream, onReceive, onStateChange, validator] in
             do {
@@ -162,8 +167,14 @@ final class SSHSession: ObservableObject {
 
 /// Parses a host's stored public key string into an NIOSSHPublicKey for host key pinning.
 /// Accepts OpenSSH format: "ssh-ed25519 <base64>" (from ssh-keyscan -t ed25519).
-/// Returns nil if no key is configured or the key cannot be parsed.
-private func hostPublicKey(from host: HostConfig) -> NIOSSHPublicKey? {
-    guard let keyString = host.hostPublicKey else { return nil }
-    return try? NIOSSHPublicKey(openSSHPublicKey: keyString)
+/// Returns nil if no key is configured. Throws if a key is configured but cannot be parsed,
+/// so the caller can fail explicitly rather than silently falling back to no verification.
+private func hostPublicKey(from host: HostConfig) throws -> NIOSSHPublicKey? {
+    guard let keyString = host.hostPublicKey, !keyString.isEmpty else { return nil }
+    guard let key = try? NIOSSHPublicKey(openSSHPublicKey: keyString) else {
+        throw HostKeyParseError()
+    }
+    return key
 }
+
+private struct HostKeyParseError: Error {}

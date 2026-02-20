@@ -1,5 +1,6 @@
 import SwiftUI
 import KeyJawnKit
+@preconcurrency import NIOSSH
 
 struct HostEditView: View {
     let onSave: (HostConfig) -> Void
@@ -13,11 +14,18 @@ struct HostEditView: View {
     @State private var authMethod = HostConfig.AuthMethod.password
     @State private var hostPublicKey = ""
 
+    private var isHostKeyValid: Bool {
+        let trimmed = hostPublicKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return true }
+        return (try? NIOSSHPublicKey(openSSHPublicKey: trimmed)) != nil
+    }
+
     private var isValid: Bool {
         !label.trimmingCharacters(in: .whitespaces).isEmpty &&
         !hostname.trimmingCharacters(in: .whitespaces).isEmpty &&
         !username.trimmingCharacters(in: .whitespaces).isEmpty &&
-        Int(port) != nil
+        Int(port) != nil &&
+        isHostKeyValid
     }
 
     var body: some View {
@@ -58,8 +66,15 @@ struct HostEditView: View {
                 } header: {
                     Text("Host key (optional)")
                 } footer: {
-                    Text("Paste output of: ssh-keyscan -t ed25519 <hostname>\nIf omitted, the server's key is not verified.")
-                        .font(.caption)
+                    let trimmed = hostPublicKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty && !isHostKeyValid {
+                        Text("Invalid key format. Paste the full line from: ssh-keyscan -t ed25519 <hostname>")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    } else {
+                        Text("Paste output of: ssh-keyscan -t ed25519 <hostname>\nIf omitted, the server's key is not verified.")
+                            .font(.caption)
+                    }
                 }
 
                 Section("Auth") {

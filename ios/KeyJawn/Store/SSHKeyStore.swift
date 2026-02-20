@@ -56,7 +56,7 @@ final class SSHKeyStore: @unchecked Sendable {
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecValueData as String: key.rawRepresentation,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
         ]
         SecItemDelete(attrs as CFDictionary)
         SecItemAdd(attrs as CFDictionary, nil)
