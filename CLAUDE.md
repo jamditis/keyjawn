@@ -135,8 +135,56 @@ bash ios/scripts/build.sh
   - Aider command set replaced with Gemini CLI commands (commits `56c11fd`, `b361c92`, `c495696`)
   - `ios-claude-code.png` renamed to `ios-slash-commands.png` (commit `325f1c5`) — **PNG content still needs replacement** with an unbranded keyboard screenshot from Mac/Simulator
   - App Store description audited — no third-party tool names found, no changes needed
-  - **Pending (needs Mac):** bump `CURRENT_PROJECT_VERSION` in `ios/project.yml`, run `bash ios/scripts/build.sh`, upload new TestFlight build
-  - **Pending (waiting):** if appeal fails after ~7 days, cancel submission and resubmit new build with Notes for Review explaining the slash command panel
+
+### Mac checklist (do this when you sit down at the MacBook)
+
+**Step 1: Pull latest**
+```bash
+cd /path/to/keyjawn
+git pull origin main
+```
+
+**Step 2: Take a new screenshot**
+1. Open Xcode, run the KeyJawn app on the iPhone 17 Pro simulator
+2. Open any text field (e.g. Notes), switch to KeyJawn Keyboard, tap the `/` key on the symbols layer to open the slash command panel
+3. Screenshot: panel open over the keyboard showing shortcuts (`/compact`, `/clear`, etc.) — **no Claude Code or other third-party tool branding visible in the terminal area**
+4. Save it as the replacement file:
+```bash
+cp ~/Desktop/screenshot.png website/public/screenshots/ios-screenshots/ios-slash-commands.png
+```
+5. Commit:
+```bash
+git add website/public/screenshots/ios-screenshots/ios-slash-commands.png
+git commit -m "replace slash commands screenshot with unbranded keyboard UI"
+```
+
+**Step 3: Bump the build number**
+
+Open `ios/project.yml`. Find `CURRENT_PROJECT_VERSION` and increment it by 1 (e.g. `7` → `8`). Then commit:
+```bash
+git add ios/project.yml
+git commit -m "bump iOS build number for 3.2.2 resubmission"
+```
+
+**Step 4: Build and upload to TestFlight**
+```bash
+cd ios
+bash scripts/build.sh
+```
+Expected: archives, exports IPA, uploads to TestFlight. Build appears in App Store Connect → TestFlight within ~15 min with status "Processing".
+
+**Step 5: Push**
+```bash
+git push origin main
+```
+
+**Step 6: Decide on resubmission**
+
+Check App Store Connect → App Review for Apple's response to the appeal (submission `83b2805c`):
+- **Appeal approved** → submit the new build as an update when ready
+- **Appeal denied or no response after 7 days** → cancel the current submission, then submit the new build with this note in App Review Information → Notes:
+
+> The slash command panel is a text shortcut picker. Tapping any item inserts a plain text string (e.g. "/compact") into the active text field. No third-party apps are embedded, linked, or sold. Category labels in the code have been renamed from tool names to functional terms (Session, Context, Files) to remove any ambiguity.
 
 **Code style:** Swift 6 strict concurrency. Use `@MainActor` for UI classes. For Citadel types that lack `Sendable` conformance, add `@unchecked @retroactive Sendable` extensions (see `SSHSession.swift`). No emojis in source or UI.
 
