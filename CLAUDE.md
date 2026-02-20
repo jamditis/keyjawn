@@ -129,6 +129,14 @@ bash ios/scripts/build.sh
 - First build (`v1`) in VALID state on TestFlight (internal testing track)
 - 5 screenshots uploaded (`APP_IPHONE_67`, 1290×2796) for en-US localization
 - Provisioning profiles managed via Apple Developer API (`ios/scripts/asc.py`)
+- **Submission `83b2805c` (v1.0) rejected 2026-02-20** for Guideline 3.2.2 — reviewer interpreted the slash command panel as a third-party app collection due to tool-branded category names (`claudeCode`, `aider`, `codex`) in the data model and a branded screenshot.
+  - Reply sent to Apple explaining `textDocumentProxy.insertText()` behavior (text autocomplete, not a storefront)
+  - `SlashCommand.Category` enum renamed: `claudeCode`→`session`, `aider`→`context`, `codex`→`files`
+  - Aider command set replaced with Gemini CLI commands (commits `56c11fd`, `b361c92`, `c495696`)
+  - `ios-claude-code.png` renamed to `ios-slash-commands.png` (commit `325f1c5`) — **PNG content still needs replacement** with an unbranded keyboard screenshot from Mac/Simulator
+  - App Store description audited — no third-party tool names found, no changes needed
+  - **Pending (needs Mac):** bump `CURRENT_PROJECT_VERSION` in `ios/project.yml`, run `bash ios/scripts/build.sh`, upload new TestFlight build
+  - **Pending (waiting):** if appeal fails after ~7 days, cancel submission and resubmit new build with Notes for Review explaining the slash command panel
 
 **Code style:** Swift 6 strict concurrency. Use `@MainActor` for UI classes. For Citadel types that lack `Sendable` conformance, add `@unchecked @retroactive Sendable` extensions (see `SSHSession.swift`). No emojis in source or UI.
 
