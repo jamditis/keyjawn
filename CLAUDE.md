@@ -240,13 +240,13 @@ Astro static site at `website/`. Deployed to GitHub Pages at `keyjawn.amditis.te
 
 ## Worker (social media automation)
 
-Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, Product Hunt, Reddit, and YouTube for relevant conversations, curates dev tool content, and posts/engages with Telegram approval.
+Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, and Product Hunt for relevant conversations, curates dev tool content, and posts/engages with Telegram approval.
 
 **Full operational reference:** `docs/claude/worker-readme.md`
 
-> **RUNS ON OFFICEJAWN ONLY.** The social-scroller uses Playwright + Chrome on officejawn's virtual desktop (DISPLAY=:99, CDP at 127.0.0.1:9222). It will silently fail if run on houseofjawn. `SocialScrollerConfig.ssh_host` must stay `""` (empty = local execution).
+> **RUNS ON HOUSEOFJAWN.** Moved from officejawn (Feb 2026) — MSU campus WiFi blocked social platform traffic. Service: `sudo systemctl start/stop keyjawn-worker` on houseofjawn directly.
 
-**Stack:** Python 3, asyncio, aiosqlite, twikit (Twitter), atproto (Bluesky), APScheduler, Redis pub/sub, Playwright + social-scroller (browser-based feed monitoring)
+**Stack:** Python 3, asyncio, aiosqlite, twikit (Twitter), atproto (Bluesky), APScheduler, Redis pub/sub
 
 **Install:** `cd worker && pip install -e ".[dev]"`
 
@@ -262,11 +262,8 @@ Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, Product Hunt
 - `curation-status` — show curation pipeline stats
 - `discovery-scan` — run on-platform discovery scan
 - `weekly-report` — generate metrics report
-- `scan-feeds` — social-scroller feed scan (requires virtual desktop + CDP)
-- `scan-feeds --strategy` — platform-specific keyword searches
-- `scan-feeds -p reddit -q "SSH from phone" -s commandline` — targeted search
 
-**Key config:** `worker/worker/config.py` — `SocialScrollerConfig.ssh_host = ""` (do not change)
+**Key config:** `worker/worker/config.py`
 **DB:** `worker/keyjawn-worker.db` (aiosqlite, 6 tables)
 **Credentials:** `pass show claude/social/twitter-keyjawn`, `pass show claude/services/bluesky-keyjawn`
 
@@ -274,6 +271,8 @@ Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, Product Hunt
 **Content topic pool:** `worker/worker/calendar_gen.py:TOPICS` — update when adding new demo material.
 
 **Twitter posting:** Twikit is Cloudflare-blocked as of Feb 2026. Use `claude --chrome` on Legion for authenticated posting until a fix is found.
+
+**Social feed engagement (separate from worker):** Handled by the jawn-browser extension on houseofjawn (display :99, profile at `~/.config/jawn-browser-profile/`). Daily shortcuts run via the Claude Code browser extension — `/like-post` at 9am (Twitter) and 6pm (Bluesky). The worker's `SocialScrollerConfig` is intentionally scoped to Twitter/Bluesky only with `search_platforms = ()` — the Playwright-based scroller is not used.
 
 ## Google Play
 

@@ -93,25 +93,22 @@ class SocialScrollerClient:
 
     async def search(
         self, query: str, platform: str, duration: int | None = None,
-        subreddit: str | None = None,
     ) -> list[dict]:
         """Search a platform for a query via browser.
 
         Args:
             query: Search terms.
-            platform: Platform name (reddit, youtube, etc).
+            platform: Platform name (twitter, bluesky, etc).
             duration: Seconds to scroll results.
-            subreddit: For Reddit, scope search to this subreddit.
 
         Returns findings in {url, text, author, platform} format.
         """
         dur = duration or self.config.scroll_duration
         # Global flags (--json, --no-screenshots, -d) must come BEFORE subcommand
-        sub_arg = f" -s {subreddit}" if subreddit else ""
         cmd = (
             f"DISPLAY=:99 python3 {self.config.script_path} "
             f"--json --no-screenshots --no-all-captures -d {dur} "
-            f"search -p {platform} -q {_shell_quote(query)}{sub_arg}"
+            f"search -p {platform} -q {_shell_quote(query)}"
         )
         # Search takes longer: scroll time + page load + extraction
         raw = await self._run_cmd(cmd, timeout=dur + 60)
@@ -120,8 +117,8 @@ class SocialScrollerClient:
     async def search_with_strategy(self) -> list[dict]:
         """Run platform-specific search strategies.
 
-        Uses configured subreddits and per-platform keywords to run
-        targeted searches instead of naive global queries.
+        Searches configured platforms with their keywords.
+        Returns an empty list if no search_platforms are configured.
         """
         all_findings = []
 
@@ -130,40 +127,18 @@ class SocialScrollerClient:
             if not keywords:
                 continue
 
-            if platform == "reddit":
-                # Subreddit-scoped searches: cycle keywords across subreddits
-                # to avoid searching every subreddit for every keyword
-                subreddits = list(self.config.reddit_subreddits)
-                for i, keyword in enumerate(keywords):
-                    # Distribute keywords across subreddits (round-robin)
-                    sub = subreddits[i % len(subreddits)]
-                    try:
-                        results = await self.search(
-                            keyword, "reddit", subreddit=sub,
-                        )
-                        all_findings.extend(results)
-                        log.info(
-                            "reddit r/%s search '%s': %d posts",
-                            sub, keyword, len(results),
-                        )
-                    except Exception:
-                        log.exception(
-                            "reddit r/%s search failed for '%s'", sub, keyword,
-                        )
-            else:
-                # Other platforms: search with each keyword
-                for keyword in keywords[:3]:  # cap at 3 to limit time
-                    try:
-                        results = await self.search(keyword, platform)
-                        all_findings.extend(results)
-                        log.info(
-                            "%s search '%s': %d posts",
-                            platform, keyword, len(results),
-                        )
-                    except Exception:
-                        log.exception(
-                            "%s search failed for '%s'", platform, keyword,
-                        )
+            for keyword in keywords[:3]:  # cap at 3 to limit time
+                try:
+                    results = await self.search(keyword, platform)
+                    all_findings.extend(results)
+                    log.info(
+                        "%s search '%s': %d posts",
+                        platform, keyword, len(results),
+                    )
+                except Exception:
+                    log.exception(
+                        "%s search failed for '%s'", platform, keyword,
+                    )
 
         return all_findings
 
