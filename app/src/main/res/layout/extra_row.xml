@@ -6,13 +6,13 @@
     android:orientation="horizontal"
     android:background="@color/extra_row_bg"
     android:gravity="center_vertical"
-    android:paddingStart="2dp"
-    android:paddingEnd="2dp">
+    android:paddingStart="1dp"
+    android:paddingEnd="1dp">
 
     <Button
         android:id="@+id/key_esc"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
@@ -29,7 +29,7 @@
     <Button
         android:id="@+id/key_tab"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
@@ -45,7 +45,7 @@
     <ImageButton
         android:id="@+id/key_clipboard"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
@@ -60,7 +60,7 @@
     <Button
         android:id="@+id/key_ctrl"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
@@ -76,7 +76,7 @@
     <Button
         android:id="@+id/key_left"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
@@ -92,7 +92,7 @@
     <Button
         android:id="@+id/key_down"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
@@ -108,7 +108,7 @@
     <Button
         android:id="@+id/key_up"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
@@ -124,7 +124,7 @@
     <Button
         android:id="@+id/key_right"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
@@ -140,7 +140,7 @@
     <ImageButton
         android:id="@+id/key_upload"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"
@@ -155,7 +155,7 @@
     <ImageButton
         android:id="@+id/key_mic"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="1dp"
         android:layout_marginEnd="1dp"

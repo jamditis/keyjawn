@@ -65,6 +65,9 @@ class QwertyKeyboard(
     // Touch drag-off long-press handler
     private val longPressHandler = Handler(Looper.getMainLooper())
 
+    // Delayed key preview hide — cancelled when next key is pressed
+    private var previewHideRunnable: Runnable? = null
+
     fun updatePackage(packageName: String) {
         currentPackage = packageName
         render()
@@ -110,15 +113,15 @@ class QwertyKeyboard(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                val hPad = dpToPx(2)
-                val vPad = dpToPx(2)
+                val hPad = dpToPx(1)
+                val vPad = dpToPx(1)
                 setPadding(hPad, vPad, hPad, vPad)
             }
 
             for (key in row) {
                 val keyView = createKeyView(key)
                 val params = LinearLayout.LayoutParams(0, dpToPx(48), key.weight)
-                val margin = dpToPx(2)
+                val margin = dpToPx(1)
                 params.setMargins(margin, margin, margin, margin)
                 keyView.layoutParams = params
                 rowLayout.addView(keyView)
@@ -303,6 +306,8 @@ class QwertyKeyboard(
                     MotionEvent.ACTION_DOWN -> {
                         touchStarted = true
                         v.isPressed = true
+                        previewHideRunnable?.let { longPressHandler.removeCallbacks(it) }
+                        previewHideRunnable = null
                         keyPreview?.show(v, previewLabel)
 
                         // Schedule long-press for alt keys
@@ -323,7 +328,8 @@ class QwertyKeyboard(
                         true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        val inBounds = event.x >= 0 && event.x <= v.width &&
+                        val slop = dpToPx(4)
+                        val inBounds = event.x >= -slop && event.x <= v.width + slop &&
                             event.y >= -v.height && event.y <= v.height * 2
                         if (!inBounds && touchStarted) {
                             touchStarted = false
@@ -335,7 +341,9 @@ class QwertyKeyboard(
                         true
                     }
                     MotionEvent.ACTION_UP -> {
-                        keyPreview?.hide()
+                        val hideRunnable = Runnable { keyPreview?.hide() }
+                        previewHideRunnable = hideRunnable
+                        longPressHandler.postDelayed(hideRunnable, 300L)
                         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         longPressRunnable = null
                         if (touchStarted && v.isPressed) {
@@ -346,7 +354,9 @@ class QwertyKeyboard(
                         true
                     }
                     MotionEvent.ACTION_CANCEL -> {
-                        keyPreview?.hide()
+                        val hideRunnable = Runnable { keyPreview?.hide() }
+                        previewHideRunnable = hideRunnable
+                        longPressHandler.postDelayed(hideRunnable, 300L)
                         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         longPressRunnable = null
                         touchStarted = false
