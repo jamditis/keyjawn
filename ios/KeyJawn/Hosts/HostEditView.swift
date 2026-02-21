@@ -11,8 +11,9 @@ struct HostEditView: View {
     @State private var hostname = ""
     @State private var port = "22"
     @State private var username = ""
-    @State private var authMethod = HostConfig.AuthMethod.password
+    @State private var authMethod = HostConfig.AuthMethod.key
     @State private var hostPublicKey = ""
+    @State private var uploadPath = "/tmp"
 
     private var isHostKeyValid: Bool {
         let trimmed = hostPublicKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -91,6 +92,20 @@ struct HostEditView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                Section {
+                    LabeledContent("Upload path") {
+                        TextField("/tmp", text: $uploadPath)
+                            .multilineTextAlignment(.trailing)
+                            .autocorrectionDisabled()
+                            .autocapitalization(.none)
+                    }
+                } header: {
+                    Text("SCP upload")
+                } footer: {
+                    Text("Remote directory where the keyboard extension uploads images via SFTP.")
+                        .font(.caption)
+                }
             }
             .navigationTitle("Add host")
             .navigationBarTitleDisplayMode(.inline)
@@ -101,13 +116,15 @@ struct HostEditView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         let trimmedKey = hostPublicKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let trimmedPath = uploadPath.trimmingCharacters(in: .whitespaces)
                         let host = HostConfig(
                             label: label.trimmingCharacters(in: .whitespaces),
                             hostname: hostname.trimmingCharacters(in: .whitespaces),
                             port: UInt16(port) ?? 22,
                             username: username.trimmingCharacters(in: .whitespaces),
                             authMethod: authMethod,
-                            hostPublicKey: trimmedKey.isEmpty ? nil : trimmedKey
+                            hostPublicKey: trimmedKey.isEmpty ? nil : trimmedKey,
+                            uploadPath: trimmedPath.isEmpty ? "/tmp" : trimmedPath
                         )
                         onSave(host)
                         dismiss()

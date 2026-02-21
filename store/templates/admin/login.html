@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - keyjawn-store</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x2328;</text></svg>">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <main class="container" style="max-width:360px; padding-top:80px;">
+        <h1 style="margin-bottom:24px;">Admin login</h1>
+        {% if error %}
+        <p style="color:#e55; margin-bottom:16px;">{{ error }}</p>
+        {% endif %}
+        <form method="post" action="/admin/login">
+            <label for="token" style="display:block; margin-bottom:8px; font-weight:600;">Token</label>
+            <input
+                id="token"
+                name="token"
+                type="password"
+                autocomplete="current-password"
+                style="width:100%; padding:10px 12px; font-size:15px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; margin-bottom:16px;"
+                autofocus
+            >
+            <button type="submit" style="width:100%; padding:10px; font-size:15px; background:#1B1B1F; color:#fff; border:none; border-radius:6px; cursor:pointer;">
+                Sign in
+            </button>
+        </form>
+    </main>
+</body>
+</html>

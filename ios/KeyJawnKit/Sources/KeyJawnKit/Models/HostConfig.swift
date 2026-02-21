@@ -11,6 +11,8 @@ public struct HostConfig: Sendable, Identifiable, Codable, Hashable {
     /// Obtain with: ssh-keyscan -t ed25519 <hostname>
     /// If nil, host key verification is skipped — vulnerable to MitM attacks.
     public var hostPublicKey: String?
+    /// Remote directory path for SCP uploads. Defaults to /tmp.
+    public var uploadPath: String
 
     public enum AuthMethod: String, Sendable, Codable, CaseIterable {
         case password   = "password"
@@ -24,7 +26,8 @@ public struct HostConfig: Sendable, Identifiable, Codable, Hashable {
         port: UInt16 = 22,
         username: String,
         authMethod: AuthMethod = .key,
-        hostPublicKey: String? = nil
+        hostPublicKey: String? = nil,
+        uploadPath: String = "/tmp"
     ) {
         self.id = id
         self.label = label
@@ -33,6 +36,7 @@ public struct HostConfig: Sendable, Identifiable, Codable, Hashable {
         self.username = username
         self.authMethod = authMethod
         self.hostPublicKey = hostPublicKey
+        self.uploadPath = uploadPath
     }
 
     public var isValid: Bool {

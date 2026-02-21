@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, Request, HTTPException, Query
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from db import get_db
@@ -13,15 +13,30 @@ def get_admin_token():
 def check_auth(request: Request):
     token = request.cookies.get("admin_token")
     if token != get_admin_token():
-        raise HTTPException(401, "Unauthorized")
+        raise HTTPException(302, headers={"Location": "/admin/login"})
+
+@router.get("/login")
+async def login_page(request: Request):
+    return templates.TemplateResponse(request, "admin/login.html", {})
+
+@router.post("/login")
+async def login(request: Request):
+    form = await request.form()
+    token = form.get("token", "")
+    if token != get_admin_token():
+        return templates.TemplateResponse(request, "admin/login.html", {"error": "Invalid token"}, status_code=401)
+    response = RedirectResponse("/admin", status_code=303)
+    response.set_cookie("admin_token", token, httponly=True, samesite="strict", secure=True)
+    return response
+
+@router.post("/logout")
+async def logout():
+    response = RedirectResponse("/admin/login", status_code=303)
+    response.delete_cookie("admin_token")
+    return response
 
 @router.get("")
-async def dashboard(request: Request, token: str = Query(None)):
-    admin_token = get_admin_token()
-    if token and token == admin_token:
-        response = RedirectResponse("/admin", status_code=302)
-        response.set_cookie("admin_token", token, httponly=True, samesite="strict")
-        return response
+async def dashboard(request: Request):
     check_auth(request)
     conn = get_db()
     stats = {

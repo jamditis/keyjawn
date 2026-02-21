@@ -11,7 +11,9 @@ from db import get_db
 log = logging.getLogger("keyjawn-store")
 router = APIRouter()
 
-UNSUBSCRIBE_SECRET = os.environ.get("UNSUBSCRIBE_SECRET", "keyjawn-unsub-default")
+UNSUBSCRIBE_SECRET = os.environ.get("UNSUBSCRIBE_SECRET", "")
+if not UNSUBSCRIBE_SECRET:
+    raise RuntimeError("UNSUBSCRIBE_SECRET env var must be set before starting the store service")
 
 
 def make_unsubscribe_token(email: str) -> str:

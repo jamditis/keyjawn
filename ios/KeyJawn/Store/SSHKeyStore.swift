@@ -11,6 +11,7 @@ final class SSHKeyStore: @unchecked Sendable {
 
     private let service = "com.keyjawn"
     private let account = "ssh-identity-ed25519"
+    private let appGroupRawKey = "keyjawn.ssh-identity-raw"
 
     // MARK: - Key access
 
@@ -60,6 +61,9 @@ final class SSHKeyStore: @unchecked Sendable {
         ]
         SecItemDelete(attrs as CFDictionary)
         SecItemAdd(attrs as CFDictionary, nil)
+
+        // Mirror raw key bytes to App Group so the keyboard extension can authenticate.
+        UserDefaults(suiteName: "group.com.keyjawn")?.set(key.rawRepresentation, forKey: appGroupRawKey)
     }
 
     private func deleteKey() {
@@ -69,6 +73,9 @@ final class SSHKeyStore: @unchecked Sendable {
             kSecAttrAccount as String: account,
         ]
         SecItemDelete(query as CFDictionary)
+
+        // Remove mirror too.
+        UserDefaults(suiteName: "group.com.keyjawn")?.removeObject(forKey: appGroupRawKey)
     }
 }
 

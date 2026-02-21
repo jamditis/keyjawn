@@ -31,7 +31,7 @@ async def stripe_webhook(request: Request):
         amount = session.get("amount_total", 400)
 
         conn = get_db()
-        conn.execute("""
+        result = conn.execute("""
             INSERT INTO users (email, stripe_customer_id, stripe_payment_intent, amount_cents)
             VALUES (?, ?, ?, ?)
             ON CONFLICT(email) DO NOTHING
@@ -39,6 +39,10 @@ async def stripe_webhook(request: Request):
         conn.commit()
         conn.close()
 
-        send_download_email(email)
+        # Only send the welcome email if this is a new user (not a duplicate event)
+        if result.rowcount > 0:
+            send_download_email(email)
+        else:
+            log.info("duplicate stripe event for %s — skipping download email", email)
 
     return {"status": "ok"}

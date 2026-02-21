@@ -8,6 +8,7 @@ struct HostTerminalView: View {
 
     @StateObject private var session = SSHSession()
     @State private var showingPasswordPrompt = false
+    @State private var showingKeyWarning = false
 
     var body: some View {
         ZStack {
@@ -39,24 +40,43 @@ struct HostTerminalView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if session.connectionState == .connected {
-                    Button("Disconnect") { session.disconnect() }
+                HStack(spacing: 12) {
+                    if session.connectionState == .connected && !session.isHostKeyVerified {
+                        Button {
+                            showingKeyWarning = true
+                        } label: {
+                            Image(systemName: "shield.slash")
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    if session.connectionState == .connected {
+                        Button("Disconnect") { session.disconnect() }
+                    }
                 }
             }
         }
         .onAppear {
             if session.connectionState == .disconnected {
-                if host.authMethod == .key {
-                    session.connectWithKey(to: host)
-                } else {
-                    showingPasswordPrompt = true
-                }
+                startConnection()
             }
         }
         .sheet(isPresented: $showingPasswordPrompt) {
             PasswordPromptView(host: host) { password in
                 session.connect(to: host, password: password)
             }
+        }
+        .alert("Host key not verified", isPresented: $showingKeyWarning) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("No host key is configured for \(host.label). The server's identity cannot be confirmed, making this connection susceptible to interception.\n\nAdd a host key in host settings to secure future connections.")
+        }
+    }
+
+    private func startConnection() {
+        if host.authMethod == .key {
+            session.connectWithKey(to: host)
+        } else {
+            showingPasswordPrompt = true
         }
     }
 
@@ -67,7 +87,7 @@ struct HostTerminalView: View {
                 .foregroundStyle(.secondary)
             Text("Not connected")
                 .font(.title3)
-            Button("Connect") { showingPasswordPrompt = true }
+            Button("Connect") { startConnection() }
                 .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -84,11 +104,7 @@ struct HostTerminalView: View {
                 .padding(.horizontal, 32)
             Button("Retry") {
                 session.disconnect()
-                if host.authMethod == .key {
-                    session.connectWithKey(to: host)
-                } else {
-                    showingPasswordPrompt = true
-                }
+                startConnection()
             }
             .buttonStyle(.borderedProminent)
         }

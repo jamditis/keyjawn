@@ -34,7 +34,7 @@ public struct Key: Sendable {
 
 // MARK: - Extra row layout (LLM CLI focused)
 //
-// Slot order: Ctrl+C | Tab | ▲ | ▼ | ◄ | ► | / | Esc | Clip
+// Slot order: Ctrl+C | Tab | ▲ | ▼ | ◄ | ► | / | Esc | Clip | SCP
 //
 // Ctrl+C is first because it's by far the most-used key during LLM sessions
 // (interrupt generation). The full Ctrl modifier lives on long-press of Ctrl+C.
@@ -51,12 +51,13 @@ public enum ExtraRowSlot: Int, CaseIterable, Sendable {
     case slash
     case escape
     case clipboard
+    case upload
 }
 
 public struct ExtraRowKey: Sendable {
     public let slot: ExtraRowSlot
     public let label: String
-    public let output: KeyOutput?   // nil for action keys (clipboard)
+    public let output: KeyOutput?   // nil for action keys (clipboard, upload)
 
     public static let defaults: [ExtraRowKey] = [
         ExtraRowKey(slot: .ctrlC,      label: "^C",  output: .ctrlC),
@@ -68,6 +69,7 @@ public struct ExtraRowKey: Sendable {
         ExtraRowKey(slot: .slash,      label: "/",   output: .slash),
         ExtraRowKey(slot: .escape,     label: "Esc", output: .escape),
         ExtraRowKey(slot: .clipboard,  label: "Clip",output: nil),
+        ExtraRowKey(slot: .upload,     label: "SCP", output: nil),
     ]
 
     public init(slot: ExtraRowSlot, label: String, output: KeyOutput?) {

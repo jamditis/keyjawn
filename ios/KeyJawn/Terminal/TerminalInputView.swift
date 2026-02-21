@@ -53,5 +53,15 @@ extension TerminalInputView: ExtraRowDelegate {
             onRawInput?(bytes)
         }
     }
-    func extraRowDidTapClipboard(_ view: ExtraRowView) { print("clipboard") }
+
+    func extraRowDidTapClipboard(_ view: ExtraRowView) {
+        guard let string = UIPasteboard.general.string else { return }
+        onRawInput?(Array(string.utf8))
+    }
+
+    /// SCP upload is not available from the in-app terminal extra row.
+    /// It is only active in the keyboard extension.
+    func extraRowDidTapUpload(_ view: ExtraRowView) {
+        // no-op in terminal context
+    }
 }

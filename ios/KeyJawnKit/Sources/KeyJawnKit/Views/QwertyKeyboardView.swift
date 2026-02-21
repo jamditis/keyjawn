@@ -24,12 +24,14 @@ public final class QwertyKeyboardView: UIView {
     private var layer_: KeyboardLayerType = .lowercase  // 'layer' shadows UIView.layer
     private var shiftState: ShiftState = .off
 
-    // MARK: Colours
+    // MARK: Theme
 
-    private static let bg       = UIColor(red: 0.145, green: 0.145, blue: 0.145, alpha: 1)
-    private static let keyBg    = UIColor(white: 0.27, alpha: 1)
-    private static let specBg   = UIColor(white: 0.17, alpha: 1)
-    private static let shiftOn  = UIColor(red: 0.267, green: 0.467, blue: 0.800, alpha: 1)
+    public var theme: KeyboardTheme = .dark
+
+    private var bg: UIColor      { theme.keyboardBg }
+    private var keyBg: UIColor   { theme.keyBg }
+    private var specBg: UIColor  { theme.specKeyBg }
+    private var shiftOn: UIColor { theme.armed }
 
     // MARK: Layout constants
 
@@ -47,13 +49,13 @@ public final class QwertyKeyboardView: UIView {
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = Self.bg
+        backgroundColor = bg
         rebuild()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        backgroundColor = Self.bg
+        backgroundColor = bg
         rebuild()
     }
 
@@ -66,9 +68,14 @@ public final class QwertyKeyboardView: UIView {
         let rows = KeyboardLayers.rows(for: layer_, shiftState: shiftState)
         for row in rows {
             for key in row {
-                let btn = QwertyKeyButton(key: key)
+                let btn = QwertyKeyButton(key: key, theme: theme)
                 btn.backgroundColor = bgColor(for: key)
                 btn.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside)
+                if case .character = key {
+                    let lp = UILongPressGestureRecognizer(target: self, action: #selector(keyLongPressed(_:)))
+                    lp.minimumPressDuration = 0.4
+                    btn.addGestureRecognizer(lp)
+                }
                 addSubview(btn)
                 keyButtons.append(btn)
             }
@@ -170,15 +177,24 @@ public final class QwertyKeyboardView: UIView {
 
     private func bgColor(for key: QwertyKey) -> UIColor {
         switch key {
-        case .character:    return Self.keyBg
-        case .space:        return Self.keyBg
+        case .character:    return keyBg
+        case .space:        return keyBg
         case .shift:
             switch shiftState {
-            case .off:           return Self.specBg
-            case .once, .caps:   return Self.shiftOn
+            case .off:           return specBg
+            case .once, .caps:   return shiftOn
             }
-        default:            return Self.specBg
+        default:            return specBg
         }
+    }
+
+    // MARK: - Theme
+
+    public func applyTheme(_ theme: KeyboardTheme) {
+        self.theme = theme
+        backgroundColor = bg
+        rebuild()
+        setNeedsLayout()
     }
 
     // MARK: - Key tap handler
@@ -234,6 +250,38 @@ public final class QwertyKeyboardView: UIView {
             delegate?.keyboardAdvanceToNextInputMode(self)
         }
     }
+
+    // MARK: - Long-press alt characters
+
+    @objc private func keyLongPressed(_ gr: UILongPressGestureRecognizer) {
+        guard gr.state == .began,
+              let btn = gr.view as? QwertyKeyButton,
+              case .character(let s) = btn.key
+        else { return }
+
+        let alts = AltKeyMappings.alts(for: s)
+        if alts.isEmpty { return }
+
+        if alts.count == 1 {
+            delegate?.keyboard(self, insertText: alts[0])
+            return
+        }
+
+        guard let window = gr.view?.window else { return }
+        let popup = AltKeyPopup(alts: alts)
+        popup.onSelect = { [weak self] alt in
+            guard let self else { return }
+            self.delegate?.keyboard(self, insertText: alt)
+        }
+
+        let btnFrame = btn.convert(btn.bounds, to: window)
+        let popupW = min(CGFloat(alts.count) * 52, window.bounds.width - 16)
+        let popupX = max(8, min(btnFrame.midX - popupW / 2, window.bounds.width - popupW - 8))
+        let popupY = btnFrame.minY - 52
+        popup.frame = CGRect(x: popupX, y: popupY, width: popupW, height: 44)
+        window.addSubview(popup)
+        popup.attachDimmer(to: window)
+    }
 }
 
 // MARK: - QwertyKeyButton
@@ -242,18 +290,22 @@ public final class QwertyKeyboardView: UIView {
 final class QwertyKeyButton: UIButton {
 
     let key: QwertyKey
+    private let theme: KeyboardTheme
 
-    init(key: QwertyKey) {
+    init(key: QwertyKey, theme: KeyboardTheme) {
         self.key = key
+        self.theme = theme
         super.init(frame: .zero)
         configure()
     }
 
-    required init?(coder: NSCoder) { fatalError("use init(key:)") }
+    required init?(coder: NSCoder) { fatalError("use init(key:theme:)") }
 
     private func configure() {
-        setTitleColor(.white, for: .normal)
-        setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .highlighted)
+        let text = theme.keyText
+        let textFaded = text.withAlphaComponent(0.4)
+        setTitleColor(text, for: .normal)
+        setTitleColor(textFaded, for: .highlighted)
         layer.cornerRadius    = 5
         layer.masksToBounds   = false
         layer.shadowColor     = UIColor.black.cgColor
@@ -276,11 +328,11 @@ final class QwertyKeyButton: UIButton {
 
         case .backspace:
             setImage(UIImage(systemName: "delete.backward"), for: .normal)
-            tintColor = .white
+            tintColor = text
 
         case .shift:
             setImage(UIImage(systemName: "shift"), for: .normal)
-            tintColor = .white
+            tintColor = text
 
         case .symbolsToggle:
             titleLabel?.font = .systemFont(ofSize: 14, weight: .regular)
@@ -292,7 +344,7 @@ final class QwertyKeyButton: UIButton {
 
         case .globe:
             setImage(UIImage(systemName: "globe"), for: .normal)
-            tintColor = .white
+            tintColor = text
 
         case .more:
             titleLabel?.font = .systemFont(ofSize: 13, weight: .regular)
