@@ -116,19 +116,39 @@ bash ios/scripts/build.sh
 **Architecture:**
 - `KeyJawnKit/` — shared Swift package used by both the main app and the keyboard extension. Contains keyboard models (`KeyboardLayout`, `HostConfig`, `SlashCommand`, `CtrlState`) and UIKit views (`QwertyKeyboardView`, `ExtraRowView`, `SlashCommandPanel`).
 - `KeyJawn/` — main SwiftUI app. Host management (`HostListView`, `HostEditView`, `HostStore`), SSH terminal (`SSHSession` via Citadel/SwiftNIO SSH, `TerminalViewController` via SwiftTerm), settings (`SettingsView`, `SSHKeysView`), and `SSHKeyStore` (Keychain-backed Ed25519 identity key).
-- `KeyJawnKeyboard/` — `UIInputViewController` keyboard extension. Uses `QwertyKeyboardView` + `ExtraRowView` from KeyJawnKit. Communicates via `textDocumentProxy` only (no shared App Groups currently).
+- `KeyJawnKeyboard/` — `UIInputViewController` keyboard extension. Uses `QwertyKeyboardView` + `ExtraRowView` from KeyJawnKit. Uses `group.com.keyjawn` App Group to share host configs and SSH key bytes with the main app (`AppGroupHostStore`, `AppGroupSSHKeyStore`). SCP image upload via `CitadelSCPUploader` (Citadel/SwiftNIO SFTP).
 
 **Key decisions:**
 - One Ed25519 identity key for the whole app (not per-host). Public key is shown in Settings → SSH keys for the user to copy to `authorized_keys`. Private key stored in Keychain under `com.keyjawn / ssh-identity-ed25519`.
 - Host key pinning via `NIOSSHPublicKey(openSSHPublicKey:)`. If no host key is stored, connects with `.acceptAnything()` (warns in UI).
 - Keyboard extension cannot use `present()`. Overlays (slash command panel) are added as `UIView` children of the extension root view.
 - Debug build uses automatic signing; Release build uses manual signing with App Store provisioning profiles (`KeyJawn AppStore`, `KeyJawn Keyboard AppStore`).
+- App Group `group.com.keyjawn` is registered in Apple Developer portal and enabled on both App IDs (`com.keyjawn` and `com.keyjawn.keyboard`). Provisioning profiles regenerated 2026-02-20.
 
 **App Store Connect:**
 - App ID: `com.keyjawn` / keyboard extension: `com.keyjawn.keyboard`
-- First build (`v1`) in VALID state on TestFlight (internal testing track)
-- 5 screenshots uploaded (`APP_IPHONE_67`, 1290×2796) for en-US localization
+- App Store Connect app numeric ID: `6759345867`
+- App Store version 1.0 ID: `071542f6-0cdb-43a5-b07c-7b74688e937b`
+- Build v2 ID: `7e8af1a4-eac8-4b57-8ae0-8a3bd2655c1f` — current build in review
+- Screenshots uploaded: `APP_IPHONE_67` (1290×2796) + `APP_IPAD_PRO_3GEN_129` (2048×2732) for en-US localization
 - Provisioning profiles managed via Apple Developer API (`ios/scripts/asc.py`)
+- App Store Connect API credentials in `pass` at `claude/services/appstore-connect-{issuer-id,key-id,api-key}`
+
+**App Store Connect API notes:**
+- `appStoreVersionSubmissions` is deprecated — use `reviewSubmissions` + `reviewSubmissionItems` instead
+- Submit flow: `POST /v1/reviewSubmissions` → `POST /v1/reviewSubmissionItems` → `PATCH /v1/reviewSubmissions/{id}` with `submitted: true`
+- Pricing set via `POST /v1/appPriceSchedules` with `baseTerritory: USA` and inline `appPrices` using `${local-id}` format (must use file-based script, not heredoc — shell strips `${}`)
+- App Privacy (data usage) labels must be published via web UI — no API endpoint exists for this
+- `usesNonExemptEncryption: false` must be set on each build via `PATCH /v1/builds/{id}` (SSH uses IETF-standard algorithms, exempt from EAR)
+- Screenshot upload flow: create set → reserve slot (`POST /v1/appScreenshots`) → PUT bytes to `uploadOperations[].url` → commit with MD5 checksum
+
+**Submission status (2026-02-20):**
+- App Store review: submitted, state `WAITING_FOR_REVIEW` (review submission ID `83b2805c-650c-4bf6-91ff-0c6339f36324`)
+- TestFlight external group: "KeyJawn Beta (external)" (ID `360a2954-431c-4d74-aa68-faaf86baa926`)
+- Public TestFlight link: `https://testflight.apple.com/join/8vMqguKK` (limit 50 testers)
+- Beta App Review: `IN_REVIEW` — must clear before external testers can install
+- Internal group: "KeyJawn Beta" (ID `55817758-6243-4d2b-b0f3-ffc95221cbdb`)
+
 - **Submission `83b2805c` (v1.0) rejected 2026-02-20** for Guideline 3.2.2 — reviewer interpreted the slash command panel as a third-party app collection due to tool-branded category names (`claudeCode`, `aider`, `codex`) in the data model and a branded screenshot.
   - Reply sent to Apple explaining `textDocumentProxy.insertText()` behavior (text autocomplete, not a storefront)
   - `SlashCommand.Category` enum renamed: `claudeCode`→`session`, `aider`→`context`, `codex`→`files`
@@ -225,8 +245,14 @@ The store backend (`store/`) handles purchases and APK distribution. Runs on hou
 - Keys in `pass`: `claude/services/keyjawn-stripe-api-key`, `claude/services/keyjawn-stripe-webhook-secret`
 
 **Admin:**
-- Dashboard: `keyjawn-store.amditis.tech/admin?token=<ADMIN_TOKEN>`
+- Dashboard: `keyjawn-store.amditis.tech/admin` (redirects to `/admin/login` — POST form with password field, sets httponly+secure cookie)
 - Token in `pass`: `claude/services/keyjawn-admin-token`
+
+**Security hardening (2026-02-20):**
+- Admin login moved from GET `?token=` query param to POST `/admin/login` with cookie session
+- `UNSUBSCRIBE_SECRET` fails fast at startup if env var not set
+- `/api/download` and `/api/support` return uniform 202 responses regardless of whether email exists (prevents enumeration)
+- Stripe webhook uses `rowcount` check on INSERT to prevent duplicate welcome emails on retries
 
 **DB location:** `store/keyjawn-store.db`
 
