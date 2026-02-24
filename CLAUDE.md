@@ -319,6 +319,28 @@ Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, and Product 
   - 7 testers configured on internal track
   - CI auto-publish ready (`publish-play-store` job) -- change track to `production` when ready
 
+## Release checklist — SOCIAL.md
+
+`SOCIAL.md` in the repo root is the live context doc read by the Claude Code browser extension before each social media session. Keep it current.
+
+**Update SOCIAL.md whenever any of the following happen:**
+
+- A new version is tagged and released (update "Current version" and "Recent changes")
+- A feature ships, changes behavior, or is removed (update "Features to highlight" and pain points)
+- App Store or Google Play status changes (review outcome, new track, rejection/approval)
+- A backlog item moves to in-progress or ships (update "What's in progress / coming soon")
+- Distribution changes (new download location, price change, new platform)
+
+**Where to update:** `SOCIAL.md` → "Current version", "Recent changes", "What's in progress / coming soon"
+
+Add a line to "Recent changes" in every release commit:
+```
+git add SOCIAL.md && git commit --amend --no-edit
+```
+Or add it as a separate commit before tagging.
+
+---
+
 ## Code style
 
 - Kotlin with standard Android conventions
