@@ -298,7 +298,20 @@ Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, and Product 
 
 **Twitter posting:** Twikit is Cloudflare-blocked as of Feb 2026. Use `claude --chrome` on Legion for authenticated posting until a fix is found.
 
-**Social feed engagement (separate from worker):** Handled by the jawn-browser extension on houseofjawn (display :99, profile at `~/.config/jawn-browser-profile/`). Daily shortcuts run via the Claude Code browser extension — `/like-post` at 9am (Twitter) and 6pm (Bluesky). The worker's `SocialScrollerConfig` is intentionally scoped to Twitter/Bluesky only with `search_platforms = ()` — the Playwright-based scroller is not used.
+**Social feed engagement (separate from worker):** Handled by the Claude Code browser extension on houseofjawn (display :99, Chromium profile at `~/.config/jawn-browser-profile/`). 8 daily scheduled shortcuts:
+
+| Time | Shortcut | What it does |
+|------|----------|--------------|
+| 10:00 AM | `bsky-engagement` | Like/engage Bluesky feed |
+| 10:15 AM | `twitter-engagement` | Like/engage Twitter feed |
+| 11:00 AM | `keyjawn-search-twitter` | Search Twitter for relevant posts and like them |
+| 11:30 AM | `keyjawn-post-twitter` | Read SOCIAL.md, write 2–3 original tweets |
+| 12:00 PM | `keyjawn-search-bluesky` | Search Bluesky for relevant posts and like them |
+| 12:30 PM | `keyjawn-post-bluesky` | Read SOCIAL.md, write 2–3 original Bluesky posts |
+| 5:15 PM | `twitter-engagement-pm` | Like/engage Twitter feed |
+| 5:45 PM | `bsky-engagement-pm` | Like/engage Bluesky feed |
+
+Shortcut prompts stored at `~/.claude/commands/keyjawn-*.md` on houseofjawn. The post shortcuts start from `https://raw.githubusercontent.com/jamditis/keyjawn/main/SOCIAL.md` so the agent reads the live context doc before navigating to the platform. The worker's `SocialScrollerConfig` has `search_platforms = ()` — the Playwright scroller is not used.
 
 ## Google Play
 
