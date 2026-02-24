@@ -7,12 +7,23 @@ Keep it current. Update it when features ship, things break, or the story change
 
 ## What KeyJawn is
 
-A custom mobile keyboard for developers who use LLM CLI tools from their phone.
-The main addition is a dedicated terminal key row above a standard QWERTY layout: Esc, Tab, Ctrl (one-shot tap / sticky long-press), left/right/up/down arrows, mic button, and SCP upload.
-Also includes: number row with long-press symbols, slash command panel for LLM shortcuts, clipboard history, alt-character long-press, swipe gestures, per-app autocorrect toggle.
+A custom mobile keyboard built specifically for developers who use LLM CLI agents from their phone.
 
-The target user: anyone who's done real terminal work on a phone and fought the default keyboard to do it.
-Specifically: Claude Code, Gemini CLI, Codex CLI, OpenCode users. SSH power users. Termux regulars.
+**The key distinction from other mobile terminal keyboards:**
+Most mobile terminal keyboards (Hacker's Keyboard, etc.) are built for traditional terminal use — shell commands, SSH sessions, running htop, navigating vim. That's not the primary use case for KeyJawn. KeyJawn is built around the specific interaction pattern of working with LLM CLI agents: writing prompts, reviewing output, sending follow-ups, uploading context, managing slash commands. The workflow is less about typing `ls -la` and more about `/compact`, voice-dictating a long prompt, copying an agent's output to paste elsewhere, and sending a screenshot to your remote session.
+
+This shapes every feature decision:
+- The slash command panel exists because `/compact`, `/clear`, `/memory`, `/cost` are typed constantly in Claude Code and Gemini CLI sessions
+- Voice input is for dictating long prompts — not just quick commands
+- Clipboard history exists because you're constantly copying context between your agent and other apps
+- SCP upload is for sending screenshots and images into your agent's context from your phone
+- The one-shot Ctrl key handles the prompt → Ctrl+C → re-prompt cycle that characterizes agent debugging
+
+Traditional terminal keyboards assume you're running commands. KeyJawn assumes you're in a conversation with an agent.
+
+**The terminal keys are still there** — Esc, Tab, Ctrl, arrows — because LLM CLI tools live in terminals and you still need them. But they're not the point. The point is that the rest of the keyboard is designed around how you actually use Claude Code or Gemini CLI, not how you'd use bash in 2010.
+
+The target user: anyone running Claude Code, Gemini CLI, Codex CLI, OpenCode, or similar agents from their phone. SSH power users who also use AI tooling. Termux regulars who've moved beyond shell commands into agent workflows.
 
 ---
 
@@ -57,16 +68,20 @@ Specifically: Claude Code, Gemini CLI, Codex CLI, OpenCode users. SSH power user
 
 ## Pain points KeyJawn solves
 
-Use these for post ideas. Be specific, not generic.
+Use these for post ideas. Be specific, not generic. Frame them around agent workflows, not traditional terminal use.
 
-- No Esc key on stock Android keyboards. Try using vim, tmux, or any terminal tool without Esc.
-- Ctrl modifier is completely absent on AOSP keyboards. Ctrl+C, Ctrl+D, Ctrl+Z all require workarounds.
-- Arrow keys on stock keyboards require switching to a symbol layer, breaking your flow.
-- Voice input on Android doesn't work inside SSH/terminal apps by default — KeyJawn's mic button handles this at the keyboard level, so it works in Termux, JuiceSSH, Cockpit web terminal, etc.
-- Typing `/compact` or `/clear` into Claude Code by hand every session gets old fast. The slash command panel inserts these with one tap.
-- Stock clipboard on Android doesn't persist between sessions. KeyJawn's clipboard history keeps 30 items and lets you pin ones you use constantly.
-- SCP upload from phone to server required a separate app. Now it's a button in the keyboard.
-- Switching between Ctrl+C and normal typing on stock keyboards requires a mode switch. KeyJawn's one-shot Ctrl tap (armed → fires → resets) handles this without mode switching.
+**Agent-specific pain points (highest priority for posts):**
+- You can't run Claude Code seriously from your phone on stock Android because there's no Esc, no Ctrl, no arrows. Every other keyboard makes you open a symbol panel to find them.
+- Typing `/compact` or `/clear` into Claude Code by hand, every single session, on a touchscreen, gets old fast. The slash command panel inserts them in one tap.
+- Dictating long prompts by voice is faster than typing them on a phone keyboard — but Android's voice input doesn't work inside SSH apps or Termux. KeyJawn's mic button works at the keyboard level, so it fires in any app.
+- You want to send a screenshot to your Claude session. On most phones that's: screenshot → open SCP app → find the file → upload → switch back. With Full, it's a button in the keyboard row.
+- Clipboard on Android doesn't remember what you copied three prompts ago. KeyJawn keeps 30 items in history. Full version lets you pin the ones you reuse constantly.
+- The prompt → Ctrl+C → re-prompt cycle is constant when working with agents. Stock keyboards make you switch modes to get Ctrl. KeyJawn's one-shot Ctrl: tap to arm, next key fires with Ctrl, automatically resets. No mode switching.
+
+**General terminal pain points (also valid but less distinctive):**
+- No Esc key on AOSP keyboards. Affects vim, less, any terminal tool.
+- Arrow keys require a layer switch on stock keyboards. Kills your flow when navigating command history.
+- Per-app autocorrect — you want it off in Termux, on in your notes app. Long-press spacebar handles this without going into Settings.
 
 ---
 
