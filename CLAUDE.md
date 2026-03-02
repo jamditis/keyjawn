@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+
+## GitHub Actions suspended (account-wide)
+
+GitHub Actions are disabled on the entire `jamditis` GitHub account until further notice. This means:
+- **No CI/CD pipelines will run** — builds, tests, deploys all fail silently
+- **GitHub Pages deploys won't work** — even "legacy" static deploys that used Actions under the hood
+- **No automated workflows** — PR checks, scheduled jobs, release automation are all dead
+
+**For any project that previously deployed via GitHub Actions or GitHub Pages, you must use an alternative** (manual deploy, Cloudflare Pages, Firebase Hosting, direct FTP, etc.). Do not create or rely on `.github/workflows/` files.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What this is
@@ -142,11 +152,11 @@ bash ios/scripts/build.sh
 - `usesNonExemptEncryption: false` must be set on each build via `PATCH /v1/builds/{id}` (SSH uses IETF-standard algorithms, exempt from EAR)
 - Screenshot upload flow: create set → reserve slot (`POST /v1/appScreenshots`) → PUT bytes to `uploadOperations[].url` → commit with MD5 checksum
 
-**Submission status (2026-02-20):**
-- App Store review: submitted, state `WAITING_FOR_REVIEW` (review submission ID `83b2805c-650c-4bf6-91ff-0c6339f36324`)
+**Submission status (2026-02-24):**
+- App Store review: appeal in progress, state unknown — Apple replied 2026-02-24 "we will continue the review and will notify if there are further issues"
+- Review submission ID: `83b2805c-650c-4bf6-91ff-0c6339f36324`
 - TestFlight external group: "KeyJawn Beta (external)" (ID `360a2954-431c-4d74-aa68-faaf86baa926`)
 - Public TestFlight link: `https://testflight.apple.com/join/8vMqguKK` (limit 50 testers)
-- Beta App Review: `IN_REVIEW` — must clear before external testers can install
 - Internal group: "KeyJawn Beta" (ID `55817758-6243-4d2b-b0f3-ffc95221cbdb`)
 
 - **Submission `83b2805c` (v1.0) rejected 2026-02-20** for Guideline 3.2.2 — reviewer interpreted the slash command panel as a third-party app collection due to tool-branded category names (`claudeCode`, `aider`, `codex`) in the data model and a branded screenshot.
@@ -155,6 +165,7 @@ bash ios/scripts/build.sh
   - Aider command set replaced with Gemini CLI commands (commits `56c11fd`, `b361c92`, `c495696`)
   - `ios-claude-code.png` renamed to `ios-slash-commands.png` (commit `325f1c5`) — **PNG content still needs replacement** with an unbranded keyboard screenshot from Mac/Simulator
   - App Store description audited — no third-party tool names found, no changes needed
+- **2026-02-24:** Apple replied "we will continue the review" — appeal accepted, re-review underway. Waiting on outcome before deciding whether to submit a new build.
 
 ### Mac checklist (do this when you sit down at the MacBook)
 
