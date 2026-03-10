@@ -6,12 +6,17 @@ on:
 
 jobs:
   label:
+    # Skip bot-created issues (Dependabot, GitHub Actions, etc.)
+    if: |
+      github.actor != 'dependabot[bot]' &&
+      github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
       issues: write
       models: read
     steps:
       - uses: actions/github-script@v7
+        timeout-minutes: 2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -20,6 +25,8 @@ jobs:
             const body = (context.payload.issue.body || '').slice(0, 500);
             let label = 'needs-triage';
             try {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 15000);
               const response = await fetch(
                 'https://models.inference.ai.azure.com/chat/completions',
                 {
@@ -33,8 +40,10 @@ jobs:
                     messages: [{ role: 'user', content: `Classify this GitHub issue as exactly one word: bug, enhancement, question, or duplicate.\n\nTitle: ${title}\nBody: ${body}` }],
                     max_tokens: 5,
                   }),
+                  signal: controller.signal,
                 }
               );
+              clearTimeout(timeout);
               const data = await response.json();
               const candidate = data.choices[0].message.content.trim().toLowerCase();
               const valid = ['bug', 'enhancement', 'question', 'duplicate'];
