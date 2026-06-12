@@ -32,16 +32,24 @@ class KeyJawnService : InputMethodService() {
             themeManager.currentTheme = KeyboardTheme.DARK
         }
         slashCommandRegistry = SlashCommandRegistry(this)
+        // The clipboard manager holds the user's unpinned clip history in memory and
+        // registers a system clipboard listener in its constructor. Build it once for
+        // the service lifetime so a theme-change input-view rebuild reuses the same
+        // instance instead of stranding the listener and resetting history to empty.
+        // It keeps no reference to the input view, so reuse is safe; ExtraRowManager
+        // re-wires the new view's clipboard panel to this instance on each rebuild.
+        clipboardHistoryManager = ClipboardHistoryManager(this)
     }
 
     override fun onCreateInputView(): View {
         // A theme change rebuilds the input view via setInputView(onCreateInputView()).
-        // Tear down the previous handlers before constructing replacements so their
-        // clipboard listener, IO scope, and SpeechRecognizer are released instead of
-        // leaking until the process dies. destroy() on each is idempotent.
+        // Tear down the previous voice and upload handlers before constructing
+        // replacements so their SpeechRecognizer and IO scope are released instead of
+        // leaking until the process dies. destroy() on each is idempotent. The
+        // clipboard manager is intentionally not torn down here: it is hoisted to
+        // onCreate() and reused so the user's unpinned clip history survives a reskin.
         voiceInputHandler?.destroy()
         uploadHandler?.destroy()
-        clipboardHistoryManager?.destroy()
         pendingUploadHandler = null
 
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
@@ -65,8 +73,11 @@ class KeyJawnService : InputMethodService() {
         } else null
         uploadHandler = upload
 
-        val clipManager = ClipboardHistoryManager(this)
-        clipboardHistoryManager = clipManager
+        // Reuse the hoisted clipboard manager (built once in onCreate) rather than
+        // constructing a new one per rebuild, which would drop unpinned history.
+        val clipManager = clipboardHistoryManager ?: ClipboardHistoryManager(this).also {
+            clipboardHistoryManager = it
+        }
 
         val clipPanel = view.findViewById<ScrollView>(R.id.clipboard_panel)
         val clipList = view.findViewById<LinearLayout>(R.id.clipboard_list)
