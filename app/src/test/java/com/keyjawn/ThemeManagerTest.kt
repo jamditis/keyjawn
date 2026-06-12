@@ -209,4 +209,78 @@ class ThemeManagerTest {
             assertEquals(swatch.keyText, themeManager.keyText())
         }
     }
+
+    @Test
+    fun `createKeyDrawable hands out a distinct copy of one cached prototype`() {
+        themeManager.currentTheme = KeyboardTheme.DARK
+        val color = themeManager.keyBg()
+
+        // Each call returns its own Drawable (a Drawable can back only one view).
+        val first = themeManager.createKeyDrawable(color)
+        val second = themeManager.createKeyDrawable(color)
+        assertNotSame(first, second)
+
+        // But both copies come from the same cached prototype: the drawable tree
+        // is built once, not per call.
+        assertSame(
+            themeManager.keyDrawablePrototype(color),
+            themeManager.keyDrawablePrototype(color)
+        )
+    }
+
+    @Test
+    fun `key drawable prototype is rebuilt after a theme change`() {
+        themeManager.currentTheme = KeyboardTheme.DARK
+        val darkColor = themeManager.keyBg()
+        val darkProto = themeManager.keyDrawablePrototype(darkColor)
+
+        // Switching themes must invalidate the cache so a later lookup of the
+        // same color value resolves a fresh prototype (the pressed ripple color
+        // is theme-specific even when the surface color repeats).
+        themeManager.currentTheme = KeyboardTheme.TERMINAL
+        themeManager.currentTheme = KeyboardTheme.DARK
+        val rebuiltProto = themeManager.keyDrawablePrototype(darkColor)
+
+        assertNotSame(darkProto, rebuiltProto)
+    }
+
+    @Test
+    fun `refresh rebuilds the key drawable prototype cache`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = context.getSharedPreferences("keyjawn_theme", 0)
+        themeManager.currentTheme = KeyboardTheme.DARK
+        val color = themeManager.keyBg()
+        val before = themeManager.keyDrawablePrototype(color)
+
+        prefs.edit().putString("theme", KeyboardTheme.TERMINAL.name).commit()
+        themeManager.refresh()
+        prefs.edit().putString("theme", KeyboardTheme.DARK.name).commit()
+        themeManager.refresh()
+
+        assertNotSame(before, themeManager.keyDrawablePrototype(color))
+    }
+
+    @Test
+    fun `extra row button drawable reuses one cached prototype per color`() {
+        themeManager.currentTheme = KeyboardTheme.DARK
+        val color = themeManager.arrowBg()
+        val first = themeManager.createExtraRowButtonDrawable(color)
+        val second = themeManager.createExtraRowButtonDrawable(color)
+        assertNotSame(first, second)
+        assertSame(
+            themeManager.extraRowButtonDrawablePrototype(color),
+            themeManager.extraRowButtonDrawablePrototype(color)
+        )
+    }
+
+    @Test
+    fun `createFlatDrawable copies share the immutable gradient constant state`() {
+        themeManager.currentTheme = KeyboardTheme.DARK
+        val color = themeManager.accent()
+        val first = themeManager.createFlatDrawable(color)
+        val second = themeManager.createFlatDrawable(color)
+        // GradientDrawable copies share their ConstantState through newDrawable().
+        assertNotSame(first, second)
+        assertSame(first.constantState, second.constantState)
+    }
 }

@@ -166,14 +166,24 @@ class QwertyKeyboard(
     private fun createKeyView(key: Key): View {
         val context = container.context
         val tm = themeManager
+        // Character keys with alt characters render their key background on the
+        // wrapping FrameLayout, so the button itself stays transparent. Resolve
+        // alts up front and skip building a button background that would only be
+        // discarded for those keys.
+        val alts = if (key.output is KeyOutput.Character) AltKeyMappings.getAlts(key.label) else null
+        val buttonHasOwnBackground = alts == null
         val button = Button(context).apply {
             text = key.label
             isAllCaps = false
             if (tm != null) {
-                background = tm.createKeyDrawable(tm.keyBg())
+                if (buttonHasOwnBackground) {
+                    background = tm.createKeyDrawable(tm.keyBg())
+                }
                 setTextColor(tm.keyText())
             } else {
-                setBackgroundResource(R.drawable.key_bg)
+                if (buttonHasOwnBackground) {
+                    setBackgroundResource(R.drawable.key_bg)
+                }
                 setTextColor(context.getColor(R.color.key_text))
             }
             gravity = Gravity.CENTER
@@ -292,7 +302,7 @@ class QwertyKeyboard(
         }
 
         // Character key touch handling with drag-off cancellation (item 4)
-        val alts = if (key.output is KeyOutput.Character) AltKeyMappings.getAlts(key.label) else null
+        // (alts was resolved at the top of this method.)
         if (key.output is KeyOutput.Character) {
             val previewLabel = key.label
             var touchStarted = false
@@ -359,10 +369,11 @@ class QwertyKeyboard(
             }
         }
 
-        // Wrap character keys that have alts in a FrameLayout with a hint label
+        // Wrap character keys that have alts in a FrameLayout with a hint label.
+        // The button background was never built for these keys (see top of
+        // createKeyView); the key surface lives on the wrapping frame instead.
         if (key.output is KeyOutput.Character && alts != null) {
             val hintChar = if (alts.size == 1) alts[0] else alts[0]
-            button.background = null
             val frame = FrameLayout(context).apply {
                 if (tm != null) {
                     background = tm.createKeyDrawable(tm.keyBg())

@@ -23,12 +23,22 @@ class ThemeManager(context: Context) {
     private var _currentTheme: KeyboardTheme = readPersistedTheme()
     private var palette: Palette = paletteFor(_currentTheme)
 
+    // Drawable prototypes, keyed by surface color, rebuilt only on a theme
+    // change. Each call hands out a cheap copy via constantState.newDrawable()
+    // (a Drawable can back only one view) instead of rebuilding the drawable
+    // tree per key per render. The pressed ColorStateList is immutable, so a
+    // single instance is shared across every key of the active theme.
+    private var pressedColorStateList: ColorStateList = ColorStateList.valueOf(palette.keyBgPressed)
+    private val keyDrawableCache = HashMap<Int, Drawable>()
+    private val flatDrawableCache = HashMap<Int, Drawable>()
+    private val extraRowDrawableCache = HashMap<Int, Drawable>()
+
     var currentTheme: KeyboardTheme
         get() = _currentTheme
         set(value) {
             prefs.edit().putString("theme", value.name).apply()
             _currentTheme = value
-            palette = paletteFor(value)
+            applyPalette(paletteFor(value))
         }
 
     /**
@@ -38,7 +48,18 @@ class ThemeManager(context: Context) {
      */
     fun refresh() {
         _currentTheme = readPersistedTheme()
-        palette = paletteFor(_currentTheme)
+        applyPalette(paletteFor(_currentTheme))
+    }
+
+    private fun applyPalette(newPalette: Palette) {
+        palette = newPalette
+        // The pressed ripple color is theme-specific, so the drawable
+        // prototypes must be discarded even when a surface color repeats
+        // across themes.
+        pressedColorStateList = ColorStateList.valueOf(newPalette.keyBgPressed)
+        keyDrawableCache.clear()
+        flatDrawableCache.clear()
+        extraRowDrawableCache.clear()
     }
 
     private fun readPersistedTheme(): KeyboardTheme =
@@ -85,8 +106,39 @@ class ThemeManager(context: Context) {
     fun micBg(): Int = palette.micBg
 
     // -- Drawable builders --
+    // The drawable tree for a given surface color is built once per theme and
+    // cached as a prototype. Each create* call hands out a fresh, view-assignable
+    // copy via constantState.newDrawable() (a Drawable can back only one view)
+    // without reconstructing the GradientDrawable/LayerDrawable tree. Callers must
+    // not tint the returned drawable in place (the surface color is already baked
+    // in); a future per-instance tint would need a mutate() on the copy first.
 
-    fun createKeyDrawable(bgColor: Int): Drawable {
+    fun createKeyDrawable(bgColor: Int): Drawable =
+        copyOf(keyDrawablePrototype(bgColor))
+
+    fun createFlatDrawable(bgColor: Int): Drawable =
+        copyOf(flatDrawablePrototype(bgColor))
+
+    fun createExtraRowButtonDrawable(bgColor: Int): Drawable =
+        copyOf(extraRowButtonDrawablePrototype(bgColor))
+
+    // Cached prototypes. internal so tests can assert that the same prototype
+    // instance is reused for a color until the theme changes (RippleDrawable's
+    // newDrawable() does not preserve ConstantState identity, so prototype
+    // identity is the observable signal that the tree was not rebuilt).
+    internal fun keyDrawablePrototype(bgColor: Int): Drawable =
+        keyDrawableCache.getOrPut(bgColor) { buildKeyDrawable(bgColor) }
+
+    internal fun flatDrawablePrototype(bgColor: Int): Drawable =
+        flatDrawableCache.getOrPut(bgColor) { buildFlatDrawable(bgColor) }
+
+    internal fun extraRowButtonDrawablePrototype(bgColor: Int): Drawable =
+        extraRowDrawableCache.getOrPut(bgColor) { buildExtraRowButtonDrawable(bgColor) }
+
+    private fun copyOf(prototype: Drawable): Drawable =
+        prototype.constantState?.newDrawable() ?: prototype
+
+    private fun buildKeyDrawable(bgColor: Int): Drawable {
         val cornerRadius = 6f * density
 
         // Shadow layer (darker, offset down 1dp)
@@ -108,29 +160,26 @@ class ThemeManager(context: Context) {
         layers.setLayerInset(0, 0, insetPx, 0, 0) // shadow offset down
         layers.setLayerInset(1, 0, 0, 0, insetPx) // surface offset up
 
-        val rippleColor = ColorStateList.valueOf(keyBgPressed())
-        return RippleDrawable(rippleColor, layers, null)
+        return RippleDrawable(pressedColorStateList, layers, null)
     }
 
-    fun createFlatDrawable(bgColor: Int): Drawable {
+    private fun buildFlatDrawable(bgColor: Int): Drawable {
+        val cornerRadius = 6f * density
+        return GradientDrawable().apply {
+            this.shape = GradientDrawable.RECTANGLE
+            setColor(bgColor)
+            this.cornerRadius = cornerRadius
+        }
+    }
+
+    private fun buildExtraRowButtonDrawable(bgColor: Int): Drawable {
         val cornerRadius = 6f * density
         val shape = GradientDrawable().apply {
             this.shape = GradientDrawable.RECTANGLE
             setColor(bgColor)
             this.cornerRadius = cornerRadius
         }
-        return shape
-    }
-
-    fun createExtraRowButtonDrawable(bgColor: Int): Drawable {
-        val cornerRadius = 6f * density
-        val shape = GradientDrawable().apply {
-            this.shape = GradientDrawable.RECTANGLE
-            setColor(bgColor)
-            this.cornerRadius = cornerRadius
-        }
-        val rippleColor = ColorStateList.valueOf(keyBgPressed())
-        return RippleDrawable(rippleColor, shape, null)
+        return RippleDrawable(pressedColorStateList, shape, null)
     }
 
     // -- Pure palette --
