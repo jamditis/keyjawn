@@ -105,6 +105,41 @@ class ThemeManagerTest {
     }
 
     @Test
+    fun `swatch does not read or write the persisted theme pref`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = context.getSharedPreferences("keyjawn_theme", 0)
+        themeManager.currentTheme = KeyboardTheme.LIGHT
+
+        var writes = 0
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "theme") writes++
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        try {
+            // Reading any other theme's palette must not change the live selection.
+            for (theme in KeyboardTheme.entries) {
+                themeManager.swatch(theme)
+            }
+        } finally {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+
+        assertEquals("swatch must not write the theme pref", 0, writes)
+        assertEquals(KeyboardTheme.LIGHT, themeManager.currentTheme)
+    }
+
+    @Test
+    fun `swatch colors match the instance resolvers for the active theme`() {
+        for (theme in KeyboardTheme.entries) {
+            themeManager.currentTheme = theme
+            val palette = themeManager.swatch(theme)
+            assertEquals("keyboardBg mismatch for $theme", themeManager.keyboardBg(), palette.keyboardBg)
+            assertEquals("keyBg mismatch for $theme", themeManager.keyBg(), palette.keyBg)
+            assertEquals("keyText mismatch for $theme", themeManager.keyText(), palette.keyText)
+        }
+    }
+
+    @Test
     fun `extra row background differs from keyboard background for non-OLED themes`() {
         for (theme in KeyboardTheme.entries) {
             if (theme == KeyboardTheme.OLED) continue // OLED uses pure black for both

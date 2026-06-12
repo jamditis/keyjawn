@@ -312,11 +312,10 @@ class MenuPanel(
         val selected = themeManager.currentTheme
 
         for (theme in themeManager.getAvailableThemes()) {
-            val preview = ThemeManager(context)
-            preview.currentTheme = theme
-            val bgColor = preview.keyboardBg()
-            val keyColor = preview.keyBg()
-            val textColor = preview.keyText()
+            val palette = themeManager.swatch(theme)
+            val bgColor = palette.keyboardBg
+            val keyColor = palette.keyBg
+            val textColor = palette.keyText
 
             val swatch = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
@@ -374,9 +373,6 @@ class MenuPanel(
 
             strip.addView(swatch)
         }
-
-        // Restore real theme after creating previews
-        themeManager.currentTheme = selected
 
         list.addView(strip)
         addDivider()

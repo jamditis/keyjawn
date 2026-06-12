@@ -209,6 +209,20 @@ class ThemeManager(context: Context) {
         return RippleDrawable(rippleColor, shape, null)
     }
 
+    // -- Pure palette --
+    // Swatch colors for a given theme, with no prefs read or write and no
+    // currentTheme mutation. Used to render theme previews without touching the
+    // live selection.
+
+    data class Swatch(val keyboardBg: Int, val keyBg: Int, val keyText: Int)
+
+    fun swatch(theme: KeyboardTheme): Swatch = when (theme) {
+        KeyboardTheme.DARK -> Swatch(0xFF1B1B1F.toInt(), 0xFF2B2B30.toInt(), 0xFFE8E8EC.toInt())
+        KeyboardTheme.LIGHT -> Swatch(0xFFE8E8EC.toInt(), 0xFFFFFFFF.toInt(), 0xFF1A1A1F.toInt())
+        KeyboardTheme.OLED -> Swatch(0xFF000000.toInt(), 0xFF111114.toInt(), 0xFFE8E8EC.toInt())
+        KeyboardTheme.TERMINAL -> Swatch(0xFF0A1A0A.toInt(), 0xFF0F2B0F.toInt(), 0xFF33FF33.toInt())
+    }
+
     fun getAvailableThemes(): List<KeyboardTheme> = KeyboardTheme.entries
 
     fun themeLabel(theme: KeyboardTheme): String = when (theme) {
