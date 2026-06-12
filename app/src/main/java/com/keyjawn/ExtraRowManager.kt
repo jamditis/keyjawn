@@ -4,6 +4,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableString
+import android.text.style.UnderlineSpan
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.View
@@ -68,7 +70,12 @@ class ExtraRowManager(
 
         applyThemeColors()
 
-        ctrlState.onStateChanged = { mode -> updateCtrlAppearance(mode) }
+        ctrlState.onStateChanged = { mode ->
+            updateCtrlAppearance(mode)
+            // Brief transition feedback; OFF (fired on every armed-key consumption)
+            // returns null so it doesn't pop a tooltip on every keystroke.
+            ctrlTransitionMessage(mode)?.let { showTooltip(it, 900L) }
+        }
     }
 
     fun showTooltip(message: String, durationMs: Long = 1500L) {
@@ -254,6 +261,10 @@ class ExtraRowManager(
 
     private fun wireUpload() {
         val uploadButton = view.findViewById<View>(R.id.key_upload)
+        // Route upload status to the in-keyboard tooltip bar instead of a Toast.
+        // Upload results land after a picker round-trip, so use the longer duration
+        // (the same the voice permission path uses) to give the user time to read.
+        uploadHandler?.onShowStatus = { msg -> showTooltip(msg, 2500L) }
         if (menuPanelView != null && menuListView != null && themeManager != null && appPrefs != null) {
             val mp = MenuPanel(
                 panel = menuPanelView,
@@ -324,7 +335,11 @@ class ExtraRowManager(
 
             override fun onVoiceStop() {
                 voiceBar?.visibility = View.GONE
-                extraRow.visibility = View.VISIBLE
+                // An error in onError() may have raised the tooltip bar in place
+                // of the extra row; don't clobber it by re-showing the extra row.
+                if (tooltipBar?.visibility != View.VISIBLE) {
+                    extraRow.visibility = View.VISIBLE
+                }
             }
 
             override fun onPartialResult(text: String) {
@@ -342,8 +357,9 @@ class ExtraRowManager(
                 voiceWaveform?.updateRms(rmsdB)
             }
 
-            override fun onError() {
+            override fun onError(error: Int) {
                 voiceText?.text = ""
+                showTooltip(voiceErrorMessage(error))
             }
         }
     }
@@ -356,6 +372,7 @@ class ExtraRowManager(
 
     private fun updateCtrlAppearance(mode: CtrlMode) {
         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+        applyCtrlLabel(mode)
         val tm = themeManager
         if (tm != null) {
             when (mode) {
@@ -370,6 +387,21 @@ class ExtraRowManager(
                 CtrlMode.LOCKED -> R.drawable.key_bg_locked
             }
             ctrlButton.setBackgroundResource(bgRes)
+        }
+    }
+
+    /**
+     * Carries the locked distinction through shape, not color alone: LOCKED
+     * underlines the label so it survives color-blindness and dim screens, while
+     * OFF and ARMED keep the plain label.
+     */
+    private fun applyCtrlLabel(mode: CtrlMode) {
+        if (mode == CtrlMode.LOCKED) {
+            val locked = SpannableString("Ctrl")
+            locked.setSpan(UnderlineSpan(), 0, locked.length, SpannableString.SPAN_INCLUSIVE_EXCLUSIVE)
+            ctrlButton.text = locked
+        } else {
+            ctrlButton.text = "Ctrl"
         }
     }
 }
