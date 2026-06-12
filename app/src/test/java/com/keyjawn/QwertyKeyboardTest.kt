@@ -339,4 +339,28 @@ class QwertyKeyboardTest {
         val firstKey = findButton(row2.getChildAt(0))
         assertEquals("*", firstKey.text.toString())
     }
+
+    @Test
+    fun `updatePackage with same package does not rebuild the grid`() {
+        keyboard.updatePackage("com.example.app")
+        val rowBefore = container.getChildAt(0)
+
+        keyboard.updatePackage("com.example.app")
+        val rowAfter = container.getChildAt(0)
+
+        // A rebuild calls removeAllViews() and re-inflates, producing new view
+        // instances. Unchanged package must reuse the existing grid.
+        assertSame(rowBefore, rowAfter)
+    }
+
+    @Test
+    fun `updatePackage with a different package rebuilds the grid`() {
+        keyboard.updatePackage("com.example.app")
+        val rowBefore = container.getChildAt(0)
+
+        keyboard.updatePackage("com.other.app")
+        val rowAfter = container.getChildAt(0)
+
+        assertNotSame(rowBefore, rowAfter)
+    }
 }

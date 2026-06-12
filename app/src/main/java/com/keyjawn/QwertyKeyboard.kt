@@ -66,6 +66,7 @@ class QwertyKeyboard(
     private val longPressHandler = Handler(Looper.getMainLooper())
 
     fun updatePackage(packageName: String) {
+        if (packageName == currentPackage) return
         currentPackage = packageName
         render()
     }
