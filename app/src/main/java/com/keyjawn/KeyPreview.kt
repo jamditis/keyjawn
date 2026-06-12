@@ -56,17 +56,6 @@ class KeyPreview(
         }
     }
 
-    /**
-     * Rebuilds the themed background and text color. Call when the theme
-     * changes if this KeyPreview is reused across a theme switch. The current
-     * service recreates the whole input view on theme change, so this is here
-     * for callers that keep the same instance.
-     */
-    fun refresh() {
-        previewView.background = buildBackground()
-        previewView.setTextColor(themeManager.keyText())
-    }
-
     fun show(anchor: View, label: String) {
         bounceAnimator.cancel()
 
