@@ -175,6 +175,23 @@ class ThemeManagerTest {
     }
 
     @Test
+    fun `isThemeStale detects an external theme change`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = context.getSharedPreferences("keyjawn_theme", 0)
+
+        themeManager.currentTheme = KeyboardTheme.DARK
+        assertFalse(themeManager.isThemeStale())
+
+        // Another instance (e.g. SettingsActivity) writes a new theme.
+        prefs.edit().putString("theme", KeyboardTheme.LIGHT.name).commit()
+        assertTrue(themeManager.isThemeStale())
+
+        themeManager.refresh()
+        assertFalse(themeManager.isThemeStale())
+        assertEquals(KeyboardTheme.LIGHT, themeManager.currentTheme)
+    }
+
+    @Test
     fun `refresh re-resolves the theme and palette from prefs`() {
         val context = RuntimeEnvironment.getApplication()
         val prefs = context.getSharedPreferences("keyjawn_theme", 0)

@@ -65,6 +65,13 @@ class ThemeManager(context: Context) {
     private fun readPersistedTheme(): KeyboardTheme =
         themeForName(prefs.getString("theme", KeyboardTheme.DARK.name))
 
+    /**
+     * True when the persisted theme differs from the cached one, i.e. another
+     * instance (such as SettingsActivity) changed it. Lets the IME decide to
+     * refresh and re-apply colors on the next keyboard open.
+     */
+    fun isThemeStale(): Boolean = readPersistedTheme() != _currentTheme
+
     // -- Core colors --
 
     fun keyboardBg(): Int = palette.keyboardBg
