@@ -6,6 +6,17 @@ enum class CtrlMode {
     LOCKED
 }
 
+/**
+ * Short transition tooltip for a [CtrlMode], or null when none should show.
+ * OFF returns null because it fires on every armed-key consumption, which would
+ * pop a tooltip on every keystroke.
+ */
+fun ctrlTransitionMessage(mode: CtrlMode): String? = when (mode) {
+    CtrlMode.ARMED -> "Ctrl armed"
+    CtrlMode.LOCKED -> "Ctrl locked"
+    CtrlMode.OFF -> null
+}
+
 class CtrlState {
 
     var mode: CtrlMode = CtrlMode.OFF
