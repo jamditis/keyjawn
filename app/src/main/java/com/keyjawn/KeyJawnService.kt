@@ -18,7 +18,9 @@ class KeyJawnService : InputMethodService() {
     private var voiceInputHandler: VoiceInputHandler? = null
     private var slashCommandRegistry: SlashCommandRegistry? = null
     private var uploadHandler: UploadHandler? = null
-    private var clipboardHistoryManager: ClipboardHistoryManager? = null
+    // internal (module-scoped) so unit tests in the same module can assert the
+    // manager instance is reused across input-view rebuilds. Not public.
+    internal var clipboardHistoryManager: ClipboardHistoryManager? = null
 
     companion object {
         var pendingUploadHandler: UploadHandler? = null
@@ -80,8 +82,11 @@ class KeyJawnService : InputMethodService() {
 
         // Reuse the hoisted clipboard manager (built once in onCreate) rather than
         // constructing a new one per rebuild, which would drop unpinned history.
-        val clipManager = clipboardHistoryManager ?: ClipboardHistoryManager(this).also {
-            clipboardHistoryManager = it
+        // onCreate() always runs before onCreateInputView(), so the manager must
+        // already exist here. Fail loudly if a future change drops the onCreate()
+        // construction instead of silently reconstructing per rebuild.
+        val clipManager = requireNotNull(clipboardHistoryManager) {
+            "clipboardHistoryManager must be created in onCreate() before onCreateInputView()"
         }
 
         val clipPanel = view.findViewById<ScrollView>(R.id.clipboard_panel)
