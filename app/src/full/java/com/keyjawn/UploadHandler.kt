@@ -28,6 +28,13 @@ class UploadHandler(private val context: Context) {
     private var inputConnectionProvider: (() -> InputConnection?)? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    /**
+     * Routes upload status messages to the keyboard's in-context feedback surface
+     * (the tooltip bar). When unset, status falls back to a Toast so a misconfigured
+     * wiring still surfaces the result instead of dropping it silently.
+     */
+    var onShowStatus: ((String) -> Unit)? = null
+
     init {
         activeHost = HostStorage(context).getActiveHost()
     }
@@ -62,12 +69,12 @@ class UploadHandler(private val context: Context) {
 
     fun createPickerIntent(): Intent? {
         if (!hasMediaPermission()) {
-            showToast("Image permission required. Opening settings.")
+            showStatus("Image permission required. Opening settings.")
             openAppSettings()
             return null
         }
         if (!hasHostConfigured()) {
-            showToast("No host configured. Open KeyJawn settings to add one.")
+            showStatus("No host configured. Open KeyJawn settings to add one.")
             return null
         }
         return Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
@@ -79,7 +86,7 @@ class UploadHandler(private val context: Context) {
         if (uri == null) return
         val host = activeHost
         if (host == null) {
-            showToast("No host configured. Open KeyJawn settings to add one.")
+            showStatus("No host configured. Open KeyJawn settings to add one.")
             return
         }
 
@@ -89,10 +96,10 @@ class UploadHandler(private val context: Context) {
             val result = scpUploader.upload(host, localFile, knownHostsManager)
             withContext(Dispatchers.Main) {
                 if (result.success) {
-                    showToast("Uploaded -> ${result.remotePath}")
+                    showStatus("Uploaded -> ${result.remotePath}")
                     inputConnectionProvider?.invoke()?.commitText(result.remotePath, 1)
                 } else {
-                    showToast("Upload failed: ${result.error}")
+                    showStatus("Upload failed: ${result.error}")
                 }
                 localFile.delete()
             }
@@ -118,12 +125,17 @@ class UploadHandler(private val context: Context) {
             inputStream.close()
             tempFile
         } catch (e: Exception) {
-            showToast("Failed to read image")
+            showStatus("Failed to read image")
             null
         }
     }
 
-    private fun showToast(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    private fun showStatus(message: String) {
+        val callback = onShowStatus
+        if (callback != null) {
+            callback(message)
+        } else {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
     }
 }

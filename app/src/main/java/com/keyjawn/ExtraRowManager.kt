@@ -254,6 +254,10 @@ class ExtraRowManager(
 
     private fun wireUpload() {
         val uploadButton = view.findViewById<View>(R.id.key_upload)
+        // Route upload status to the in-keyboard tooltip bar instead of a Toast.
+        // Upload results land after a picker round-trip, so use the longer duration
+        // (the same the voice permission path uses) to give the user time to read.
+        uploadHandler?.onShowStatus = { msg -> showTooltip(msg, 2500L) }
         if (menuPanelView != null && menuListView != null && themeManager != null && appPrefs != null) {
             val mp = MenuPanel(
                 panel = menuPanelView,
