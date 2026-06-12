@@ -17,6 +17,7 @@ local.properties
 .playwright-mcp/
 keyjawn-site-*.png
 *.jks
+*.jks.bak
 *.keystore
 *.p8
 play-service-account.json
