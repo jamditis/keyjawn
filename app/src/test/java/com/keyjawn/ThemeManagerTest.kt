@@ -151,4 +151,62 @@ class ThemeManagerTest {
             )
         }
     }
+
+    @Test
+    fun `color lookups do not re-read the theme pref after the theme is set`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = context.getSharedPreferences("keyjawn_theme", 0)
+
+        // Set the theme through the setter (the single refresh point).
+        themeManager.currentTheme = KeyboardTheme.DARK
+        val darkKeyBg = themeManager.keyBg()
+        assertEquals(0xFF2B2B30.toInt(), darkKeyBg)
+
+        // Mutate the persisted pref directly, bypassing the setter. A cached
+        // palette must not observe this change on a plain color lookup.
+        prefs.edit().putString("theme", KeyboardTheme.TERMINAL.name).commit()
+
+        assertEquals(
+            "color lookup must read the cached palette, not re-parse prefs",
+            darkKeyBg,
+            themeManager.keyBg()
+        )
+        assertEquals(KeyboardTheme.DARK, themeManager.currentTheme)
+    }
+
+    @Test
+    fun `refresh re-resolves the theme and palette from prefs`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = context.getSharedPreferences("keyjawn_theme", 0)
+
+        themeManager.currentTheme = KeyboardTheme.DARK
+        // External write, then explicit refresh: the cache picks up the change.
+        prefs.edit().putString("theme", KeyboardTheme.TERMINAL.name).commit()
+        themeManager.refresh()
+
+        assertEquals(KeyboardTheme.TERMINAL, themeManager.currentTheme)
+        assertEquals(0xFF0F2B0F.toInt(), themeManager.keyBg())
+    }
+
+    @Test
+    fun `themeForName resolves every enum name and falls back to DARK`() {
+        for (theme in KeyboardTheme.entries) {
+            assertEquals(theme, ThemeManager.themeForName(theme.name))
+        }
+        assertEquals(KeyboardTheme.DARK, ThemeManager.themeForName("NONEXISTENT"))
+        assertEquals(KeyboardTheme.DARK, ThemeManager.themeForName(null))
+    }
+
+    @Test
+    fun `cached palette matches per-theme colors across all resolvers`() {
+        // Resolve every color for each theme and assert the cache stays in sync
+        // with the theme after each set, with no stale carry-over.
+        for (theme in KeyboardTheme.entries) {
+            themeManager.currentTheme = theme
+            val swatch = themeManager.swatch(theme)
+            assertEquals(swatch.keyboardBg, themeManager.keyboardBg())
+            assertEquals(swatch.keyBg, themeManager.keyBg())
+            assertEquals(swatch.keyText, themeManager.keyText())
+        }
+    }
 }

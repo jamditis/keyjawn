@@ -17,148 +17,72 @@ class ThemeManager(context: Context) {
     private val prefs = context.getSharedPreferences("keyjawn_theme", Context.MODE_PRIVATE)
     private val density = context.resources.displayMetrics.density
 
+    // Resolved once at construction and refreshed only through the setter or
+    // refresh(): every color lookup reads these cached fields instead of
+    // re-reading prefs and re-parsing the theme enum on the hot render path.
+    private var _currentTheme: KeyboardTheme = readPersistedTheme()
+    private var palette: Palette = paletteFor(_currentTheme)
+
     var currentTheme: KeyboardTheme
-        get() {
-            val name = prefs.getString("theme", KeyboardTheme.DARK.name) ?: KeyboardTheme.DARK.name
-            return try {
-                KeyboardTheme.valueOf(name)
-            } catch (_: IllegalArgumentException) {
-                KeyboardTheme.DARK
-            }
-        }
+        get() = _currentTheme
         set(value) {
             prefs.edit().putString("theme", value.name).apply()
+            _currentTheme = value
+            palette = paletteFor(value)
         }
+
+    /**
+     * Re-resolve the cached theme and palette from prefs. Needed only when the
+     * persisted value can change without going through the setter on this
+     * instance (the setter is the normal single refresh point).
+     */
+    fun refresh() {
+        _currentTheme = readPersistedTheme()
+        palette = paletteFor(_currentTheme)
+    }
+
+    private fun readPersistedTheme(): KeyboardTheme =
+        themeForName(prefs.getString("theme", KeyboardTheme.DARK.name))
 
     // -- Core colors --
 
-    fun keyboardBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF1B1B1F.toInt()
-        KeyboardTheme.LIGHT -> 0xFFE8E8EC.toInt()
-        KeyboardTheme.OLED -> 0xFF000000.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF0A1A0A.toInt()
-    }
+    fun keyboardBg(): Int = palette.keyboardBg
 
-    fun keyBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF2B2B30.toInt()
-        KeyboardTheme.LIGHT -> 0xFFFFFFFF.toInt()
-        KeyboardTheme.OLED -> 0xFF111114.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF0F2B0F.toInt()
-    }
+    fun keyBg(): Int = palette.keyBg
 
-    fun keyText(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFFE8E8EC.toInt()
-        KeyboardTheme.LIGHT -> 0xFF1A1A1F.toInt()
-        KeyboardTheme.OLED -> 0xFFE8E8EC.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF33FF33.toInt()
-    }
+    fun keyText(): Int = palette.keyText
 
-    fun keySpecialBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF333338.toInt()
-        KeyboardTheme.LIGHT -> 0xFFD8D8E0.toInt()
-        KeyboardTheme.OLED -> 0xFF1A1A1E.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF1A3A1A.toInt()
-    }
+    fun keySpecialBg(): Int = palette.keySpecialBg
 
-    fun quickKeyBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF2A3A4A.toInt()
-        KeyboardTheme.LIGHT -> 0xFFC0D0E0.toInt()
-        KeyboardTheme.OLED -> 0xFF1A2A3A.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF1A3A2A.toInt()
-    }
+    fun quickKeyBg(): Int = palette.quickKeyBg
 
-    fun accent(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF6C9BF2.toInt()
-        KeyboardTheme.LIGHT -> 0xFF2563EB.toInt()
-        KeyboardTheme.OLED -> 0xFF6C9BF2.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF33FF33.toInt()
-    }
+    fun accent(): Int = palette.accent
 
-    fun accentLocked(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFFE86C5A.toInt()
-        KeyboardTheme.LIGHT -> 0xFFDC2626.toInt()
-        KeyboardTheme.OLED -> 0xFFE86C5A.toInt()
-        KeyboardTheme.TERMINAL -> 0xFFFF6633.toInt()
-    }
+    fun accentLocked(): Int = palette.accentLocked
 
-    fun extraRowBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF161619.toInt()
-        KeyboardTheme.LIGHT -> 0xFFD0D0D8.toInt()
-        KeyboardTheme.OLED -> 0xFF000000.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF081808.toInt()
-    }
+    fun extraRowBg(): Int = palette.extraRowBg
 
-    fun qwertyBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF222226.toInt()
-        KeyboardTheme.LIGHT -> 0xFFE0E0E6.toInt()
-        KeyboardTheme.OLED -> 0xFF080810.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF0D220D.toInt()
-    }
+    fun qwertyBg(): Int = palette.qwertyBg
 
-    fun keyHint(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF6E6E78.toInt()
-        KeyboardTheme.LIGHT -> 0xFF8888A0.toInt()
-        KeyboardTheme.OLED -> 0xFF555560.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF227722.toInt()
-    }
+    fun keyHint(): Int = palette.keyHint
 
-    fun keyBgPressed(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF3A3A40.toInt()
-        KeyboardTheme.LIGHT -> 0xFFD0D0D8.toInt()
-        KeyboardTheme.OLED -> 0xFF222228.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF1A4A1A.toInt()
-    }
+    fun keyBgPressed(): Int = palette.keyBgPressed
 
-    fun divider(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF38383E.toInt()
-        KeyboardTheme.LIGHT -> 0xFFC0C0CC.toInt()
-        KeyboardTheme.OLED -> 0xFF222228.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF1A3A1A.toInt()
-    }
+    fun divider(): Int = palette.divider
 
     // -- Extra row per-button colors --
 
-    fun escBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF1A1A1A.toInt()
-        KeyboardTheme.LIGHT -> 0xFFBBBBC8.toInt()
-        KeyboardTheme.OLED -> 0xFF0A0A0E.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF0A1A0A.toInt()
-    }
+    fun escBg(): Int = palette.escBg
 
-    fun tabBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF2A4A35.toInt()
-        KeyboardTheme.LIGHT -> 0xFFA8D4B8.toInt()
-        KeyboardTheme.OLED -> 0xFF1A3A25.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF1A3A1A.toInt()
-    }
+    fun tabBg(): Int = palette.tabBg
 
-    fun clipboardBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF4A3D20.toInt()
-        KeyboardTheme.LIGHT -> 0xFFD4C898.toInt()
-        KeyboardTheme.OLED -> 0xFF3A2D10.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF2A3A1A.toInt()
-    }
+    fun clipboardBg(): Int = palette.clipboardBg
 
-    fun arrowBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF3A3A3F.toInt()
-        KeyboardTheme.LIGHT -> 0xFFC0C0CC.toInt()
-        KeyboardTheme.OLED -> 0xFF1A1A22.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF1A2A1A.toInt()
-    }
+    fun arrowBg(): Int = palette.arrowBg
 
-    fun uploadBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF253050.toInt()
-        KeyboardTheme.LIGHT -> 0xFF98B4D4.toInt()
-        KeyboardTheme.OLED -> 0xFF152040.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF1A2A3A.toInt()
-    }
+    fun uploadBg(): Int = palette.uploadBg
 
-    fun micBg(): Int = when (currentTheme) {
-        KeyboardTheme.DARK -> 0xFF4A2525.toInt()
-        KeyboardTheme.LIGHT -> 0xFFD4A0A0.toInt()
-        KeyboardTheme.OLED -> 0xFF3A1515.toInt()
-        KeyboardTheme.TERMINAL -> 0xFF3A1A1A.toInt()
-    }
+    fun micBg(): Int = palette.micBg
 
     // -- Drawable builders --
 
@@ -216,11 +140,8 @@ class ThemeManager(context: Context) {
 
     data class Swatch(val keyboardBg: Int, val keyBg: Int, val keyText: Int)
 
-    fun swatch(theme: KeyboardTheme): Swatch = when (theme) {
-        KeyboardTheme.DARK -> Swatch(0xFF1B1B1F.toInt(), 0xFF2B2B30.toInt(), 0xFFE8E8EC.toInt())
-        KeyboardTheme.LIGHT -> Swatch(0xFFE8E8EC.toInt(), 0xFFFFFFFF.toInt(), 0xFF1A1A1F.toInt())
-        KeyboardTheme.OLED -> Swatch(0xFF000000.toInt(), 0xFF111114.toInt(), 0xFFE8E8EC.toInt())
-        KeyboardTheme.TERMINAL -> Swatch(0xFF0A1A0A.toInt(), 0xFF0F2B0F.toInt(), 0xFF33FF33.toInt())
+    fun swatch(theme: KeyboardTheme): Swatch = paletteFor(theme).let {
+        Swatch(it.keyboardBg, it.keyBg, it.keyText)
     }
 
     fun getAvailableThemes(): List<KeyboardTheme> = KeyboardTheme.entries
@@ -230,5 +151,124 @@ class ThemeManager(context: Context) {
         KeyboardTheme.LIGHT -> "Light"
         KeyboardTheme.OLED -> "OLED black"
         KeyboardTheme.TERMINAL -> "Terminal"
+    }
+
+    /**
+     * Every theme color resolved once into plain Int fields. Pure function of
+     * the theme, so it carries no prefs access and can back both the live
+     * cached palette and the preview swatches.
+     */
+    class Palette(
+        val keyboardBg: Int,
+        val keyBg: Int,
+        val keyText: Int,
+        val keySpecialBg: Int,
+        val quickKeyBg: Int,
+        val accent: Int,
+        val accentLocked: Int,
+        val extraRowBg: Int,
+        val qwertyBg: Int,
+        val keyHint: Int,
+        val keyBgPressed: Int,
+        val divider: Int,
+        val escBg: Int,
+        val tabBg: Int,
+        val clipboardBg: Int,
+        val arrowBg: Int,
+        val uploadBg: Int,
+        val micBg: Int
+    )
+
+    companion object {
+        // Precomputed name -> enum lookup. Replaces KeyboardTheme.valueOf(),
+        // which throws and catches on an unknown value, with a single map read.
+        private val THEMES_BY_NAME: Map<String, KeyboardTheme> =
+            KeyboardTheme.entries.associateBy { it.name }
+
+        fun themeForName(name: String?): KeyboardTheme =
+            THEMES_BY_NAME[name] ?: KeyboardTheme.DARK
+
+        fun paletteFor(theme: KeyboardTheme): Palette = when (theme) {
+            KeyboardTheme.DARK -> Palette(
+                keyboardBg = 0xFF1B1B1F.toInt(),
+                keyBg = 0xFF2B2B30.toInt(),
+                keyText = 0xFFE8E8EC.toInt(),
+                keySpecialBg = 0xFF333338.toInt(),
+                quickKeyBg = 0xFF2A3A4A.toInt(),
+                accent = 0xFF6C9BF2.toInt(),
+                accentLocked = 0xFFE86C5A.toInt(),
+                extraRowBg = 0xFF161619.toInt(),
+                qwertyBg = 0xFF222226.toInt(),
+                keyHint = 0xFF6E6E78.toInt(),
+                keyBgPressed = 0xFF3A3A40.toInt(),
+                divider = 0xFF38383E.toInt(),
+                escBg = 0xFF1A1A1A.toInt(),
+                tabBg = 0xFF2A4A35.toInt(),
+                clipboardBg = 0xFF4A3D20.toInt(),
+                arrowBg = 0xFF3A3A3F.toInt(),
+                uploadBg = 0xFF253050.toInt(),
+                micBg = 0xFF4A2525.toInt()
+            )
+            KeyboardTheme.LIGHT -> Palette(
+                keyboardBg = 0xFFE8E8EC.toInt(),
+                keyBg = 0xFFFFFFFF.toInt(),
+                keyText = 0xFF1A1A1F.toInt(),
+                keySpecialBg = 0xFFD8D8E0.toInt(),
+                quickKeyBg = 0xFFC0D0E0.toInt(),
+                accent = 0xFF2563EB.toInt(),
+                accentLocked = 0xFFDC2626.toInt(),
+                extraRowBg = 0xFFD0D0D8.toInt(),
+                qwertyBg = 0xFFE0E0E6.toInt(),
+                keyHint = 0xFF8888A0.toInt(),
+                keyBgPressed = 0xFFD0D0D8.toInt(),
+                divider = 0xFFC0C0CC.toInt(),
+                escBg = 0xFFBBBBC8.toInt(),
+                tabBg = 0xFFA8D4B8.toInt(),
+                clipboardBg = 0xFFD4C898.toInt(),
+                arrowBg = 0xFFC0C0CC.toInt(),
+                uploadBg = 0xFF98B4D4.toInt(),
+                micBg = 0xFFD4A0A0.toInt()
+            )
+            KeyboardTheme.OLED -> Palette(
+                keyboardBg = 0xFF000000.toInt(),
+                keyBg = 0xFF111114.toInt(),
+                keyText = 0xFFE8E8EC.toInt(),
+                keySpecialBg = 0xFF1A1A1E.toInt(),
+                quickKeyBg = 0xFF1A2A3A.toInt(),
+                accent = 0xFF6C9BF2.toInt(),
+                accentLocked = 0xFFE86C5A.toInt(),
+                extraRowBg = 0xFF000000.toInt(),
+                qwertyBg = 0xFF080810.toInt(),
+                keyHint = 0xFF555560.toInt(),
+                keyBgPressed = 0xFF222228.toInt(),
+                divider = 0xFF222228.toInt(),
+                escBg = 0xFF0A0A0E.toInt(),
+                tabBg = 0xFF1A3A25.toInt(),
+                clipboardBg = 0xFF3A2D10.toInt(),
+                arrowBg = 0xFF1A1A22.toInt(),
+                uploadBg = 0xFF152040.toInt(),
+                micBg = 0xFF3A1515.toInt()
+            )
+            KeyboardTheme.TERMINAL -> Palette(
+                keyboardBg = 0xFF0A1A0A.toInt(),
+                keyBg = 0xFF0F2B0F.toInt(),
+                keyText = 0xFF33FF33.toInt(),
+                keySpecialBg = 0xFF1A3A1A.toInt(),
+                quickKeyBg = 0xFF1A3A2A.toInt(),
+                accent = 0xFF33FF33.toInt(),
+                accentLocked = 0xFFFF6633.toInt(),
+                extraRowBg = 0xFF081808.toInt(),
+                qwertyBg = 0xFF0D220D.toInt(),
+                keyHint = 0xFF227722.toInt(),
+                keyBgPressed = 0xFF1A4A1A.toInt(),
+                divider = 0xFF1A3A1A.toInt(),
+                escBg = 0xFF0A1A0A.toInt(),
+                tabBg = 0xFF1A3A1A.toInt(),
+                clipboardBg = 0xFF2A3A1A.toInt(),
+                arrowBg = 0xFF1A2A1A.toInt(),
+                uploadBg = 0xFF1A2A3A.toInt(),
+                micBg = 0xFF3A1A1A.toInt()
+            )
+        }
     }
 }
