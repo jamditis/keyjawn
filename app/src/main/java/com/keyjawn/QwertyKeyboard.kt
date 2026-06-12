@@ -38,6 +38,11 @@ class QwertyKeyboard(
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider, themeManager)
     private var quickKeyButton: Button? = null
 
+    // Display density never changes for the keyboard view's lifetime (the view
+    // is rebuilt on a configuration change), so cache it once instead of reading
+    // resources.displayMetrics on every dpToPx call across every key per render.
+    private val density: Float = container.context.resources.displayMetrics.density
+
     var currentLayer: Int = KeyboardLayouts.LAYER_LOWER
         private set
 
@@ -65,10 +70,22 @@ class QwertyKeyboard(
     // Touch drag-off long-press handler
     private val longPressHandler = Handler(Looper.getMainLooper())
 
+    // Cached per-package autocorrect flag, read from prefs only at the boundary
+    // events that can change it (package change and the autocorrect toggle)
+    // instead of on every render and Space-key handler call. refreshAutocorrect()
+    // is the single update point so every write site invalidates the same field.
+    private var autocorrectOn: Boolean = appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
+
     fun updatePackage(packageName: String) {
         if (packageName == currentPackage) return
         currentPackage = packageName
+        refreshAutocorrect()
         render()
+    }
+
+    /** Re-read the autocorrect flag for the current package into the cache. */
+    fun refreshAutocorrect() {
+        autocorrectOn = appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
     }
 
     fun resetTransientState() {
@@ -90,9 +107,7 @@ class QwertyKeyboard(
         }
     }
 
-    fun isAutocorrectOn(): Boolean {
-        return appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
-    }
+    fun isAutocorrectOn(): Boolean = autocorrectOn
 
     fun setLayer(layer: Int) {
         currentLayer = layer
@@ -166,14 +181,29 @@ class QwertyKeyboard(
     private fun createKeyView(key: Key): View {
         val context = container.context
         val tm = themeManager
+        // Character keys with alt characters render their key background on the
+        // wrapping FrameLayout, so the button itself stays transparent. Resolve
+        // alts up front and skip building a button background that would only be
+        // discarded for those keys; the button's platform-default background is
+        // cleared instead so the themed frame shows through.
+        val alts = if (key.output is KeyOutput.Character) AltKeyMappings.getAlts(key.label) else null
+        val buttonHasOwnBackground = alts == null
         val button = Button(context).apply {
             text = key.label
             isAllCaps = false
             if (tm != null) {
-                background = tm.createKeyDrawable(tm.keyBg())
+                if (buttonHasOwnBackground) {
+                    background = tm.createKeyDrawable(tm.keyBg())
+                } else {
+                    background = null
+                }
                 setTextColor(tm.keyText())
             } else {
-                setBackgroundResource(R.drawable.key_bg)
+                if (buttonHasOwnBackground) {
+                    setBackgroundResource(R.drawable.key_bg)
+                } else {
+                    background = null
+                }
                 setTextColor(context.getColor(R.color.key_text))
             }
             gravity = Gravity.CENTER
@@ -269,6 +299,7 @@ class QwertyKeyboard(
                 onTap = { handleKeyPress(key) },
                 onLongPress = {
                     val enabled = appPrefs?.toggleAutocorrect(currentPackage) ?: false
+                    autocorrectOn = enabled
                     val state = if (enabled) "on" else "off"
                     extraRowManager.showTooltip("Autocorrect $state")
                     render()
@@ -292,7 +323,7 @@ class QwertyKeyboard(
         }
 
         // Character key touch handling with drag-off cancellation (item 4)
-        val alts = if (key.output is KeyOutput.Character) AltKeyMappings.getAlts(key.label) else null
+        // (alts was resolved at the top of this method.)
         if (key.output is KeyOutput.Character) {
             val previewLabel = key.label
             var touchStarted = false
@@ -359,10 +390,11 @@ class QwertyKeyboard(
             }
         }
 
-        // Wrap character keys that have alts in a FrameLayout with a hint label
+        // Wrap character keys that have alts in a FrameLayout with a hint label.
+        // The button background was never built for these keys (see top of
+        // createKeyView); the key surface lives on the wrapping frame instead.
         if (key.output is KeyOutput.Character && alts != null) {
             val hintChar = if (alts.size == 1) alts[0] else alts[0]
-            button.background = null
             val frame = FrameLayout(context).apply {
                 if (tm != null) {
                     background = tm.createKeyDrawable(tm.keyBg())
@@ -552,7 +584,6 @@ class QwertyKeyboard(
     }
 
     private fun dpToPx(dp: Int): Int {
-        val density = container.context.resources.displayMetrics.density
         return (dp * density + 0.5f).toInt()
     }
 

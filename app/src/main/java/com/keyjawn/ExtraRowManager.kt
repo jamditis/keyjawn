@@ -33,7 +33,8 @@ class ExtraRowManager(
     private val isFullFlavor: Boolean = false,
     private val onOpenSettings: (() -> Unit)? = null,
     private val onThemeChanged: (() -> Unit)? = null,
-    private val currentPackageProvider: (() -> String)? = null
+    private val currentPackageProvider: (() -> String)? = null,
+    private val onAutocorrectChanged: (() -> Unit)? = null
 ) {
 
     val ctrlState = CtrlState()
@@ -80,7 +81,10 @@ class ExtraRowManager(
 
     fun showTooltip(message: String, durationMs: Long = 1500L) {
         val bar = tooltipBar ?: return
-        if (!AppPrefs(view.context).isTooltipsEnabled()) return
+        // Reuse the injected long-lived AppPrefs instead of constructing a new
+        // one (and a getSharedPreferences lookup) on every tooltip. Wiring paths
+        // that pass no appPrefs keep the prior default-on behavior.
+        if (appPrefs?.isTooltipsEnabled() == false) return
         tooltipDismissRunnable?.let { handler.removeCallbacks(it) }
         bar.text = message
         extraRow.visibility = View.GONE
@@ -277,7 +281,8 @@ class ExtraRowManager(
                 onThemeChanged = { onThemeChanged?.invoke() },
                 onShowTooltip = { msg -> showTooltip(msg) },
                 currentPackageProvider = currentPackageProvider ?: { "unknown" },
-                onBottomPaddingChanged = { onBottomPaddingChanged?.invoke() }
+                onBottomPaddingChanged = { onBottomPaddingChanged?.invoke() },
+                onAutocorrectChanged = { onAutocorrectChanged?.invoke() }
             )
             menuPanel = mp
             uploadButton.setOnClickListener {

@@ -20,7 +20,8 @@ class MenuPanel(
     private val onThemeChanged: () -> Unit,
     private val onShowTooltip: (String) -> Unit,
     private val currentPackageProvider: () -> String,
-    private val onBottomPaddingChanged: () -> Unit = {}
+    private val onBottomPaddingChanged: () -> Unit = {},
+    private val onAutocorrectChanged: () -> Unit = {}
 ) {
 
     private val context: Context get() = panel.context
@@ -127,7 +128,11 @@ class MenuPanel(
         )
         addToggleRow("Autocorrect", fullOnly = false,
             isOn = { appPrefs.isAutocorrectEnabled(currentPackageProvider()) },
-            onToggle = { appPrefs.toggleAutocorrect(currentPackageProvider()); populateMenu() }
+            onToggle = {
+                appPrefs.toggleAutocorrect(currentPackageProvider())
+                onAutocorrectChanged()
+                populateMenu()
+            }
         )
         addToggleRow("Tooltips", fullOnly = true,
             isOn = { appPrefs.isTooltipsEnabled() },

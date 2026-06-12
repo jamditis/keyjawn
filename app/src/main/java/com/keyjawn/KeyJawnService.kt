@@ -46,6 +46,11 @@ class KeyJawnService : InputMethodService() {
 
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
         val tm = themeManager
+        // The theme can be changed from SettingsActivity (a separate
+        // ThemeManager instance writing the shared pref). The palette is cached,
+        // so re-resolve it from prefs before applying colors to pick up a change
+        // made while this service's view was torn down.
+        tm.refresh()
         val isFullFlavor = BuildConfig.FLAVOR == "full"
 
         // Apply theme colors to layout backgrounds
@@ -95,7 +100,13 @@ class KeyJawnService : InputMethodService() {
                 startActivity(intent)
             },
             onThemeChanged = { setInputView(onCreateInputView()) },
-            currentPackageProvider = { qwertyKeyboard?.currentPackage ?: "unknown" }
+            currentPackageProvider = { qwertyKeyboard?.currentPackage ?: "unknown" },
+            onAutocorrectChanged = {
+                // Refresh the cached flag and re-render so the spacebar keycap
+                // ("space" vs "SPACE") reflects the new setting immediately.
+                qwertyKeyboard?.refreshAutocorrect()
+                qwertyKeyboard?.let { it.setLayer(it.currentLayer) }
+            }
         )
         extraRowManager = erm
 
@@ -143,6 +154,13 @@ class KeyJawnService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+
+        // If the theme was changed from settings while this view was cached,
+        // rebuild the input view so the new theme applies on this open (the
+        // settings screen tells the user it applies on the next keyboard open).
+        if (themeManager.isThemeStale()) {
+            setInputView(onCreateInputView())
+        }
 
         // Pass EditorInfo to keyboard before updatePackage triggers render
         val imeAction = (info?.imeOptions ?: 0) and EditorInfo.IME_MASK_ACTION

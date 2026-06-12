@@ -20,12 +20,26 @@ class SwipeGestureDetector(
     private val minVerticalDistanceDp = 90f
     private val minVerticalVelocityDp = 300f
 
-    override fun onTouch(view: View, event: MotionEvent): Boolean {
+    // px thresholds resolved once from the touched view's density (constant for
+    // the listener's lifetime) instead of re-reading resources on every event.
+    private var thresholdsResolved = false
+    private var minDistancePx = 0f
+    private var minVelocityPx = 0f
+    private var minVerticalDistancePx = 0f
+    private var minVerticalVelocityPx = 0f
+
+    private fun resolveThresholds(view: View) {
+        if (thresholdsResolved) return
         val density = view.context.resources.displayMetrics.density
-        val minDistancePx = minDistanceDp * density
-        val minVelocityPx = minVelocityDp * density
-        val minVerticalDistancePx = minVerticalDistanceDp * density
-        val minVerticalVelocityPx = minVerticalVelocityDp * density
+        minDistancePx = minDistanceDp * density
+        minVelocityPx = minVelocityDp * density
+        minVerticalDistancePx = minVerticalDistanceDp * density
+        minVerticalVelocityPx = minVerticalVelocityDp * density
+        thresholdsResolved = true
+    }
+
+    override fun onTouch(view: View, event: MotionEvent): Boolean {
+        resolveThresholds(view)
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
