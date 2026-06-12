@@ -27,6 +27,7 @@ class UploadHandler(private val context: Context) {
     private var activeHost: HostConfig? = null
     private var inputConnectionProvider: (() -> InputConnection?)? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var destroyed = false
 
     init {
         activeHost = HostStorage(context).getActiveHost()
@@ -100,6 +101,8 @@ class UploadHandler(private val context: Context) {
     }
 
     fun destroy() {
+        if (destroyed) return
+        destroyed = true
         scope.cancel()
     }
 

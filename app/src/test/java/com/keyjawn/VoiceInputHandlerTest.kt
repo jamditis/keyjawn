@@ -33,4 +33,12 @@ class VoiceInputHandlerTest {
         val handler = VoiceInputHandler(RuntimeEnvironment.getApplication())
         handler.destroy()
     }
+
+    @Test
+    fun `destroy is idempotent`() {
+        // A rebuild may destroy an already destroyed handler.
+        val handler = VoiceInputHandler(RuntimeEnvironment.getApplication())
+        handler.destroy()
+        handler.destroy()
+    }
 }

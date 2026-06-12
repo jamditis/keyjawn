@@ -35,6 +35,15 @@ class KeyJawnService : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
+        // A theme change rebuilds the input view via setInputView(onCreateInputView()).
+        // Tear down the previous handlers before constructing replacements so their
+        // clipboard listener, IO scope, and SpeechRecognizer are released instead of
+        // leaking until the process dies. destroy() on each is idempotent.
+        voiceInputHandler?.destroy()
+        uploadHandler?.destroy()
+        clipboardHistoryManager?.destroy()
+        pendingUploadHandler = null
+
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
         val tm = themeManager
         val isFullFlavor = BuildConfig.FLAVOR == "full"
@@ -107,7 +116,8 @@ class KeyJawnService : InputMethodService() {
                 onDismissedEmpty = {
                     val ic = currentInputConnection ?: return@SlashCommandPopup
                     keySender.sendText(ic, "/")
-                }
+                },
+                themeManager = tm
             )
         } else null
 

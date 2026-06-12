@@ -219,6 +219,42 @@ class MenuPanelTest {
     }
 
     @Test
+    fun `building theme swatches does not write the live theme pref`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = context.getSharedPreferences("keyjawn_theme", 0)
+        // Establish a known selected theme before opening the menu.
+        themeManager.currentTheme = KeyboardTheme.TERMINAL
+        prefs.edit().putString("theme", KeyboardTheme.TERMINAL.name).commit()
+
+        // Count any write to the persisted "theme" pref while the menu is built.
+        var themeWrites = 0
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "theme") themeWrites++
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+
+        try {
+            // Opening the menu builds the theme swatch strip. Building swatches is a
+            // pure render and must not touch the persisted "theme" pref at all.
+            menuPanel.show()
+        } finally {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+
+        assertEquals(
+            "Building theme swatches must not write the persisted theme pref",
+            0,
+            themeWrites
+        )
+        assertEquals(
+            "Persisted theme must still be the originally selected theme",
+            KeyboardTheme.TERMINAL.name,
+            prefs.getString("theme", KeyboardTheme.DARK.name)
+        )
+        assertEquals(KeyboardTheme.TERMINAL, themeManager.currentTheme)
+    }
+
+    @Test
     fun `bottom padding slider fires callback and updates pref`() {
         menuPanel.show()
         // Find the SeekBar
