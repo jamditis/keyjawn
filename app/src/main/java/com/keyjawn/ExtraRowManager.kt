@@ -324,7 +324,11 @@ class ExtraRowManager(
 
             override fun onVoiceStop() {
                 voiceBar?.visibility = View.GONE
-                extraRow.visibility = View.VISIBLE
+                // An error in onError() may have raised the tooltip bar in place
+                // of the extra row; don't clobber it by re-showing the extra row.
+                if (tooltipBar?.visibility != View.VISIBLE) {
+                    extraRow.visibility = View.VISIBLE
+                }
             }
 
             override fun onPartialResult(text: String) {
@@ -342,8 +346,9 @@ class ExtraRowManager(
                 voiceWaveform?.updateRms(rmsdB)
             }
 
-            override fun onError() {
+            override fun onError(error: Int) {
                 voiceText?.text = ""
+                showTooltip(voiceErrorMessage(error))
             }
         }
     }
