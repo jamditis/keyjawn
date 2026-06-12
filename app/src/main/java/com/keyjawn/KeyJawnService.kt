@@ -120,8 +120,11 @@ class KeyJawnService : InputMethodService() {
             onAutocorrectChanged = {
                 // Refresh the cached flag and re-render so the spacebar keycap
                 // ("space" vs "SPACE") reflects the new setting immediately.
+                // The layer is unchanged, so use the force path: a plain
+                // setLayer(currentLayer) is swallowed by render()'s same-layer
+                // guard and would leave the keycap stale.
                 qwertyKeyboard?.refreshAutocorrect()
-                qwertyKeyboard?.let { it.setLayer(it.currentLayer) }
+                qwertyKeyboard?.refreshRender()
             }
         )
         extraRowManager = erm
@@ -153,7 +156,9 @@ class KeyJawnService : InputMethodService() {
         qwertyKeyboard = qwerty
 
         erm.onQuickKeyChanged = { _ ->
-            qwerty.setLayer(qwerty.currentLayer)
+            // The quick-key label changes without a layer change, so force the
+            // rebuild past render()'s same-layer guard.
+            qwerty.refreshRender()
         }
 
         // Bottom padding: user-configurable via menu slider (default 0)

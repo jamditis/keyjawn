@@ -38,6 +38,28 @@ class QwertyKeyboard(
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider, themeManager)
     private var quickKeyButton: Button? = null
 
+    // The layer the current view tree was last built for. render() compares it
+    // against currentLayer and bails when nothing structural changed, so the most
+    // common interactions (same-layer re-renders) do not tear the grid down.
+    // -1 means "nothing built yet" so the first render always runs.
+    private var renderedLayer: Int = -1
+
+    // One holder per Character key in the built grid, in row/col order. The holder
+    // is the single source of truth for what a character key currently shows and
+    // emits: its touch listener dereferences holder.key at touch time (never a
+    // build-time capture), so the visible label and the sent character cannot
+    // diverge. applyShiftCase() mutates holder.key in place on a shift toggle.
+    private class CharKeyHolder(
+        val rowIndex: Int,
+        val colIndex: Int,
+        val button: Button,
+        var key: Key
+    ) {
+        var hint: TextView? = null
+    }
+
+    private val charHolders = mutableListOf<CharKeyHolder>()
+
     // Display density never changes for the keyboard view's lifetime (the view
     // is rebuilt on a configuration change), so cache it once instead of reading
     // resources.displayMetrics on every dpToPx call across every key per render.
@@ -80,7 +102,11 @@ class QwertyKeyboard(
         if (packageName == currentPackage) return
         currentPackage = packageName
         refreshAutocorrect()
-        render()
+        // Per-package autocorrect can flip the spacebar keycap ("space" vs
+        // "SPACE") without a layer change, so force a re-render even though the
+        // layer is unchanged. The same-package early-return above means this only
+        // runs on a genuine package switch.
+        refreshRender()
     }
 
     /** Re-read the autocorrect flag for the current package into the cache. */
@@ -110,16 +136,50 @@ class QwertyKeyboard(
     fun isAutocorrectOn(): Boolean = autocorrectOn
 
     fun setLayer(layer: Int) {
+        val previous = currentLayer
         currentLayer = layer
-        render()
+        // A shift toggle (lower<->upper) swaps only the per-key labels; the grid
+        // structure is position-identical between the two layers. When the other
+        // case is already built, relabel the existing letter buttons in place
+        // instead of tearing the grid down. Any other transition (to/from the
+        // symbol layers) swaps the whole key SET and key COUNT, so it must do a
+        // full rebuild.
+        val isShiftToggle =
+            (previous == KeyboardLayouts.LAYER_LOWER && layer == KeyboardLayouts.LAYER_UPPER) ||
+            (previous == KeyboardLayouts.LAYER_UPPER && layer == KeyboardLayouts.LAYER_LOWER)
+        if (isShiftToggle && charHolders.isNotEmpty()) {
+            applyShiftCase(layer)
+        } else {
+            render()
+        }
     }
 
-    private fun render() {
+    /**
+     * Force a rebuild of the grid even when the layer is unchanged. Use this from
+     * any caller that changes what a key DISPLAYS without changing the layer (the
+     * spacebar "space"/"SPACE" keycap, the quick-key label). A plain setLayer to
+     * the current layer is a no-op under render()'s same-layer guard, so those
+     * refreshers must come through here.
+     */
+    fun refreshRender() = render(force = true)
+
+    /**
+     * Rebuilds the QWERTY grid from scratch for [currentLayer].
+     *
+     * Guarded so a same-layer call is a no-op: re-rendering the layer that is
+     * already on screen would tear down and re-inflate ~34 views for nothing.
+     * Any caller that needs to refresh displayed content WITHOUT a layer change
+     * (spacebar keycap, quick-key label) must use [refreshRender] / force = true,
+     * not a setLayer(currentLayer) that this guard would swallow.
+     */
+    private fun render(force: Boolean = false) {
+        if (!force && currentLayer == renderedLayer) return
         container.removeAllViews()
+        charHolders.clear()
         val layout = KeyboardLayouts.getLayer(currentLayer)
         val context = container.context
 
-        for (row in layout) {
+        for ((rowIndex, row) in layout.withIndex()) {
             val rowLayout = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 layoutParams = LinearLayout.LayoutParams(
@@ -131,8 +191,8 @@ class QwertyKeyboard(
                 setPadding(hPad, vPad, hPad, vPad)
             }
 
-            for (key in row) {
-                val keyView = createKeyView(key)
+            for ((colIndex, key) in row.withIndex()) {
+                val keyView = createKeyView(key, rowIndex, colIndex)
                 val params = LinearLayout.LayoutParams(0, dpToPx(48), key.weight)
                 val margin = dpToPx(2)
                 params.setMargins(margin, margin, margin, margin)
@@ -142,6 +202,7 @@ class QwertyKeyboard(
 
             container.addView(rowLayout)
         }
+        renderedLayer = currentLayer
 
         // Swipe gestures on each row's padding area (not on the container,
         // which can interfere with child button touch dispatch)
@@ -178,7 +239,7 @@ class QwertyKeyboard(
         }
     }
 
-    private fun createKeyView(key: Key): View {
+    private fun createKeyView(key: Key, rowIndex: Int, colIndex: Int): View {
         val context = container.context
         val tm = themeManager
         // Character keys with alt characters render their key background on the
@@ -302,7 +363,10 @@ class QwertyKeyboard(
                     autocorrectOn = enabled
                     val state = if (enabled) "on" else "off"
                     extraRowManager.showTooltip("Autocorrect $state")
-                    render()
+                    // The spacebar keycap ("space" vs "SPACE") tracks autocorrect
+                    // but the layer is unchanged, so force the rebuild past the
+                    // same-layer guard.
+                    refreshRender()
                 },
                 hapticView = container,
                 appPrefs = appPrefs
@@ -325,7 +389,13 @@ class QwertyKeyboard(
         // Character key touch handling with drag-off cancellation (item 4)
         // (alts was resolved at the top of this method.)
         if (key.output is KeyOutput.Character) {
-            val previewLabel = key.label
+            // Register this character key so a shift toggle can relabel it in
+            // place. holder.key is the single source of truth: the listener below
+            // reads holder.key at touch time, never the build-time `key`, so the
+            // visible label and the emitted character stay in sync after a
+            // lower<->upper relabel.
+            val holder = CharKeyHolder(rowIndex, colIndex, button, key)
+            charHolders.add(holder)
             var touchStarted = false
             var longPressRunnable: Runnable? = null
 
@@ -335,18 +405,20 @@ class QwertyKeyboard(
                     MotionEvent.ACTION_DOWN -> {
                         touchStarted = true
                         v.isPressed = true
-                        keyPreview?.show(v, previewLabel)
+                        keyPreview?.show(v, holder.key.label)
 
-                        // Schedule long-press for alt keys
-                        if (alts != null) {
+                        // Schedule long-press for alt keys. Resolve alts from the
+                        // CURRENT label so the case matches what is on screen.
+                        val currentAlts = AltKeyMappings.getAlts(holder.key.label)
+                        if (currentAlts != null) {
                             val runnable = Runnable {
                                 touchStarted = false
                                 keyPreview?.hide()
-                                if (alts.size == 1) {
+                                if (currentAlts.size == 1) {
                                     val ic = inputConnectionProvider() ?: return@Runnable
-                                    keySender.sendText(ic, alts[0])
+                                    keySender.sendText(ic, currentAlts[0])
                                 } else {
-                                    altKeyPopup.show(v, alts)
+                                    altKeyPopup.show(v, currentAlts)
                                 }
                             }
                             longPressRunnable = runnable
@@ -371,7 +443,7 @@ class QwertyKeyboard(
                         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         longPressRunnable = null
                         if (touchStarted && v.isPressed) {
-                            handleKeyPress(key)
+                            handleKeyPress(holder.key)
                         }
                         touchStarted = false
                         v.isPressed = false
@@ -388,40 +460,42 @@ class QwertyKeyboard(
                     else -> false
                 }
             }
-        }
 
-        // Wrap character keys that have alts in a FrameLayout with a hint label.
-        // The button background was never built for these keys (see top of
-        // createKeyView); the key surface lives on the wrapping frame instead.
-        if (key.output is KeyOutput.Character && alts != null) {
-            val hintChar = if (alts.size == 1) alts[0] else alts[0]
-            val frame = FrameLayout(context).apply {
-                if (tm != null) {
-                    background = tm.createKeyDrawable(tm.keyBg())
-                } else {
-                    setBackgroundResource(R.drawable.key_bg)
+            // Wrap character keys that have alts in a FrameLayout with a hint
+            // label. The button background was never built for these keys (see top
+            // of createKeyView); the key surface lives on the wrapping frame. The
+            // hint TextView is captured on the holder so applyShiftCase() can
+            // update it to the case-correct alt in place.
+            if (alts != null) {
+                val frame = FrameLayout(context).apply {
+                    if (tm != null) {
+                        background = tm.createKeyDrawable(tm.keyBg())
+                    } else {
+                        setBackgroundResource(R.drawable.key_bg)
+                    }
                 }
-            }
-            button.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            frame.addView(button)
-            val hint = TextView(context).apply {
-                text = hintChar
-                setTextColor(if (tm != null) tm.keyHint() else context.getColor(R.color.key_hint))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.TOP or Gravity.END
-                ).apply {
-                    topMargin = dpToPx(1)
-                    marginEnd = dpToPx(2)
+                button.layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                frame.addView(button)
+                val hint = TextView(context).apply {
+                    text = alts[0]
+                    setTextColor(if (tm != null) tm.keyHint() else context.getColor(R.color.key_hint))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        Gravity.TOP or Gravity.END
+                    ).apply {
+                        topMargin = dpToPx(1)
+                        marginEnd = dpToPx(2)
+                    }
                 }
+                frame.addView(hint)
+                holder.hint = hint
+                return frame
             }
-            frame.addView(hint)
-            return frame
         }
 
         return button
@@ -581,6 +655,42 @@ class QwertyKeyboard(
                 ShiftState.CAPS_LOCK -> button.setBackgroundResource(R.drawable.key_bg_locked)
             }
         }
+    }
+
+    /**
+     * Relabels the existing character buttons in place for a lower<->upper shift
+     * toggle, instead of tearing the grid down and rebuilding it. The lower and
+     * upper layers are position-identical, so every holder's (rowIndex, colIndex)
+     * maps to a Character key in the target layer and only its label, alt hint,
+     * and the holder's key binding change. No view is added or removed, so no
+     * relayout is needed.
+     *
+     * Safety net: if any holder's position falls outside the target layer or the
+     * target key at that position is not a Character (a structural divergence
+     * between the two layers that does not exist today but a future layout edit
+     * could introduce), fall back to a full forced rebuild so the grid can never
+     * end up with a stale or mismatched key. This keeps the core typing path
+     * correct over a fragile fast path.
+     */
+    private fun applyShiftCase(targetLayer: Int) {
+        val layout = KeyboardLayouts.getLayer(targetLayer)
+        for (holder in charHolders) {
+            val row = layout.getOrNull(holder.rowIndex)
+            val targetKey = row?.getOrNull(holder.colIndex)
+            if (targetKey == null || targetKey.output !is KeyOutput.Character) {
+                render(force = true)
+                return
+            }
+            holder.key = targetKey
+            holder.button.text = targetKey.label
+            holder.hint?.let { hint ->
+                AltKeyMappings.getAlts(targetKey.label)?.let { alts ->
+                    hint.text = alts[0]
+                }
+            }
+        }
+        renderedLayer = targetLayer
+        updateShiftAppearance(shiftButton)
     }
 
     private fun dpToPx(dp: Int): Int {
