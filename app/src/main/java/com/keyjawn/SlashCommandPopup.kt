@@ -13,7 +13,8 @@ import android.widget.TextView
 class SlashCommandPopup(
     private val registry: SlashCommandRegistry,
     private val onCommandSelected: (String) -> Unit,
-    private val onDismissedEmpty: () -> Unit
+    private val onDismissedEmpty: () -> Unit,
+    private val themeManager: ThemeManager? = null
 ) {
 
     private var popup: PopupWindow? = null
@@ -24,10 +25,16 @@ class SlashCommandPopup(
         val popupView = inflater.inflate(R.layout.slash_command_popup, null)
         val commandList = popupView.findViewById<LinearLayout>(R.id.command_list)
 
+        val tm = themeManager
+        val backgroundColor = tm?.keyboardBg() ?: DEFAULT_BACKGROUND
+        val textColor = tm?.keyText() ?: DEFAULT_TEXT
+        popupView.setBackgroundColor(backgroundColor)
+
         val commands = registry.getCommands()
         for (command in commands) {
             val item = inflater.inflate(R.layout.slash_command_item, commandList, false) as TextView
             item.text = command
+            item.setTextColor(textColor)
             item.setOnClickListener {
                 registry.recordUsage(command)
                 onCommandSelected(command)
@@ -42,7 +49,7 @@ class SlashCommandPopup(
             dpToPx(context, 200),
             true
         )
-        window.setBackgroundDrawable(ColorDrawable(0xFF1E1E1E.toInt()))
+        window.setBackgroundDrawable(ColorDrawable(backgroundColor))
         window.isOutsideTouchable = true
         window.setOnDismissListener {
             onDismissedEmpty()
@@ -64,5 +71,12 @@ class SlashCommandPopup(
     private fun dpToPx(context: Context, dp: Int): Int {
         val density = context.resources.displayMetrics.density
         return (dp * density + 0.5f).toInt()
+    }
+
+    companion object {
+        // Fallback colors when no ThemeManager is supplied (lite flavor, which has
+        // no themes). Matches the previous hardcoded dark popup appearance.
+        private val DEFAULT_BACKGROUND = 0xFF1E1E1E.toInt()
+        private val DEFAULT_TEXT = 0xFFFFFFFF.toInt()
     }
 }

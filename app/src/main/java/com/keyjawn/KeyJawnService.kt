@@ -116,7 +116,8 @@ class KeyJawnService : InputMethodService() {
                 onDismissedEmpty = {
                     val ic = currentInputConnection ?: return@SlashCommandPopup
                     keySender.sendText(ic, "/")
-                }
+                },
+                themeManager = tm
             )
         } else null
 
