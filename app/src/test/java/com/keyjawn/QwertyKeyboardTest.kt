@@ -382,4 +382,52 @@ class QwertyKeyboardTest {
         assertEquals(KeyEvent.KEYCODE_UNKNOWN, QwertyKeyboard.ctrlKeyCode('/'))
         assertEquals(KeyEvent.KEYCODE_UNKNOWN, QwertyKeyboard.ctrlKeyCode('@'))
     }
+
+    @Test
+    fun `autocorrect flag is cached and not re-read from prefs on every call`() {
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
+        val prefs = AppPrefs(context)
+        val kb = QwertyKeyboard(container, keySender, extraRowManager, { ic }, prefs)
+
+        prefs.setAutocorrect("com.example.app", true)
+        kb.updatePackage("com.example.app")
+        assertTrue(kb.isAutocorrectOn())
+
+        // Flip the pref directly, bypassing the keyboard's boundary events. The
+        // cached flag must not observe the change on a plain read.
+        prefs.setAutocorrect("com.example.app", false)
+        assertTrue("autocorrect read must come from the cache, not prefs", kb.isAutocorrectOn())
+    }
+
+    @Test
+    fun `updatePackage refreshes the cached autocorrect flag`() {
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
+        val prefs = AppPrefs(context)
+        prefs.setAutocorrect("com.app.on", true)
+        val kb = QwertyKeyboard(container, keySender, extraRowManager, { ic }, prefs)
+
+        kb.updatePackage("com.app.off")
+        assertFalse(kb.isAutocorrectOn())
+
+        kb.updatePackage("com.app.on")
+        assertTrue(kb.isAutocorrectOn())
+    }
+
+    @Test
+    fun `refreshAutocorrect picks up an external toggle for the current package`() {
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
+        val prefs = AppPrefs(context)
+        val kb = QwertyKeyboard(container, keySender, extraRowManager, { ic }, prefs)
+        kb.updatePackage("com.example.app")
+        assertFalse(kb.isAutocorrectOn())
+
+        // The MenuPanel toggle writes the pref then signals the keyboard to
+        // refresh through this single update point.
+        prefs.toggleAutocorrect("com.example.app")
+        kb.refreshAutocorrect()
+        assertTrue(kb.isAutocorrectOn())
+    }
 }

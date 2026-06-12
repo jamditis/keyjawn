@@ -95,7 +95,8 @@ class KeyJawnService : InputMethodService() {
                 startActivity(intent)
             },
             onThemeChanged = { setInputView(onCreateInputView()) },
-            currentPackageProvider = { qwertyKeyboard?.currentPackage ?: "unknown" }
+            currentPackageProvider = { qwertyKeyboard?.currentPackage ?: "unknown" },
+            onAutocorrectChanged = { qwertyKeyboard?.refreshAutocorrect() }
         )
         extraRowManager = erm
 

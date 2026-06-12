@@ -70,10 +70,22 @@ class QwertyKeyboard(
     // Touch drag-off long-press handler
     private val longPressHandler = Handler(Looper.getMainLooper())
 
+    // Cached per-package autocorrect flag, read from prefs only at the boundary
+    // events that can change it (package change and the autocorrect toggle)
+    // instead of on every render and Space-key handler call. refreshAutocorrect()
+    // is the single update point so every write site invalidates the same field.
+    private var autocorrectOn: Boolean = appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
+
     fun updatePackage(packageName: String) {
         if (packageName == currentPackage) return
         currentPackage = packageName
+        refreshAutocorrect()
         render()
+    }
+
+    /** Re-read the autocorrect flag for the current package into the cache. */
+    fun refreshAutocorrect() {
+        autocorrectOn = appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
     }
 
     fun resetTransientState() {
@@ -95,9 +107,7 @@ class QwertyKeyboard(
         }
     }
 
-    fun isAutocorrectOn(): Boolean {
-        return appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
-    }
+    fun isAutocorrectOn(): Boolean = autocorrectOn
 
     fun setLayer(layer: Int) {
         currentLayer = layer
@@ -284,6 +294,7 @@ class QwertyKeyboard(
                 onTap = { handleKeyPress(key) },
                 onLongPress = {
                     val enabled = appPrefs?.toggleAutocorrect(currentPackage) ?: false
+                    autocorrectOn = enabled
                     val state = if (enabled) "on" else "off"
                     extraRowManager.showTooltip("Autocorrect $state")
                     render()
