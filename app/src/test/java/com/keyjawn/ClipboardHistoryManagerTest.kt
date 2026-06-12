@@ -162,6 +162,29 @@ class ClipboardHistoryManagerTest {
     }
 
     @Test
+    fun `destroy is idempotent`() {
+        // Tearing down twice must not throw (a rebuild may destroy an already
+        // destroyed manager).
+        manager.destroy()
+        manager.destroy()
+    }
+
+    @Test
+    fun `destroy unregisters the clipboard listener so later clips are ignored`() {
+        val context = RuntimeEnvironment.getApplication()
+        val clipboard =
+            context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+
+        manager.destroy()
+
+        // A clipboard change after destroy must not feed the torn-down manager.
+        clipboard.setPrimaryClip(
+            android.content.ClipData.newPlainText("label", "after destroy")
+        )
+        assertFalse(manager.getHistory().contains("after destroy"))
+    }
+
+    @Test
     fun `pinned items persist across instances`() {
         manager.addToHistory("persist me")
         manager.pin("persist me")

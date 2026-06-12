@@ -13,6 +13,7 @@ class ClipboardHistoryManager(context: Context) {
     private val pinned = mutableListOf<String>()
     private val maxHistory = 30
     private val maxPinned = 15
+    private var destroyed = false
 
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
         val clip = clipboard.primaryClip ?: return@OnPrimaryClipChangedListener
@@ -82,6 +83,8 @@ class ClipboardHistoryManager(context: Context) {
     }
 
     fun destroy() {
+        if (destroyed) return
+        destroyed = true
         clipboard.removePrimaryClipChangedListener(clipListener)
     }
 
