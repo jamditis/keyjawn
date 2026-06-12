@@ -384,6 +384,21 @@ class QwertyKeyboardTest {
     }
 
     @Test
+    fun `alt-key buttons have no background so the themed frame shows through`() {
+        keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
+        val row2 = container.getChildAt(1) as LinearLayout
+        // Row 2 starts with "a", which has accented alt characters and is wrapped
+        // in a FrameLayout carrying the key background.
+        val aView = row2.getChildAt(0)
+        assertTrue("alt key should be wrapped in a FrameLayout", aView is FrameLayout)
+        val frame = aView as FrameLayout
+        assertNotNull("the wrapping frame carries the key background", frame.background)
+        val innerButton = frame.getChildAt(0) as Button
+        assertEquals("a", innerButton.text.toString())
+        assertNull("the wrapped button must not paint its own background", innerButton.background)
+    }
+
+    @Test
     fun `autocorrect flag is cached and not re-read from prefs on every call`() {
         val context = RuntimeEnvironment.getApplication()
         context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()

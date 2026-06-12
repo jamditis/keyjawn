@@ -184,7 +184,8 @@ class QwertyKeyboard(
         // Character keys with alt characters render their key background on the
         // wrapping FrameLayout, so the button itself stays transparent. Resolve
         // alts up front and skip building a button background that would only be
-        // discarded for those keys.
+        // discarded for those keys; the button's platform-default background is
+        // cleared instead so the themed frame shows through.
         val alts = if (key.output is KeyOutput.Character) AltKeyMappings.getAlts(key.label) else null
         val buttonHasOwnBackground = alts == null
         val button = Button(context).apply {
@@ -193,11 +194,15 @@ class QwertyKeyboard(
             if (tm != null) {
                 if (buttonHasOwnBackground) {
                     background = tm.createKeyDrawable(tm.keyBg())
+                } else {
+                    background = null
                 }
                 setTextColor(tm.keyText())
             } else {
                 if (buttonHasOwnBackground) {
                     setBackgroundResource(R.drawable.key_bg)
+                } else {
+                    background = null
                 }
                 setTextColor(context.getColor(R.color.key_text))
             }
