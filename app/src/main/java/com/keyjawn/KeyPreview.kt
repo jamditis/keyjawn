@@ -19,7 +19,11 @@ class KeyPreview(
 
     private val density = container.context.resources.displayMetrics.density
     private val previewSize = (48 * density + 0.5f).toInt()
-    private var currentAnimator: AnimatorSet? = null
+
+    // The background drawable and bounce animators depend only on the theme,
+    // which does not change between presses, so build them once and reuse
+    // them on every show() instead of reallocating per keystroke.
+    private val bounceAnimator: AnimatorSet
 
     init {
         previewView = TextView(container.context).apply {
@@ -30,24 +34,41 @@ class KeyPreview(
             layoutParams = FrameLayout.LayoutParams(previewSize, previewSize)
             elevation = 12 * density
         }
-        updateBackground()
+        previewView.background = buildBackground()
+
+        val scaleX = ObjectAnimator.ofFloat(previewView, "scaleX", 0.8f, 1f)
+        val scaleY = ObjectAnimator.ofFloat(previewView, "scaleY", 0.8f, 1f)
+        bounceAnimator = AnimatorSet().apply {
+            playTogether(scaleX, scaleY)
+            duration = 100
+            interpolator = OvershootInterpolator(1.5f)
+        }
+
         container.addView(previewView)
     }
 
-    private fun updateBackground() {
-        val bg = GradientDrawable().apply {
+    private fun buildBackground(): GradientDrawable {
+        return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 8 * density
             setColor(themeManager.keyBg())
             setStroke((1 * density + 0.5f).toInt(), themeManager.keyHint())
         }
-        previewView.background = bg
+    }
+
+    /**
+     * Rebuilds the themed background and text color. Call when the theme
+     * changes if this KeyPreview is reused across a theme switch. The current
+     * service recreates the whole input view on theme change, so this is here
+     * for callers that keep the same instance.
+     */
+    fun refresh() {
+        previewView.background = buildBackground()
+        previewView.setTextColor(themeManager.keyText())
     }
 
     fun show(anchor: View, label: String) {
-        currentAnimator?.cancel()
-        updateBackground()
-        previewView.setTextColor(themeManager.keyText())
+        bounceAnimator.cancel()
 
         previewView.text = label
 
@@ -72,23 +93,16 @@ class KeyPreview(
 
         previewView.visibility = View.VISIBLE
 
-        // Bounce animation: scale from 0.8 to 1.0 with overshoot
+        // Bounce animation: scale from 0.8 to 1.0 with overshoot. The animator
+        // is built once in init and replayed here, so no objects are allocated
+        // per keystroke.
         previewView.scaleX = 0.8f
         previewView.scaleY = 0.8f
-        val scaleX = ObjectAnimator.ofFloat(previewView, "scaleX", 0.8f, 1f)
-        val scaleY = ObjectAnimator.ofFloat(previewView, "scaleY", 0.8f, 1f)
-        val animator = AnimatorSet().apply {
-            playTogether(scaleX, scaleY)
-            duration = 100
-            interpolator = OvershootInterpolator(1.5f)
-        }
-        currentAnimator = animator
-        animator.start()
+        bounceAnimator.start()
     }
 
     fun hide() {
-        currentAnimator?.cancel()
-        currentAnimator = null
+        bounceAnimator.cancel()
         previewView.visibility = View.GONE
         previewView.alpha = 1f
     }
