@@ -25,16 +25,28 @@ class SpacebarCursorController(
     private var longPressRunnable: Runnable? = null
     private var touchActive = false
 
+    // px thresholds resolved once from the touched view's density (constant for
+    // the controller's lifetime) instead of re-reading resources on every move.
+    private var thresholdsResolved = false
+    private var cursorThresholdPx = 0f
+    private var stepSizePx = 0f
+
     companion object {
         private const val CURSOR_THRESHOLD_DP = 10f
         private const val STEP_SIZE_DP = 8f
         private const val LONG_PRESS_MS = 500L
     }
 
-    override fun onTouch(v: View, event: MotionEvent): Boolean {
+    private fun resolveThresholds(v: View) {
+        if (thresholdsResolved) return
         val density = v.context.resources.displayMetrics.density
-        val cursorThresholdPx = CURSOR_THRESHOLD_DP * density
-        val stepSizePx = STEP_SIZE_DP * density
+        cursorThresholdPx = CURSOR_THRESHOLD_DP * density
+        stepSizePx = STEP_SIZE_DP * density
+        thresholdsResolved = true
+    }
+
+    override fun onTouch(v: View, event: MotionEvent): Boolean {
+        resolveThresholds(v)
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {

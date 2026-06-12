@@ -38,6 +38,11 @@ class QwertyKeyboard(
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider, themeManager)
     private var quickKeyButton: Button? = null
 
+    // Display density never changes for the keyboard view's lifetime (the view
+    // is rebuilt on a configuration change), so cache it once instead of reading
+    // resources.displayMetrics on every dpToPx call across every key per render.
+    private val density: Float = container.context.resources.displayMetrics.density
+
     var currentLayer: Int = KeyboardLayouts.LAYER_LOWER
         private set
 
@@ -563,7 +568,6 @@ class QwertyKeyboard(
     }
 
     private fun dpToPx(dp: Int): Int {
-        val density = container.context.resources.displayMetrics.density
         return (dp * density + 0.5f).toInt()
     }
 

@@ -2,7 +2,8 @@ package com.keyjawn
 
 object AltKeyMappings {
 
-    private val mappings = mapOf(
+    // Lowercase (and caseless) key labels mapped to their alt characters.
+    private val lowerMappings = mapOf(
         // Number row -> shifted symbols
         "1" to listOf("!"),
         "2" to listOf("@"),
@@ -33,14 +34,20 @@ object AltKeyMappings {
         "-" to listOf("\u2014", "\u2013")
     )
 
-    fun getAlts(label: String): List<String>? {
-        val lower = label.lowercase()
-        val alts = mappings[lower] ?: return null
-        return if (label != lower) {
-            // Uppercase: uppercase the alt chars
-            alts.map { it.uppercase() }
-        } else {
-            alts
+    // Both case variants precomputed once, keyed by the exact key label, so
+    // getAlts is a pure lookup with no per-call lowercasing or per-element
+    // uppercasing. The uppercase entry is added only when the label actually has
+    // a distinct uppercase form (letters); digits and punctuation map to
+    // themselves and need no second entry.
+    private val mappings: Map<String, List<String>> = buildMap {
+        for ((label, alts) in lowerMappings) {
+            put(label, alts)
+            val upperLabel = label.uppercase()
+            if (upperLabel != label) {
+                put(upperLabel, alts.map { it.uppercase() })
+            }
         }
     }
+
+    fun getAlts(label: String): List<String>? = mappings[label]
 }
