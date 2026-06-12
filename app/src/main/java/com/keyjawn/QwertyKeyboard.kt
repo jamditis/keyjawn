@@ -421,8 +421,7 @@ class QwertyKeyboard(
             is KeyOutput.Character -> {
                 val ctrlActive = extraRowManager.isCtrlActive()
                 if (ctrlActive) {
-                    val charCode = key.output.char.lowercase()[0]
-                    val keyCode = KeyEvent.keyCodeFromString("KEYCODE_${charCode.uppercaseChar()}")
+                    val keyCode = ctrlKeyCode(key.output.char.firstOrNull() ?: ' ')
                     if (keyCode == KeyEvent.KEYCODE_UNKNOWN) {
                         keySender.sendText(ic, key.output.char)
                     } else {
@@ -555,5 +554,22 @@ class QwertyKeyboard(
     private fun dpToPx(dp: Int): Int {
         val density = container.context.resources.displayMetrics.density
         return (dp * density + 0.5f).toInt()
+    }
+
+    companion object {
+        /**
+         * Maps a character to its Ctrl-combo key code without a reflective
+         * KeyEvent.keyCodeFromString parse. Letters map directly via the
+         * contiguous KEYCODE_A..KEYCODE_Z range; any non-letter returns
+         * KEYCODE_UNKNOWN so the caller falls back to sending plain text.
+         */
+        fun ctrlKeyCode(c: Char): Int {
+            val lower = c.lowercaseChar()
+            return if (lower in 'a'..'z') {
+                KeyEvent.KEYCODE_A + (lower - 'a')
+            } else {
+                KeyEvent.KEYCODE_UNKNOWN
+            }
+        }
     }
 }

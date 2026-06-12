@@ -363,4 +363,23 @@ class QwertyKeyboardTest {
 
         assertNotSame(rowBefore, rowAfter)
     }
+
+    @Test
+    fun `ctrlKeyCode maps lowercase letters to their keycodes`() {
+        assertEquals(KeyEvent.KEYCODE_A, QwertyKeyboard.ctrlKeyCode('a'))
+        assertEquals(KeyEvent.KEYCODE_Z, QwertyKeyboard.ctrlKeyCode('z'))
+    }
+
+    @Test
+    fun `ctrlKeyCode maps uppercase letters to their keycodes`() {
+        assertEquals(KeyEvent.KEYCODE_A, QwertyKeyboard.ctrlKeyCode('A'))
+        assertEquals(KeyEvent.KEYCODE_Z, QwertyKeyboard.ctrlKeyCode('Z'))
+    }
+
+    @Test
+    fun `ctrlKeyCode returns unknown for non-letters`() {
+        assertEquals(KeyEvent.KEYCODE_UNKNOWN, QwertyKeyboard.ctrlKeyCode('1'))
+        assertEquals(KeyEvent.KEYCODE_UNKNOWN, QwertyKeyboard.ctrlKeyCode('/'))
+        assertEquals(KeyEvent.KEYCODE_UNKNOWN, QwertyKeyboard.ctrlKeyCode('@'))
+    }
 }
