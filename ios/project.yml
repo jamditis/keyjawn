@@ -99,6 +99,11 @@ targets:
     dependencies:
       - package: KeyJawnKit
         product: KeyJawnKit
+      - package: Citadel
+      - package: SwiftNIO
+        product: NIOCore
+      - package: SwiftNIOSSH
+        product: NIOSSH
     settings:
       base:
         SWIFT_VERSION: "6.0"
@@ -124,6 +129,6 @@ targets:
             IsASCIICapable: false
             PrefersRightToLeft: false
             PrimaryLanguage: en-US
-            RequestsOpenAccess: false
+            RequestsOpenAccess: true
           NSExtensionPointIdentifier: com.apple.keyboard-service
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController

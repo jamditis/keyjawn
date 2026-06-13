@@ -10,13 +10,14 @@ public protocol ExtraRowDelegate: AnyObject {
     ///   - ctrlActive: whether the Ctrl modifier is currently armed or locked
     func extraRow(_ view: ExtraRowView, send output: KeyOutput, ctrlActive: Bool)
     func extraRowDidTapClipboard(_ view: ExtraRowView)
+    func extraRowDidTapUpload(_ view: ExtraRowView)
 }
 
 // MARK: - ExtraRowView
 
 /// Horizontal bar of terminal keys designed for LLM CLI workflows.
 ///
-/// Layout: ^C | Tab | ▲ | ▼ | ◄ | ► | / | Esc | Clip
+/// Layout: ^C | Tab | ▲ | ▼ | ◄ | ► | / | Esc | Clip | SCP
 ///
 /// Use as `inputAccessoryView` in the terminal app, or as the top row of the
 /// keyboard extension view.
@@ -35,12 +36,14 @@ public final class ExtraRowView: UIView {
     private var ctrlCButton: ExtraRowButton?
     private var repeatTimer: Timer?
 
-    // MARK: - Colours
+    // MARK: - Theme
 
-    private static let bg       = UIColor(red: 0.145, green: 0.145, blue: 0.145, alpha: 1)
-    private static let keyBg    = UIColor(red: 0.227, green: 0.227, blue: 0.227, alpha: 1)
-    private static let armed    = UIColor(red: 0.267, green: 0.467, blue: 0.800, alpha: 1)
-    private static let locked   = UIColor(red: 0.800, green: 0.267, blue: 0.267, alpha: 1)
+    public var theme: KeyboardTheme = .dark
+
+    private var bg: UIColor { theme.extraRowBg }
+    private var keyBg: UIColor { theme.extraRowKeyBg }
+    private var armed: UIColor { theme.armed }
+    private var locked: UIColor { theme.locked }
 
     // MARK: - Init
 
@@ -63,7 +66,7 @@ public final class ExtraRowView: UIView {
     // MARK: - Setup
 
     private func build() {
-        backgroundColor = Self.bg
+        backgroundColor = bg
 
         stack.axis = .horizontal
         stack.distribution = .fillEqually
@@ -79,7 +82,7 @@ public final class ExtraRowView: UIView {
         ])
 
         for key in ExtraRowKey.defaults {
-            let btn = ExtraRowButton(key: key)
+            let btn = ExtraRowButton(key: key, bgColor: keyBg)
             wire(btn)
             stack.addArrangedSubview(btn)
             if key.slot == .ctrlC { ctrlCButton = btn }
@@ -109,8 +112,11 @@ public final class ExtraRowView: UIView {
         case .clipboard:
             btn.addTarget(self, action: #selector(clipTapped), for: .touchUpInside)
 
+        case .upload:
+            btn.addTarget(self, action: #selector(uploadTapped), for: .touchUpInside)
+
         default:
-            // Tab, slash: single tap
+            // Tab, slash, escape: single tap
             btn.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside)
         }
     }
@@ -141,11 +147,15 @@ public final class ExtraRowView: UIView {
 
         repeatTimer?.invalidate()
         repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { [weak self, output] _ in
-            self?.repeatTimer = Timer.scheduledTimer(
-                withTimeInterval: 0.08,
-                repeats: true
-            ) { [weak self, output] _ in
-                self?.fire(output, ctrlActive: false) // repeat never carries Ctrl
+            MainActor.assumeIsolated {
+                self?.repeatTimer = Timer.scheduledTimer(
+                    withTimeInterval: 0.08,
+                    repeats: true
+                ) { [weak self, output] _ in
+                    MainActor.assumeIsolated {
+                        self?.fire(output, ctrlActive: false) // repeat never carries Ctrl
+                    }
+                }
             }
         }
     }
@@ -159,6 +169,10 @@ public final class ExtraRowView: UIView {
         delegate?.extraRowDidTapClipboard(self)
     }
 
+    @objc private func uploadTapped() {
+        delegate?.extraRowDidTapUpload(self)
+    }
+
     // MARK: - Helpers
 
     private func fire(_ output: KeyOutput, ctrlActive: Bool) {
@@ -169,25 +183,38 @@ public final class ExtraRowView: UIView {
 
     private func applyCtrlVisual(_ state: CtrlState.State) {
         guard let btn = ctrlCButton else { return }
-        UIView.animate(withDuration: 0.15) {
+        UIView.animate(withDuration: 0.15) { [self] in
             switch state {
             case .off:
-                btn.backgroundColor = Self.keyBg
+                btn.backgroundColor = keyBg
                 btn.layer.shadowOpacity = 0
             case .armed:
-                btn.backgroundColor = Self.armed
-                btn.layer.shadowColor = Self.armed.withAlphaComponent(0.5).cgColor
+                btn.backgroundColor = armed
+                btn.layer.shadowColor = armed.withAlphaComponent(0.5).cgColor
                 btn.layer.shadowOpacity = 1
                 btn.layer.shadowRadius = 8
                 btn.layer.shadowOffset = .zero
             case .locked:
-                btn.backgroundColor = Self.locked
-                btn.layer.shadowColor = Self.locked.withAlphaComponent(0.5).cgColor
+                btn.backgroundColor = locked
+                btn.layer.shadowColor = locked.withAlphaComponent(0.5).cgColor
                 btn.layer.shadowOpacity = 1
                 btn.layer.shadowRadius = 8
                 btn.layer.shadowOffset = .zero
             }
         }
+    }
+
+    // MARK: - Theme application
+
+    public func applyTheme(_ theme: KeyboardTheme) {
+        self.theme = theme
+        backgroundColor = bg
+        for subview in stack.arrangedSubviews {
+            if let btn = subview as? ExtraRowButton {
+                btn.applyBgColor(keyBg)
+            }
+        }
+        applyCtrlVisual(ctrl.state)
     }
 }
 
@@ -198,16 +225,16 @@ final class ExtraRowButton: UIButton {
 
     let key: ExtraRowKey
 
-    init(key: ExtraRowKey) {
+    init(key: ExtraRowKey, bgColor: UIColor) {
         self.key = key
         super.init(frame: .zero)
-        configure()
+        configure(bgColor: bgColor)
     }
 
-    required init?(coder: NSCoder) { fatalError("use init(key:)") }
+    required init?(coder: NSCoder) { fatalError("use init(key:bgColor:)") }
 
-    private func configure() {
-        backgroundColor = UIColor(red: 0.227, green: 0.227, blue: 0.227, alpha: 1)
+    private func configure(bgColor: UIColor) {
+        backgroundColor = bgColor
         setTitleColor(.white, for: .normal)
         setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .highlighted)
         titleLabel?.font = .monospacedSystemFont(ofSize: 13, weight: .semibold)
@@ -215,6 +242,10 @@ final class ExtraRowButton: UIButton {
         layer.cornerRadius = 6
         layer.masksToBounds = false
         layer.shadowOpacity = 0
+    }
+
+    func applyBgColor(_ color: UIColor) {
+        backgroundColor = color
     }
 
     override var isHighlighted: Bool {

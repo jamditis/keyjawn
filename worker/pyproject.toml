@@ -10,6 +10,7 @@ dependencies = [
     "apscheduler>=3.10.0",
     "redis>=5.0.0",
     "feedparser>=6.0.0",
+    "playwright>=1.40.0",
 ]
 
 [project.optional-dependencies]

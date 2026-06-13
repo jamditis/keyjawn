@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+
+## GitHub Actions suspended (account-wide)
+
+GitHub Actions are disabled on the entire `jamditis` GitHub account until further notice. This means:
+- **No CI/CD pipelines will run** — builds, tests, deploys all fail silently
+- **GitHub Pages deploys won't work** — even "legacy" static deploys that used Actions under the hood
+- **No automated workflows** — PR checks, scheduled jobs, release automation are all dead
+
+**For any project that previously deployed via GitHub Actions or GitHub Pages, you must use an alternative** (manual deploy, Cloudflare Pages, Firebase Hosting, direct FTP, etc.). Do not create or rely on `.github/workflows/` files.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What this is
@@ -116,25 +126,46 @@ bash ios/scripts/build.sh
 **Architecture:**
 - `KeyJawnKit/` — shared Swift package used by both the main app and the keyboard extension. Contains keyboard models (`KeyboardLayout`, `HostConfig`, `SlashCommand`, `CtrlState`) and UIKit views (`QwertyKeyboardView`, `ExtraRowView`, `SlashCommandPanel`).
 - `KeyJawn/` — main SwiftUI app. Host management (`HostListView`, `HostEditView`, `HostStore`), SSH terminal (`SSHSession` via Citadel/SwiftNIO SSH, `TerminalViewController` via SwiftTerm), settings (`SettingsView`, `SSHKeysView`), and `SSHKeyStore` (Keychain-backed Ed25519 identity key).
-- `KeyJawnKeyboard/` — `UIInputViewController` keyboard extension. Uses `QwertyKeyboardView` + `ExtraRowView` from KeyJawnKit. Communicates via `textDocumentProxy` only (no shared App Groups currently).
+- `KeyJawnKeyboard/` — `UIInputViewController` keyboard extension. Uses `QwertyKeyboardView` + `ExtraRowView` from KeyJawnKit. Uses `group.com.keyjawn` App Group to share host configs and SSH key bytes with the main app (`AppGroupHostStore`, `AppGroupSSHKeyStore`). SCP image upload via `CitadelSCPUploader` (Citadel/SwiftNIO SFTP).
 
 **Key decisions:**
 - One Ed25519 identity key for the whole app (not per-host). Public key is shown in Settings → SSH keys for the user to copy to `authorized_keys`. Private key stored in Keychain under `com.keyjawn / ssh-identity-ed25519`.
 - Host key pinning via `NIOSSHPublicKey(openSSHPublicKey:)`. If no host key is stored, connects with `.acceptAnything()` (warns in UI).
 - Keyboard extension cannot use `present()`. Overlays (slash command panel) are added as `UIView` children of the extension root view.
 - Debug build uses automatic signing; Release build uses manual signing with App Store provisioning profiles (`KeyJawn AppStore`, `KeyJawn Keyboard AppStore`).
+- App Group `group.com.keyjawn` is registered in Apple Developer portal and enabled on both App IDs (`com.keyjawn` and `com.keyjawn.keyboard`). Provisioning profiles regenerated 2026-02-20.
 
 **App Store Connect:**
 - App ID: `com.keyjawn` / keyboard extension: `com.keyjawn.keyboard`
-- First build (`v1`) in VALID state on TestFlight (internal testing track)
-- 5 screenshots uploaded (`APP_IPHONE_67`, 1290×2796) for en-US localization
+- App Store Connect app numeric ID: `6759345867`
+- App Store version 1.0 ID: `071542f6-0cdb-43a5-b07c-7b74688e937b`
+- Build v2 ID: `7e8af1a4-eac8-4b57-8ae0-8a3bd2655c1f` — current build in review
+- Screenshots uploaded: `APP_IPHONE_67` (1290×2796) + `APP_IPAD_PRO_3GEN_129` (2048×2732) for en-US localization
 - Provisioning profiles managed via Apple Developer API (`ios/scripts/asc.py`)
+- App Store Connect API credentials in `pass` at `claude/services/appstore-connect-{issuer-id,key-id,api-key}`
+
+**App Store Connect API notes:**
+- `appStoreVersionSubmissions` is deprecated — use `reviewSubmissions` + `reviewSubmissionItems` instead
+- Submit flow: `POST /v1/reviewSubmissions` → `POST /v1/reviewSubmissionItems` → `PATCH /v1/reviewSubmissions/{id}` with `submitted: true`
+- Pricing set via `POST /v1/appPriceSchedules` with `baseTerritory: USA` and inline `appPrices` using `${local-id}` format (must use file-based script, not heredoc — shell strips `${}`)
+- App Privacy (data usage) labels must be published via web UI — no API endpoint exists for this
+- `usesNonExemptEncryption: false` must be set on each build via `PATCH /v1/builds/{id}` (SSH uses IETF-standard algorithms, exempt from EAR)
+- Screenshot upload flow: create set → reserve slot (`POST /v1/appScreenshots`) → PUT bytes to `uploadOperations[].url` → commit with MD5 checksum
+
+**Submission status (2026-02-24):**
+- App Store review: appeal in progress, state unknown — Apple replied 2026-02-24 "we will continue the review and will notify if there are further issues"
+- Review submission ID: `83b2805c-650c-4bf6-91ff-0c6339f36324`
+- TestFlight external group: "KeyJawn Beta (external)" (ID `360a2954-431c-4d74-aa68-faaf86baa926`)
+- Public TestFlight link: `https://testflight.apple.com/join/8vMqguKK` (limit 50 testers)
+- Internal group: "KeyJawn Beta" (ID `55817758-6243-4d2b-b0f3-ffc95221cbdb`)
+
 - **Submission `83b2805c` (v1.0) rejected 2026-02-20** for Guideline 3.2.2 — reviewer interpreted the slash command panel as a third-party app collection due to tool-branded category names (`claudeCode`, `aider`, `codex`) in the data model and a branded screenshot.
   - Reply sent to Apple explaining `textDocumentProxy.insertText()` behavior (text autocomplete, not a storefront)
   - `SlashCommand.Category` enum renamed: `claudeCode`→`session`, `aider`→`context`, `codex`→`files`
   - Aider command set replaced with Gemini CLI commands (commits `56c11fd`, `b361c92`, `c495696`)
   - `ios-claude-code.png` renamed to `ios-slash-commands.png` (commit `325f1c5`) — **PNG content still needs replacement** with an unbranded keyboard screenshot from Mac/Simulator
   - App Store description audited — no third-party tool names found, no changes needed
+- **2026-02-24:** Apple replied "we will continue the review" — appeal accepted, re-review underway. Waiting on outcome before deciding whether to submit a new build.
 
 ### Mac checklist (do this when you sit down at the MacBook)
 
@@ -225,8 +256,14 @@ The store backend (`store/`) handles purchases and APK distribution. Runs on hou
 - Keys in `pass`: `claude/services/keyjawn-stripe-api-key`, `claude/services/keyjawn-stripe-webhook-secret`
 
 **Admin:**
-- Dashboard: `keyjawn-store.amditis.tech/admin?token=<ADMIN_TOKEN>`
+- Dashboard: `keyjawn-store.amditis.tech/admin` (redirects to `/admin/login` — POST form with password field, sets httponly+secure cookie)
 - Token in `pass`: `claude/services/keyjawn-admin-token`
+
+**Security hardening (2026-02-20):**
+- Admin login moved from GET `?token=` query param to POST `/admin/login` with cookie session
+- `UNSUBSCRIBE_SECRET` fails fast at startup if env var not set
+- `/api/download` and `/api/support` return uniform 202 responses regardless of whether email exists (prevents enumeration)
+- Stripe webhook uses `rowcount` check on INSERT to prevent duplicate welcome emails on retries
 
 **DB location:** `store/keyjawn-store.db`
 
@@ -240,13 +277,13 @@ Astro static site at `website/`. Deployed to GitHub Pages at `keyjawn.amditis.te
 
 ## Worker (social media automation)
 
-Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, Product Hunt, Reddit, and YouTube for relevant conversations, curates dev tool content, and posts/engages with Telegram approval.
+Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, and Product Hunt for relevant conversations, curates dev tool content, and posts/engages with Telegram approval.
 
 **Full operational reference:** `docs/claude/worker-readme.md`
 
-> **RUNS ON OFFICEJAWN ONLY.** The social-scroller uses Playwright + Chrome on officejawn's virtual desktop (DISPLAY=:99, CDP at 127.0.0.1:9222). It will silently fail if run on houseofjawn. `SocialScrollerConfig.ssh_host` must stay `""` (empty = local execution).
+> **RUNS ON HOUSEOFJAWN.** Moved from officejawn (Feb 2026) — MSU campus WiFi blocked social platform traffic. Service: `sudo systemctl start/stop keyjawn-worker` on houseofjawn directly.
 
-**Stack:** Python 3, asyncio, aiosqlite, twikit (Twitter), atproto (Bluesky), APScheduler, Redis pub/sub, Playwright + social-scroller (browser-based feed monitoring)
+**Stack:** Python 3, asyncio, aiosqlite, twikit (Twitter), atproto (Bluesky), APScheduler, Redis pub/sub
 
 **Install:** `cd worker && pip install -e ".[dev]"`
 
@@ -262,11 +299,8 @@ Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, Product Hunt
 - `curation-status` — show curation pipeline stats
 - `discovery-scan` — run on-platform discovery scan
 - `weekly-report` — generate metrics report
-- `scan-feeds` — social-scroller feed scan (requires virtual desktop + CDP)
-- `scan-feeds --strategy` — platform-specific keyword searches
-- `scan-feeds -p reddit -q "SSH from phone" -s commandline` — targeted search
 
-**Key config:** `worker/worker/config.py` — `SocialScrollerConfig.ssh_host = ""` (do not change)
+**Key config:** `worker/worker/config.py`
 **DB:** `worker/keyjawn-worker.db` (aiosqlite, 6 tables)
 **Credentials:** `pass show claude/social/twitter-keyjawn`, `pass show claude/services/bluesky-keyjawn`
 
@@ -274,6 +308,21 @@ Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, Product Hunt
 **Content topic pool:** `worker/worker/calendar_gen.py:TOPICS` — update when adding new demo material.
 
 **Twitter posting:** Twikit is Cloudflare-blocked as of Feb 2026. Use `claude --chrome` on Legion for authenticated posting until a fix is found.
+
+**Social feed engagement (separate from worker):** Handled by the Claude Code browser extension on houseofjawn (display :99, Chromium profile at `~/.config/jawn-browser-profile/`). 8 daily scheduled shortcuts:
+
+| Time | Shortcut | What it does |
+|------|----------|--------------|
+| 10:00 AM | `bsky-engagement` | Like/engage Bluesky feed |
+| 10:15 AM | `twitter-engagement` | Like/engage Twitter feed |
+| 11:00 AM | `keyjawn-search-twitter` | Search Twitter for relevant posts and like them |
+| 11:30 AM | `keyjawn-post-twitter` | Read SOCIAL.md, write 2–3 original tweets |
+| 12:00 PM | `keyjawn-search-bluesky` | Search Bluesky for relevant posts and like them |
+| 12:30 PM | `keyjawn-post-bluesky` | Read SOCIAL.md, write 2–3 original Bluesky posts |
+| 5:15 PM | `twitter-engagement-pm` | Like/engage Twitter feed |
+| 5:45 PM | `bsky-engagement-pm` | Like/engage Bluesky feed |
+
+Shortcut prompts stored at `~/.claude/commands/keyjawn-*.md` on houseofjawn. The post shortcuts start from `https://raw.githubusercontent.com/jamditis/keyjawn/main/SOCIAL.md` so the agent reads the live context doc before navigating to the platform. The worker's `SocialScrollerConfig` has `search_platforms = ()` — the Playwright scroller is not used.
 
 ## Google Play
 
@@ -293,6 +342,28 @@ Autonomous marketing agent at `worker/`. Monitors Twitter, Bluesky, Product Hunt
   - Store listing, content rating, data safety, and all other forms complete
   - 7 testers configured on internal track
   - CI auto-publish ready (`publish-play-store` job) -- change track to `production` when ready
+
+## Release checklist — SOCIAL.md
+
+`SOCIAL.md` in the repo root is the live context doc read by the Claude Code browser extension before each social media session. Keep it current.
+
+**Update SOCIAL.md whenever any of the following happen:**
+
+- A new version is tagged and released (update "Current version" and "Recent changes")
+- A feature ships, changes behavior, or is removed (update "Features to highlight" and pain points)
+- App Store or Google Play status changes (review outcome, new track, rejection/approval)
+- A backlog item moves to in-progress or ships (update "What's in progress / coming soon")
+- Distribution changes (new download location, price change, new platform)
+
+**Where to update:** `SOCIAL.md` → "Current version", "Recent changes", "What's in progress / coming soon"
+
+Add a line to "Recent changes" in every release commit:
+```
+git add SOCIAL.md && git commit --amend --no-edit
+```
+Or add it as a separate commit before tagging.
+
+---
 
 ## Code style
 

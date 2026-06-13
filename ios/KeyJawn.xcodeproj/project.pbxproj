@@ -9,9 +9,11 @@
 /* Begin PBXBuildFile section */
 		1F3BC0FB1DEE09CF9586840D /* HostTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7588DD4C7951CF1F99C3A433 /* HostTerminalView.swift */; };
 		1F6BA06DD660C887B3E1F79C /* KeyJawnApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD9AC295E87CCA2D770BDB6A /* KeyJawnApp.swift */; };
+		306C46342B0B52F882443953 /* AppGroupHostStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88516F15428436E247E65FD4 /* AppGroupHostStore.swift */; };
 		30FBF6554FC7A6F5548299C1 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B581E797ADEF1572390A6096 /* KeyboardViewController.swift */; };
 		32EB71B5DE76A94E371D71A0 /* SSHSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23A4B394C56787E8E05B58A1 /* SSHSession.swift */; };
 		35BA636F86655A1E133B3BB2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 98623C822345E60C48D7464D /* Assets.xcassets */; };
+		5629A0DC0147C9A855D09E0F /* CitadelSCPUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8E002CDE30BEFD6840ABB3A /* CitadelSCPUploader.swift */; };
 		5A4CC73980A76F9DB9E5A5E2 /* TerminalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF6FA031277F874D263EF7AD /* TerminalViewController.swift */; };
 		5DF5361C7BE43FB5D0F34CA5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */; };
 		6350BC0215D4AF763D7B6A6B /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = CB9AD386707E3751FAD823A1 /* Citadel */; };
@@ -21,14 +23,18 @@
 		9DA97D841DD222F4BC99CFC9 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1BD7D5FD852EEF611DFEF3BA /* KeyJawnKit */; };
 		A9DB22FF0F4C815305CC6106 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = D3233B073CCE7B0FEFB818EA /* KeyJawnKit */; };
 		AA523563B70682B4341E113C /* SSHKeysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CC90B529187AE9DAFC1CDE6 /* SSHKeysView.swift */; };
+		ADF9A4E2708CD41A45004661 /* AppGroupSSHKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95B8104B916CCC1CDE9400E8 /* AppGroupSSHKeyStore.swift */; };
 		B958AD522581630C2F77C218 /* NIOCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9319CFF9722F6941701039BF /* NIOCore */; };
+		BB7A5E0F892D8EA9821654B3 /* NIOCore in Frameworks */ = {isa = PBXBuildFile; productRef = C5D92697896E36FD6161FB69 /* NIOCore */; };
 		BF99261856285D2DA591AEB2 /* KeyJawnKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 22D494658DBEB0D051FF4A8C /* KeyJawnKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C2F8D707F7F9F58DA50E2A7F /* NIOSSH in Frameworks */ = {isa = PBXBuildFile; productRef = 974D61CF6F7ADA4824D53DC7 /* NIOSSH */; };
 		C5D73FD296E1B9A8CD97626C /* SSHKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DE62DD6DE973B1FB26C0314 /* SSHKeyStore.swift */; };
 		CA738FCA57272508A304C827 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = DBC5B9DCB9FBC1D3E054CE8F /* SwiftTerm */; };
+		D4959C7C420241BE04B8CD59 /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = 060BD31A2DD85CF9C0F6FE6F /* Citadel */; };
 		D833730B6D5B5B7CD1D39B17 /* TerminalInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F295D7985B88063D1F195088 /* TerminalInputView.swift */; };
 		EB892014C8DC6C2A3258F241 /* PasswordPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6274AD171FD2D143D7DFDAC /* PasswordPromptView.swift */; };
 		ED013FF5D11FE489D6798508 /* HostEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5418E5BFCD5CA8FE0DDDAC5 /* HostEditView.swift */; };
+		EF86DC91B3F6A441505BFFF0 /* NIOSSH in Frameworks */ = {isa = PBXBuildFile; productRef = E6BD72243EA2001DD46465E8 /* NIOSSH */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,9 +72,12 @@
 		62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		665662BFA6DECCD61154BEE8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7588DD4C7951CF1F99C3A433 /* HostTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostTerminalView.swift; sourceTree = "<group>"; };
+		88516F15428436E247E65FD4 /* AppGroupHostStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupHostStore.swift; sourceTree = "<group>"; };
+		95B8104B916CCC1CDE9400E8 /* AppGroupSSHKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupSSHKeyStore.swift; sourceTree = "<group>"; };
 		98623C822345E60C48D7464D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		99A67662436F2C1180E1376F /* KeyJawnKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = KeyJawnKit; path = KeyJawnKit; sourceTree = SOURCE_ROOT; };
 		A6274AD171FD2D143D7DFDAC /* PasswordPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPromptView.swift; sourceTree = "<group>"; };
+		A8E002CDE30BEFD6840ABB3A /* CitadelSCPUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CitadelSCPUploader.swift; sourceTree = "<group>"; };
 		AD9AC295E87CCA2D770BDB6A /* KeyJawnApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyJawnApp.swift; sourceTree = "<group>"; };
 		AEF300C5B755C35A8B51FED3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B5418E5BFCD5CA8FE0DDDAC5 /* HostEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostEditView.swift; sourceTree = "<group>"; };
@@ -96,6 +105,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				9DA97D841DD222F4BC99CFC9 /* KeyJawnKit in Frameworks */,
+				D4959C7C420241BE04B8CD59 /* Citadel in Frameworks */,
+				BB7A5E0F892D8EA9821654B3 /* NIOCore in Frameworks */,
+				EF86DC91B3F6A441505BFFF0 /* NIOSSH in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -158,6 +170,9 @@
 		B0C968F9E2B99A69F54EEB84 /* KeyJawnKeyboard */ = {
 			isa = PBXGroup;
 			children = (
+				88516F15428436E247E65FD4 /* AppGroupHostStore.swift */,
+				95B8104B916CCC1CDE9400E8 /* AppGroupSSHKeyStore.swift */,
+				A8E002CDE30BEFD6840ABB3A /* CitadelSCPUploader.swift */,
 				2B92C187EB65640055598EB8 /* Info.plist */,
 				B581E797ADEF1572390A6096 /* KeyboardViewController.swift */,
 			);
@@ -243,6 +258,9 @@
 			name = KeyJawnKeyboard;
 			packageProductDependencies = (
 				1BD7D5FD852EEF611DFEF3BA /* KeyJawnKit */,
+				060BD31A2DD85CF9C0F6FE6F /* Citadel */,
+				C5D92697896E36FD6161FB69 /* NIOCore */,
+				E6BD72243EA2001DD46465E8 /* NIOSSH */,
 			);
 			productName = KeyJawnKeyboard;
 			productReference = 22D494658DBEB0D051FF4A8C /* KeyJawnKeyboard.appex */;
@@ -308,6 +326,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				306C46342B0B52F882443953 /* AppGroupHostStore.swift in Sources */,
+				ADF9A4E2708CD41A45004661 /* AppGroupSSHKeyStore.swift in Sources */,
+				5629A0DC0147C9A855D09E0F /* CitadelSCPUploader.swift in Sources */,
 				30FBF6554FC7A6F5548299C1 /* KeyboardViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -632,6 +653,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		060BD31A2DD85CF9C0F6FE6F /* Citadel */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4435EB56219D1AEF4C3147DE /* XCRemoteSwiftPackageReference "Citadel" */;
+			productName = Citadel;
+		};
 		1BD7D5FD852EEF611DFEF3BA /* KeyJawnKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = KeyJawnKit;
@@ -646,6 +672,11 @@
 			package = 1E63AA3983889C46E6005E9E /* XCRemoteSwiftPackageReference "swift-nio-ssh" */;
 			productName = NIOSSH;
 		};
+		C5D92697896E36FD6161FB69 /* NIOCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E40D541DF4CADBAB4CD9CCCB /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOCore;
+		};
 		CB9AD386707E3751FAD823A1 /* Citadel */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 4435EB56219D1AEF4C3147DE /* XCRemoteSwiftPackageReference "Citadel" */;
@@ -659,6 +690,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 05B7D614E2AAC85421DE92CC /* XCRemoteSwiftPackageReference "SwiftTerm" */;
 			productName = SwiftTerm;
+		};
+		E6BD72243EA2001DD46465E8 /* NIOSSH */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1E63AA3983889C46E6005E9E /* XCRemoteSwiftPackageReference "swift-nio-ssh" */;
+			productName = NIOSSH;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

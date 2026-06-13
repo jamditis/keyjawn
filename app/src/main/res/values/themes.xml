@@ -25,7 +25,7 @@
 
     <style name="NumberKeyFrame">
         <item name="android:layout_width">0dp</item>
-        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_height">40dp</item>
         <item name="android:layout_weight">1</item>
         <item name="android:layout_marginStart">1dp</item>
         <item name="android:layout_marginEnd">1dp</item>

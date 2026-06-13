@@ -6,8 +6,8 @@
     android:orientation="horizontal"
     android:background="@color/extra_row_bg"
     android:gravity="center_vertical"
-    android:paddingStart="2dp"
-    android:paddingEnd="2dp">
+    android:paddingStart="1dp"
+    android:paddingEnd="1dp">
 
     <FrameLayout style="@style/NumberKeyFrame">
         <TextView style="@style/NumberKeyLabel" android:text="1" />

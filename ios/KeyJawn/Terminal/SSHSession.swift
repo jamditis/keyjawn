@@ -28,6 +28,9 @@ final class SSHSession: ObservableObject {
     }
 
     @Published private(set) var connectionState: ConnectionState = .disconnected
+    /// True when the current (or most recent) connection used a pinned host key.
+    /// False when `.acceptAnything()` was used — the server's identity is unverified.
+    @Published private(set) var isHostKeyVerified: Bool = false
 
     /// Called on the main actor each time SSH output arrives.
     var onData: (([UInt8]) -> Void)?
@@ -56,6 +59,7 @@ final class SSHSession: ObservableObject {
     private func connect(to host: HostConfig, authenticationMethod: SSHAuthenticationMethod) {
         guard connectionState == .disconnected else { return }
         connectionState = .connecting
+        isHostKeyVerified = host.hostPublicKey != nil
 
         let onReceive: @Sendable ([UInt8]) -> Void = { [weak self] bytes in
             Task { @MainActor in self?.onData?(bytes) }
@@ -161,6 +165,7 @@ final class SSHSession: ObservableObject {
         resizeContinuation = nil
         sessionTask?.cancel()
         sessionTask = nil
+        isHostKeyVerified = false
         connectionState = .disconnected
     }
 }

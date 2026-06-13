@@ -104,6 +104,9 @@ class QwertyKeyboard(
     // is the single update point so every write site invalidates the same field.
     private var autocorrectOn: Boolean = appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
 
+    // Delayed key preview hide — cancelled when next key is pressed
+    private var previewHideRunnable: Runnable? = null
+
     fun updatePackage(packageName: String) {
         if (packageName == currentPackage) return
         currentPackage = packageName
@@ -192,15 +195,15 @@ class QwertyKeyboard(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                val hPad = dpToPx(2)
-                val vPad = dpToPx(2)
+                val hPad = dpToPx(1)
+                val vPad = dpToPx(1)
                 setPadding(hPad, vPad, hPad, vPad)
             }
 
             for ((colIndex, key) in row.withIndex()) {
                 val keyView = createKeyView(key, rowIndex, colIndex)
                 val params = LinearLayout.LayoutParams(0, dpToPx(48), key.weight)
-                val margin = dpToPx(2)
+                val margin = dpToPx(1)
                 params.setMargins(margin, margin, margin, margin)
                 keyView.layoutParams = params
                 rowLayout.addView(keyView)
@@ -419,6 +422,8 @@ class QwertyKeyboard(
                         touchStarted = true
                         activePointerId = event.getPointerId(0)
                         v.isPressed = true
+                        previewHideRunnable?.let { longPressHandler.removeCallbacks(it) }
+                        previewHideRunnable = null
                         keyPreview?.show(v, holder.key.label)
 
                         // Schedule long-press for alt keys. Resolve alts from the
@@ -465,7 +470,10 @@ class QwertyKeyboard(
                                 )
                             }
                         } else {
-                            val inBounds = event.x >= 0 && event.x <= v.width &&
+                            // 4dp horizontal slop so a fast diagonal swipe does not
+                            // prematurely cancel the tap (issue #22).
+                            val slop = dpToPx(4)
+                            val inBounds = event.x >= -slop && event.x <= v.width + slop &&
                                 event.y >= -v.height && event.y <= v.height * 2
                             if (!inBounds && touchStarted) {
                                 touchStarted = false
@@ -499,7 +507,9 @@ class QwertyKeyboard(
                         true
                     }
                     MotionEvent.ACTION_UP -> {
-                        keyPreview?.hide()
+                        val hideRunnable = Runnable { keyPreview?.hide() }
+                        previewHideRunnable = hideRunnable
+                        longPressHandler.postDelayed(hideRunnable, 300L)
                         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         longPressRunnable = null
                         val session = slideSession
@@ -515,7 +525,9 @@ class QwertyKeyboard(
                         true
                     }
                     MotionEvent.ACTION_CANCEL -> {
-                        keyPreview?.hide()
+                        val hideRunnable = Runnable { keyPreview?.hide() }
+                        previewHideRunnable = hideRunnable
+                        longPressHandler.postDelayed(hideRunnable, 300L)
                         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         longPressRunnable = null
                         slideSession?.let { cancelSlide(it) }
