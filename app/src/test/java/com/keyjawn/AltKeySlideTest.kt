@@ -100,6 +100,41 @@ class AltKeySlideTest {
         return MotionEvent.obtain(now, now, action, x, y, 0)
     }
 
+    private data class Pointer(val id: Int, val x: Float, val y: Float)
+
+    /**
+     * Build a genuine multi-pointer [MotionEvent] from the given pointers, with
+     * [action] (already packed with its actionIndex for pointer up/down events).
+     * Single-pointer MotionEvent.obtain calls can never exercise the pointer-id
+     * routing, so the hijack and tracked-pointer-up tests must drive real
+     * PointerProperties/PointerCoords arrays.
+     */
+    private fun obtainMulti(action: Int, vararg pointers: Pointer): MotionEvent {
+        val now = SystemClock.uptimeMillis()
+        val props = Array(pointers.size) { i ->
+            MotionEvent.PointerProperties().apply {
+                id = pointers[i].id
+                toolType = MotionEvent.TOOL_TYPE_FINGER
+            }
+        }
+        val coords = Array(pointers.size) { i ->
+            MotionEvent.PointerCoords().apply {
+                x = pointers[i].x
+                y = pointers[i].y
+                pressure = 1f
+                size = 1f
+            }
+        }
+        return MotionEvent.obtain(
+            now, now, action, pointers.size, props, coords,
+            0, 0, 1f, 1f, 0, 0, 0, 0
+        )
+    }
+
+    /** Pack an ACTION_POINTER_DOWN/UP action with the pointer slot index that moved. */
+    private fun pointerAction(maskedAction: Int, pointerIndex: Int): Int =
+        maskedAction or (pointerIndex shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)
+
     /** Fire the pending long-press runnable on a multi-alt key by advancing the looper. */
     private fun openSlideOn(button: Button) {
         val down = obtain(MotionEvent.ACTION_DOWN, button.width / 2f, button.height / 2f)
@@ -236,7 +271,87 @@ class AltKeySlideTest {
     }
 
     @Test
-    fun `a second pointer mid-slide does not change the committed candidate`() {
+    fun `a second pointer mid-slide does not move or commit the tracked candidate`() {
+        // Genuine multi-pointer gesture: pointer 0 (tracked) drives candidate 1; a
+        // second pointer goes down over candidate 3 and then MOVES across the row.
+        // The activePointerId gate must keep the highlight on pointer 0's candidate.
+        // The mutation `findPointerIndex(activePointerId) -> 0` (or dropping the
+        // gate) makes this fail, because the second pointer would hijack the hover.
+        val aButton = charButtonAt(1, 0)
+        val alts = AltKeyMappings.getAlts("a")!!
+        assertTrue("test needs at least four alts", alts.size >= 4)
+        openSlideOn(aButton)
+        val session = keyboard.currentSlideSession!!
+
+        val rect1 = session.candidateRectsForTest()[1]
+        val x1 = localXForCandidate(aButton, rect1)
+        val y1 = localYForCandidate(aButton, rect1)
+        val rect3 = session.candidateRectsForTest()[3]
+        val x3 = localXForCandidate(aButton, rect3)
+        val y3 = localYForCandidate(aButton, rect3)
+
+        // Tracked finger (pointer 0) hovers candidate 1.
+        val move0 = obtain(MotionEvent.ACTION_MOVE, x1, y1)
+        aButton.dispatchTouchEvent(move0)
+        move0.recycle()
+        assertEquals(1, session.hoveredIndex)
+
+        // A second finger (pointer id 1) goes down over candidate 3.
+        val pointerDown = obtainMulti(
+            pointerAction(MotionEvent.ACTION_POINTER_DOWN, 1),
+            Pointer(0, x1, y1), Pointer(1, x3, y3)
+        )
+        aButton.dispatchTouchEvent(pointerDown)
+        pointerDown.recycle()
+        assertEquals("second pointer down must not move the highlight", 1, session.hoveredIndex)
+
+        // The second finger MOVES to candidate 0 while pointer 0 holds at candidate
+        // 1. The hijacker is placed at slot index 0 and the tracked finger at slot
+        // index 1, so a naive `idx = 0` (instead of findPointerIndex(activePointerId))
+        // would read the hijacker's coords and move the highlight to candidate 0.
+        // The activePointerId gate must keep it on candidate 1.
+        val rect0 = session.candidateRectsForTest()[0]
+        val x0 = localXForCandidate(aButton, rect0)
+        val y0 = localYForCandidate(aButton, rect0)
+        val twoFingerMove = obtainMulti(
+            MotionEvent.ACTION_MOVE,
+            Pointer(1, x0, y0), Pointer(0, x1, y1)
+        )
+        aButton.dispatchTouchEvent(twoFingerMove)
+        twoFingerMove.recycle()
+        assertEquals("second pointer move must not hijack the highlight", 1, session.hoveredIndex)
+
+        // The tracked finger lifts, still over candidate 1, as the last pointer.
+        val up = obtain(MotionEvent.ACTION_UP, x1, y1)
+        aButton.dispatchTouchEvent(up)
+        up.recycle()
+
+        verify(keySender).sendText(any(), eq(alts[1]))
+    }
+
+    @Test
+    fun `ACTION_CANCEL during a slide dismisses without sending`() {
+        val aButton = charButtonAt(1, 0)
+        openSlideOn(aButton)
+        val session = keyboard.currentSlideSession
+        assertNotNull(session)
+        assertTrue(session!!.isShowing())
+
+        val cancel = obtain(MotionEvent.ACTION_CANCEL, aButton.width / 2f, aButton.height / 2f)
+        aButton.dispatchTouchEvent(cancel)
+        cancel.recycle()
+
+        verify(keySender, never()).sendText(any(), any())
+        assertFalse("cancel dismisses the slide popup", session.isShowing())
+        assertNull(keyboard.currentSlideSession)
+    }
+
+    @Test
+    fun `tracked finger lifting as a non-primary pointer commits its candidate`() {
+        // Gates the commit-via-ACTION_POINTER_UP branch: a second finger is down, so
+        // the tracked finger lifts as a non-primary pointer (ACTION_POINTER_UP whose
+        // actionIndex is the tracked slot). The slide must commit the tracked
+        // finger's hovered candidate, not ignore the lift.
         val aButton = charButtonAt(1, 0)
         val alts = AltKeyMappings.getAlts("a")!!
         openSlideOn(aButton)
@@ -245,32 +360,36 @@ class AltKeySlideTest {
         val rect1 = session.candidateRectsForTest()[1]
         val x1 = localXForCandidate(aButton, rect1)
         val y1 = localYForCandidate(aButton, rect1)
+        val rect2 = session.candidateRectsForTest()[2]
+        val x2 = localXForCandidate(aButton, rect2)
+        val y2 = localYForCandidate(aButton, rect2)
 
-        // Tracked finger hovers candidate 1.
-        val move = obtain(MotionEvent.ACTION_MOVE, x1, y1)
-        aButton.dispatchTouchEvent(move)
-        move.recycle()
+        // Tracked finger (pointer 0) hovers candidate 1.
+        val move0 = obtain(MotionEvent.ACTION_MOVE, x1, y1)
+        aButton.dispatchTouchEvent(move0)
+        move0.recycle()
         assertEquals(1, session.hoveredIndex)
 
-        // A second finger arrives over candidate 0 via ACTION_POINTER_DOWN. It
-        // must not hijack the hovered candidate.
-        val rect0 = session.candidateRectsForTest()[0]
-        val x0 = localXForCandidate(aButton, rect0)
-        val y0 = localYForCandidate(aButton, rect0)
-        val pointerDown = MotionEvent.obtain(
-            SystemClock.uptimeMillis(), SystemClock.uptimeMillis(),
-            MotionEvent.ACTION_POINTER_DOWN, x0, y0, 0
+        // A second finger (id 1) goes down over candidate 2.
+        val pointerDown = obtainMulti(
+            pointerAction(MotionEvent.ACTION_POINTER_DOWN, 1),
+            Pointer(0, x1, y1), Pointer(1, x2, y2)
         )
         aButton.dispatchTouchEvent(pointerDown)
         pointerDown.recycle()
-        assertEquals("second pointer must not move the highlight", 1, session.hoveredIndex)
 
-        // The tracked finger lifts, still over candidate 1.
-        val up = obtain(MotionEvent.ACTION_UP, x1, y1)
-        aButton.dispatchTouchEvent(up)
-        up.recycle()
+        // The tracked finger (pointer 0, slot index 0) lifts as a NON-primary
+        // pointer while pointer 1 is still down, still over candidate 1.
+        val pointerUp = obtainMulti(
+            pointerAction(MotionEvent.ACTION_POINTER_UP, 0),
+            Pointer(0, x1, y1), Pointer(1, x2, y2)
+        )
+        aButton.dispatchTouchEvent(pointerUp)
+        pointerUp.recycle()
 
         verify(keySender).sendText(any(), eq(alts[1]))
+        assertFalse(session.isShowing())
+        assertNull(keyboard.currentSlideSession)
     }
 
     // ---- Fix A: popup clamping keeps hit-test rects on the visible buttons ----
