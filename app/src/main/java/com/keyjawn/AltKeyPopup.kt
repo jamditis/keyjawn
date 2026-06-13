@@ -106,13 +106,17 @@ class AltKeyPopup(
         // requested left off screen. showAsDropDown (clipping enabled by default)
         // would slide the window back on screen but leave our precomputed rects at
         // the off-screen origin, desyncing hit-testing from the visible buttons.
-        // Clamp horizontally ourselves to the same bounds the framework would, then
-        // derive both the rects AND the offset we pass to showAsDropDown from the
-        // clamped left, so the framework finds the window already fits and leaves
-        // it where we put it.
-        val screenWidth = context.resources.displayMetrics.widthPixels
+        // Clamp horizontally ourselves to the anchor window's visible display frame
+        // -- the same Rect showAsDropDown clips against -- then derive both the rects
+        // AND the offset we pass to showAsDropDown from the clamped left, so the
+        // framework finds the window already fits and leaves it where we put it. In
+        // split-screen/freeform the frame's left can be > 0 and its width far narrower
+        // than displayMetrics.widthPixels, so the raw screen width would let the
+        // framework re-slide the window past our clamp.
+        val displayFrame = Rect()
+        anchor.getWindowVisibleDisplayFrame(displayFrame)
         val requestedLeft = anchorScreenX + (anchor.width - popupWidth) / 2
-        val clampedLeft = clampPopupLeft(requestedLeft, popupWidth, screenWidth)
+        val clampedLeft = clampPopupLeft(requestedLeft, popupWidth, displayFrame.left, displayFrame.right)
         val clampedXOffset = clampedLeft - anchorScreenX
         val popupTop = anchorScreenY + yOffset
 
@@ -140,18 +144,23 @@ class AltKeyPopup(
 
     companion object {
         /**
-         * Clamp the requested popup left edge to the screen so the precomputed
-         * candidate rects stay aligned with where showAsDropDown actually places
-         * the window. A popup wider than the screen pins to 0; one that overflows
-         * left or right is slid inward by exactly the overflow; one that already
-         * fits is unchanged. Pure arithmetic so it is unit-testable without a
-         * rendered popup.
+         * Clamp the requested popup left edge to the anchor window's visible display
+         * frame -- the same frame showAsDropDown clips against -- so the precomputed
+         * candidate rects stay aligned with where the window actually lands in any
+         * window mode (full-screen, split-screen, or freeform). [frameLeft] and
+         * [frameRight] are screen-space, matching getLocationOnScreen. A popup wider
+         * than the frame pins to [frameLeft]; one that overflows left or right is slid
+         * inward to the frame edge; one that already fits is unchanged. Pure arithmetic
+         * so it is unit-testable without a rendered popup.
          */
-        fun clampPopupLeft(requestedLeft: Int, popupWidth: Int, screenWidth: Int): Int = when {
-            popupWidth >= screenWidth -> 0
-            requestedLeft < 0 -> 0
-            requestedLeft + popupWidth > screenWidth -> screenWidth - popupWidth
-            else -> requestedLeft
+        fun clampPopupLeft(requestedLeft: Int, popupWidth: Int, frameLeft: Int, frameRight: Int): Int {
+            val maxLeft = frameRight - popupWidth
+            return when {
+                maxLeft <= frameLeft -> frameLeft
+                requestedLeft < frameLeft -> frameLeft
+                requestedLeft > maxLeft -> maxLeft
+                else -> requestedLeft
+            }
         }
     }
 

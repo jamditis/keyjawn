@@ -395,27 +395,51 @@ class AltKeySlideTest {
     // ---- Fix A: popup clamping keeps hit-test rects on the visible buttons ----
 
     @Test
-    fun `clampPopupLeft pins a negative requested left to zero`() {
+    fun `clampPopupLeft pins a negative requested left to the frame left`() {
         // A wide candidate row centered over a narrow edge key requests a negative
-        // left; the clamp must pin it to 0 so the visible popup and the rects agree.
-        assertEquals(0, AltKeyPopup.clampPopupLeft(requestedLeft = -120, popupWidth = 300, screenWidth = 1080))
+        // left; the clamp must pin it to the frame left so the visible popup and the
+        // rects agree. Portrait full-width IME: frame is [0, 1080].
+        assertEquals(0, AltKeyPopup.clampPopupLeft(requestedLeft = -120, popupWidth = 300, frameLeft = 0, frameRight = 1080))
     }
 
     @Test
-    fun `clampPopupLeft slides an overflowing-right popup back on screen`() {
-        // Requested right edge (1000 + 300 = 1300) overflows the 1080 screen, so the
-        // left clamps to screenWidth - popupWidth = 780.
-        assertEquals(780, AltKeyPopup.clampPopupLeft(requestedLeft = 1000, popupWidth = 300, screenWidth = 1080))
+    fun `clampPopupLeft slides an overflowing-right popup back inside the frame`() {
+        // Requested right edge (1000 + 300 = 1300) overflows the [0, 1080] frame, so
+        // the left clamps to frameRight - popupWidth = 780.
+        assertEquals(780, AltKeyPopup.clampPopupLeft(requestedLeft = 1000, popupWidth = 300, frameLeft = 0, frameRight = 1080))
     }
 
     @Test
     fun `clampPopupLeft leaves a popup that already fits unchanged`() {
-        assertEquals(400, AltKeyPopup.clampPopupLeft(requestedLeft = 400, popupWidth = 300, screenWidth = 1080))
+        assertEquals(400, AltKeyPopup.clampPopupLeft(requestedLeft = 400, popupWidth = 300, frameLeft = 0, frameRight = 1080))
     }
 
     @Test
-    fun `clampPopupLeft pins a popup wider than the screen to zero`() {
-        assertEquals(0, AltKeyPopup.clampPopupLeft(requestedLeft = -50, popupWidth = 1200, screenWidth = 1080))
+    fun `clampPopupLeft pins a popup wider than the frame to the frame left`() {
+        assertEquals(0, AltKeyPopup.clampPopupLeft(requestedLeft = -50, popupWidth = 1200, frameLeft = 0, frameRight = 1080))
+    }
+
+    @Test
+    fun `clampPopupLeft pins a left-overflowing popup to a non-zero frame left`() {
+        // Split-screen/freeform: the anchor window's visible frame is [200, 1000].
+        // A requested left of 150 falls left of the frame, so it pins to frameLeft.
+        // The old [0, screenWidth - popupWidth] clamp ignored frameLeft and returned
+        // 150 unchanged, leaving the rects off the left edge of the window.
+        assertEquals(200, AltKeyPopup.clampPopupLeft(requestedLeft = 150, popupWidth = 300, frameLeft = 200, frameRight = 1000))
+    }
+
+    @Test
+    fun `clampPopupLeft slides a right-overflowing popup to the non-zero frame right`() {
+        // Frame [200, 1000], popupWidth 300: requested left 850 would push the right
+        // edge to 1150, past frameRight, so it clamps to frameRight - popupWidth = 700.
+        assertEquals(700, AltKeyPopup.clampPopupLeft(requestedLeft = 850, popupWidth = 300, frameLeft = 200, frameRight = 1000))
+    }
+
+    @Test
+    fun `clampPopupLeft pins a popup wider than a non-zero frame to the frame left`() {
+        // Frame [200, 1000] is 800 wide; a 900-wide popup cannot fit, so it pins to
+        // frameLeft (200), not 0.
+        assertEquals(200, AltKeyPopup.clampPopupLeft(requestedLeft = 250, popupWidth = 900, frameLeft = 200, frameRight = 1000))
     }
 
     @Test
@@ -432,14 +456,18 @@ class AltKeySlideTest {
         val session = keyboard.currentSlideSession
         assertNotNull("long-press on a multi-alt key opens a slide session", session)
 
-        val screenWidth = aButton.context.resources.displayMetrics.widthPixels
+        // Assert against the anchor window's visible display frame -- the same Rect
+        // showAsDropDown clips against -- not raw displayMetrics.widthPixels, so the
+        // bounds match what the popup is actually clamped to in any window mode.
+        val displayFrame = Rect()
+        aButton.getWindowVisibleDisplayFrame(displayFrame)
         val rects = session!!.candidateRectsForTest()
         assertEquals(alts.size, rects.size)
 
         var previousRight = Int.MIN_VALUE
         for ((i, rect) in rects.withIndex()) {
-            assertTrue("rect $i must not start off the left edge: ${rect.left}", rect.left >= 0)
-            assertTrue("rect $i must not run off the right edge: ${rect.right} > $screenWidth", rect.right <= screenWidth)
+            assertTrue("rect $i must not start off the left edge: ${rect.left} < ${displayFrame.left}", rect.left >= displayFrame.left)
+            assertTrue("rect $i must not run off the right edge: ${rect.right} > ${displayFrame.right}", rect.right <= displayFrame.right)
             assertTrue("rects must be left-to-right ordered", rect.left > previousRight)
             previousRight = rect.right
         }
