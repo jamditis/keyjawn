@@ -18,7 +18,9 @@ class KeyJawnService : InputMethodService() {
     private var voiceInputHandler: VoiceInputHandler? = null
     private var slashCommandRegistry: SlashCommandRegistry? = null
     private var uploadHandler: UploadHandler? = null
-    private var clipboardHistoryManager: ClipboardHistoryManager? = null
+    // internal (module-scoped) so unit tests in the same module can assert the
+    // manager instance is reused across input-view rebuilds. Not public.
+    internal var clipboardHistoryManager: ClipboardHistoryManager? = null
 
     companion object {
         var pendingUploadHandler: UploadHandler? = null
@@ -32,11 +34,39 @@ class KeyJawnService : InputMethodService() {
             themeManager.currentTheme = KeyboardTheme.DARK
         }
         slashCommandRegistry = SlashCommandRegistry(this)
+        // The clipboard manager holds the user's unpinned clip history in memory and
+        // registers a system clipboard listener in its constructor. Build it once for
+        // the service lifetime so a theme-change input-view rebuild reuses the same
+        // instance instead of stranding the listener and resetting history to empty.
+        // It keeps no reference to the input view, so reuse is safe; ExtraRowManager
+        // re-wires the new view's clipboard panel to this instance on each rebuild.
+        clipboardHistoryManager = ClipboardHistoryManager(this)
     }
 
     override fun onCreateInputView(): View {
+        // A theme change rebuilds the input view via setInputView(onCreateInputView()).
+        // Tear down the previous voice and upload handlers before constructing
+        // replacements so their SpeechRecognizer and IO scope are released instead of
+        // leaking until the process dies. destroy() on each is idempotent. The
+        // clipboard manager is intentionally not torn down here: it is hoisted to
+        // onCreate() and reused so the user's unpinned clip history survives a reskin.
+        voiceInputHandler?.destroy()
+        uploadHandler?.destroy()
+        // Nulling pendingUploadHandler here cannot strand an in-flight picker
+        // result. This method and PickerActivity.onActivityResult both run on the
+        // main thread, and for the full flavor this same synchronous call repoints
+        // pendingUploadHandler to the freshly built handler below before returning.
+        // A result delivered after a rebuild therefore always observes the live
+        // handler (wired to the current input connection), never this transient null.
+        pendingUploadHandler = null
+
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
         val tm = themeManager
+        // The theme can be changed from SettingsActivity (a separate
+        // ThemeManager instance writing the shared pref). The palette is cached,
+        // so re-resolve it from prefs before applying colors to pick up a change
+        // made while this service's view was torn down.
+        tm.refresh()
         val isFullFlavor = BuildConfig.FLAVOR == "full"
 
         // Apply theme colors to layout backgrounds
@@ -56,8 +86,14 @@ class KeyJawnService : InputMethodService() {
         } else null
         uploadHandler = upload
 
-        val clipManager = ClipboardHistoryManager(this)
-        clipboardHistoryManager = clipManager
+        // Reuse the hoisted clipboard manager (built once in onCreate) rather than
+        // constructing a new one per rebuild, which would drop unpinned history.
+        // onCreate() always runs before onCreateInputView(), so the manager must
+        // already exist here. Fail loudly if a future change drops the onCreate()
+        // construction instead of silently reconstructing per rebuild.
+        val clipManager = requireNotNull(clipboardHistoryManager) {
+            "clipboardHistoryManager must be created in onCreate() before onCreateInputView()"
+        }
 
         val clipPanel = view.findViewById<ScrollView>(R.id.clipboard_panel)
         val clipList = view.findViewById<LinearLayout>(R.id.clipboard_list)
@@ -86,7 +122,16 @@ class KeyJawnService : InputMethodService() {
                 startActivity(intent)
             },
             onThemeChanged = { setInputView(onCreateInputView()) },
-            currentPackageProvider = { qwertyKeyboard?.currentPackage ?: "unknown" }
+            currentPackageProvider = { qwertyKeyboard?.currentPackage ?: "unknown" },
+            onAutocorrectChanged = {
+                // Refresh the cached flag and re-render so the spacebar keycap
+                // ("space" vs "SPACE") reflects the new setting immediately.
+                // The layer is unchanged, so use the force path: a plain
+                // setLayer(currentLayer) is swallowed by render()'s same-layer
+                // guard and would leave the keycap stale.
+                qwertyKeyboard?.refreshAutocorrect()
+                qwertyKeyboard?.refreshRender()
+            }
         )
         extraRowManager = erm
 
@@ -107,7 +152,8 @@ class KeyJawnService : InputMethodService() {
                 onDismissedEmpty = {
                     val ic = currentInputConnection ?: return@SlashCommandPopup
                     keySender.sendText(ic, "/")
-                }
+                },
+                themeManager = tm
             )
         } else null
 
@@ -116,7 +162,9 @@ class KeyJawnService : InputMethodService() {
         qwertyKeyboard = qwerty
 
         erm.onQuickKeyChanged = { _ ->
-            qwerty.setLayer(qwerty.currentLayer)
+            // The quick-key label changes without a layer change, so force the
+            // rebuild past render()'s same-layer guard.
+            qwerty.refreshRender()
         }
 
         // Bottom padding: user-configurable via menu slider (default 0)
@@ -133,6 +181,13 @@ class KeyJawnService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+
+        // If the theme was changed from settings while this view was cached,
+        // rebuild the input view so the new theme applies on this open (the
+        // settings screen tells the user it applies on the next keyboard open).
+        if (themeManager.isThemeStale()) {
+            setInputView(onCreateInputView())
+        }
 
         // Pass EditorInfo to keyboard before updatePackage triggers render
         val imeAction = (info?.imeOptions ?: 0) and EditorInfo.IME_MASK_ACTION

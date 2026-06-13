@@ -162,6 +162,29 @@ class ClipboardHistoryManagerTest {
     }
 
     @Test
+    fun `destroy is idempotent`() {
+        // Tearing down twice must not throw (a rebuild may destroy an already
+        // destroyed manager).
+        manager.destroy()
+        manager.destroy()
+    }
+
+    @Test
+    fun `destroy unregisters the clipboard listener so later clips are ignored`() {
+        val context = RuntimeEnvironment.getApplication()
+        val clipboard =
+            context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+
+        manager.destroy()
+
+        // A clipboard change after destroy must not feed the torn-down manager.
+        clipboard.setPrimaryClip(
+            android.content.ClipData.newPlainText("label", "after destroy")
+        )
+        assertFalse(manager.getHistory().contains("after destroy"))
+    }
+
+    @Test
     fun `pinned items persist across instances`() {
         manager.addToHistory("persist me")
         manager.pin("persist me")
@@ -170,5 +193,25 @@ class ClipboardHistoryManagerTest {
         assertEquals(listOf("persist me"), manager2.getPinned())
         assertTrue(manager2.isPinned("persist me"))
         manager2.destroy()
+    }
+
+    @Test
+    fun `reusing the same instance keeps unpinned history but a new instance does not`() {
+        // Unpinned history lives only in memory on the instance (unlike pins, which
+        // round-trip through prefs). This is why KeyJawnService hoists one manager
+        // and reuses it across input-view rebuilds: reusing the same instance keeps
+        // the user's unpinned clips, while constructing a fresh one on every theme
+        // change (the pre-#37-follow-up behavior) silently drops them.
+        manager.addToHistory("unpinned clip")
+        assertEquals(listOf("unpinned clip"), manager.getHistory())
+
+        // Reuse: same instance still has the history.
+        assertEquals(listOf("unpinned clip"), manager.getHistory())
+
+        // Reconstruct: a brand-new instance starts empty (no inherited unpinned
+        // history), which is the data loss the hoist avoids.
+        val rebuilt = ClipboardHistoryManager(RuntimeEnvironment.getApplication())
+        assertFalse(rebuilt.getHistory().contains("unpinned clip"))
+        rebuilt.destroy()
     }
 }

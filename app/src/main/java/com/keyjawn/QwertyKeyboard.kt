@@ -38,6 +38,39 @@ class QwertyKeyboard(
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider, themeManager)
     private var quickKeyButton: Button? = null
 
+    // The slide-and-release session for the currently open alt-key popup, or null
+    // when no multi-alt popup is up. The character key's touch listener routes the
+    // tracked finger's MOVE/UP into it. Exposed for tests to drive the gesture.
+    internal var currentSlideSession: AltKeyPopup.SlideSession? = null
+        private set
+
+    // The layer the current view tree was last built for. render() compares it
+    // against currentLayer and bails when nothing structural changed, so the most
+    // common interactions (same-layer re-renders) do not tear the grid down.
+    // -1 means "nothing built yet" so the first render always runs.
+    private var renderedLayer: Int = -1
+
+    // One holder per Character key in the built grid, in row/col order. The holder
+    // is the single source of truth for what a character key currently shows and
+    // emits: its touch listener dereferences holder.key at touch time (never a
+    // build-time capture), so the visible label and the sent character cannot
+    // diverge. applyShiftCase() mutates holder.key in place on a shift toggle.
+    private class CharKeyHolder(
+        val rowIndex: Int,
+        val colIndex: Int,
+        val button: Button,
+        var key: Key
+    ) {
+        var hint: TextView? = null
+    }
+
+    private val charHolders = mutableListOf<CharKeyHolder>()
+
+    // Display density never changes for the keyboard view's lifetime (the view
+    // is rebuilt on a configuration change), so cache it once instead of reading
+    // resources.displayMetrics on every dpToPx call across every key per render.
+    private val density: Float = container.context.resources.displayMetrics.density
+
     var currentLayer: Int = KeyboardLayouts.LAYER_LOWER
         private set
 
@@ -62,15 +95,49 @@ class QwertyKeyboard(
     // EditorInfo inputType hints (item 11)
     private var inputTypeQuickKeyOverride: String? = null
 
+    // Set by updateImeAction/updateInputType when the editor-derived display state
+    // (adaptive Enter label, input-type quick-key override) actually changes.
+    // updatePackage consumes it to force one render on a same-package focus switch
+    // -- e.g. moving from a text field to a search or URL field in the same app --
+    // which the #29 same-package early-return would otherwise skip, leaving a stale
+    // Enter label or quick key. Change-detection in the setters keeps a refocus
+    // with identical editor state from forcing a needless rebuild. Cleared by
+    // render() once a rebuild consumes it.
+    private var editorDisplayDirty = false
+
     // Touch drag-off long-press handler
     private val longPressHandler = Handler(Looper.getMainLooper())
+
+    // Cached per-package autocorrect flag, read from prefs only at the boundary
+    // events that can change it (package change and the autocorrect toggle)
+    // instead of on every render and Space-key handler call. refreshAutocorrect()
+    // is the single update point so every write site invalidates the same field.
+    private var autocorrectOn: Boolean = appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
 
     // Delayed key preview hide — cancelled when next key is pressed
     private var previewHideRunnable: Runnable? = null
 
     fun updatePackage(packageName: String) {
-        currentPackage = packageName
-        render()
+        val packageChanged = packageName != currentPackage
+        if (packageChanged) {
+            currentPackage = packageName
+            refreshAutocorrect()
+        }
+        // This is the single render point for a focus change: onStartInputView
+        // calls updateImeAction/updateInputType first (recording any editor-state
+        // change), then this. Render once when the package changed (per-package
+        // autocorrect can flip the spacebar "space"/"SPACE" keycap) OR the editor
+        // display state changed (adaptive Enter label, input-type quick-key
+        // override). A same-package refocus with no change keeps the existing
+        // grid (issue #29). render() clears editorDisplayDirty.
+        if (packageChanged || editorDisplayDirty) {
+            refreshRender()
+        }
+    }
+
+    /** Re-read the autocorrect flag for the current package into the cache. */
+    fun refreshAutocorrect() {
+        autocorrectOn = appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
     }
 
     fun resetTransientState() {
@@ -79,34 +146,75 @@ class QwertyKeyboard(
     }
 
     fun updateImeAction(action: Int, flags: Int) {
-        currentImeAction = action
-        currentImeFlags = flags
+        // Mark the display dirty only on a real change so a refocus with the same
+        // action does not force a rebuild (preserves the #29 same-package skip).
+        if (action != currentImeAction || flags != currentImeFlags) {
+            currentImeAction = action
+            currentImeFlags = flags
+            editorDisplayDirty = true
+        }
     }
 
     fun updateInputType(inputType: Int) {
         val variation = inputType and InputType.TYPE_MASK_VARIATION
-        inputTypeQuickKeyOverride = when (variation) {
+        val override = when (variation) {
             InputType.TYPE_TEXT_VARIATION_URI -> "/"
             InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS -> "@"
             else -> null
         }
+        if (override != inputTypeQuickKeyOverride) {
+            inputTypeQuickKeyOverride = override
+            editorDisplayDirty = true
+        }
     }
 
-    fun isAutocorrectOn(): Boolean {
-        return appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
-    }
+    fun isAutocorrectOn(): Boolean = autocorrectOn
 
     fun setLayer(layer: Int) {
+        val previous = currentLayer
         currentLayer = layer
-        render()
+        // A shift toggle (lower<->upper) swaps only the per-key labels; the grid
+        // structure is position-identical between the two layers. When the other
+        // case is already built, relabel the existing letter buttons in place
+        // instead of tearing the grid down. Any other transition (to/from the
+        // symbol layers) swaps the whole key SET and key COUNT, so it must do a
+        // full rebuild.
+        val isShiftToggle =
+            (previous == KeyboardLayouts.LAYER_LOWER && layer == KeyboardLayouts.LAYER_UPPER) ||
+            (previous == KeyboardLayouts.LAYER_UPPER && layer == KeyboardLayouts.LAYER_LOWER)
+        if (isShiftToggle && charHolders.isNotEmpty()) {
+            applyShiftCase(layer)
+        } else {
+            render()
+        }
     }
 
-    private fun render() {
+    /**
+     * Force a rebuild of the grid even when the layer is unchanged. Use this from
+     * any caller that changes what a key DISPLAYS without changing the layer (the
+     * spacebar "space"/"SPACE" keycap, the quick-key label). A plain setLayer to
+     * the current layer is a no-op under render()'s same-layer guard, so those
+     * refreshers must come through here.
+     */
+    fun refreshRender() = render(force = true)
+
+    /**
+     * Rebuilds the QWERTY grid from scratch for [currentLayer].
+     *
+     * Guarded so a same-layer call is a no-op: re-rendering the layer that is
+     * already on screen would tear down and re-inflate ~34 views for nothing.
+     * Any caller that needs to refresh displayed content WITHOUT a layer change
+     * (spacebar keycap, quick-key label) must use [refreshRender] / force = true,
+     * not a setLayer(currentLayer) that this guard would swallow.
+     */
+    private fun render(force: Boolean = false) {
+        if (!force && currentLayer == renderedLayer) return
         container.removeAllViews()
+        charHolders.clear()
         val layout = KeyboardLayouts.getLayer(currentLayer)
         val context = container.context
 
-        for (row in layout) {
+        for ((rowIndex, row) in layout.withIndex()) {
             val rowLayout = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 layoutParams = LinearLayout.LayoutParams(
@@ -118,8 +226,8 @@ class QwertyKeyboard(
                 setPadding(hPad, vPad, hPad, vPad)
             }
 
-            for (key in row) {
-                val keyView = createKeyView(key)
+            for ((colIndex, key) in row.withIndex()) {
+                val keyView = createKeyView(key, rowIndex, colIndex)
                 val params = LinearLayout.LayoutParams(0, dpToPx(48), key.weight)
                 val margin = dpToPx(1)
                 params.setMargins(margin, margin, margin, margin)
@@ -129,6 +237,10 @@ class QwertyKeyboard(
 
             container.addView(rowLayout)
         }
+        renderedLayer = currentLayer
+        // This rebuild reflects the current editor state (Enter label, quick-key
+        // override), so any pending editor-display change is now consumed.
+        editorDisplayDirty = false
 
         // Swipe gestures on each row's padding area (not on the container,
         // which can interfere with child button touch dispatch)
@@ -165,17 +277,32 @@ class QwertyKeyboard(
         }
     }
 
-    private fun createKeyView(key: Key): View {
+    private fun createKeyView(key: Key, rowIndex: Int, colIndex: Int): View {
         val context = container.context
         val tm = themeManager
+        // Character keys with alt characters render their key background on the
+        // wrapping FrameLayout, so the button itself stays transparent. Resolve
+        // alts up front and skip building a button background that would only be
+        // discarded for those keys; the button's platform-default background is
+        // cleared instead so the themed frame shows through.
+        val alts = if (key.output is KeyOutput.Character) AltKeyMappings.getAlts(key.label) else null
+        val buttonHasOwnBackground = alts == null
         val button = Button(context).apply {
             text = key.label
             isAllCaps = false
             if (tm != null) {
-                background = tm.createKeyDrawable(tm.keyBg())
+                if (buttonHasOwnBackground) {
+                    background = tm.createKeyDrawable(tm.keyBg())
+                } else {
+                    background = null
+                }
                 setTextColor(tm.keyText())
             } else {
-                setBackgroundResource(R.drawable.key_bg)
+                if (buttonHasOwnBackground) {
+                    setBackgroundResource(R.drawable.key_bg)
+                } else {
+                    background = null
+                }
                 setTextColor(context.getColor(R.color.key_text))
             }
             gravity = Gravity.CENTER
@@ -271,9 +398,13 @@ class QwertyKeyboard(
                 onTap = { handleKeyPress(key) },
                 onLongPress = {
                     val enabled = appPrefs?.toggleAutocorrect(currentPackage) ?: false
+                    autocorrectOn = enabled
                     val state = if (enabled) "on" else "off"
                     extraRowManager.showTooltip("Autocorrect $state")
-                    render()
+                    // The spacebar keycap ("space" vs "SPACE") tracks autocorrect
+                    // but the layer is unchanged, so force the rebuild past the
+                    // same-layer guard.
+                    refreshRender()
                 },
                 hapticView = container,
                 appPrefs = appPrefs
@@ -294,32 +425,57 @@ class QwertyKeyboard(
         }
 
         // Character key touch handling with drag-off cancellation (item 4)
-        val alts = if (key.output is KeyOutput.Character) AltKeyMappings.getAlts(key.label) else null
+        // (alts was resolved at the top of this method.)
         if (key.output is KeyOutput.Character) {
-            val previewLabel = key.label
+            // Register this character key so a shift toggle can relabel it in
+            // place. holder.key is the single source of truth: the listener below
+            // reads holder.key at touch time, never the build-time `key`, so the
+            // visible label and the emitted character stay in sync after a
+            // lower<->upper relabel.
+            val holder = CharKeyHolder(rowIndex, colIndex, button, key)
+            charHolders.add(holder)
             var touchStarted = false
             var longPressRunnable: Runnable? = null
+            // Slide-and-release state. slideSession is non-null once a multi-alt
+            // popup is open for this key; while it is, the tracked finger's
+            // MOVE/UP route into the popup instead of typing the base char.
+            var slideSession: AltKeyPopup.SlideSession? = null
+            var activePointerId = MotionEvent.INVALID_POINTER_ID
+            var anchorScreenX = 0
+            var anchorScreenY = 0
 
             button.setOnClickListener(null) // Remove default click -- handled by touch
             button.setOnTouchListener { v, event ->
-                when (event.action) {
+                when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         touchStarted = true
+                        activePointerId = event.getPointerId(0)
                         v.isPressed = true
                         previewHideRunnable?.let { longPressHandler.removeCallbacks(it) }
                         previewHideRunnable = null
-                        keyPreview?.show(v, previewLabel)
+                        keyPreview?.show(v, holder.key.label)
 
-                        // Schedule long-press for alt keys
-                        if (alts != null) {
+                        // Schedule long-press for alt keys. Resolve alts from the
+                        // CURRENT label so the case matches what is on screen.
+                        val currentAlts = AltKeyMappings.getAlts(holder.key.label)
+                        if (currentAlts != null) {
                             val runnable = Runnable {
                                 touchStarted = false
                                 keyPreview?.hide()
-                                if (alts.size == 1) {
+                                if (currentAlts.size == 1) {
                                     val ic = inputConnectionProvider() ?: return@Runnable
-                                    keySender.sendText(ic, alts[0])
+                                    keySender.sendText(ic, currentAlts[0])
                                 } else {
-                                    altKeyPopup.show(v, alts)
+                                    // Open the slide popup and capture the anchor's
+                                    // screen position so MOVE can convert key-local
+                                    // pointer coords into the popup's screen space.
+                                    val loc = IntArray(2)
+                                    v.getLocationOnScreen(loc)
+                                    anchorScreenX = loc[0]
+                                    anchorScreenY = loc[1]
+                                    val session = altKeyPopup.openForSlide(v, currentAlts)
+                                    slideSession = session
+                                    currentSlideSession = session
                                 }
                             }
                             longPressRunnable = runnable
@@ -328,15 +484,54 @@ class QwertyKeyboard(
                         true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        val slop = dpToPx(4)
-                        val inBounds = event.x >= -slop && event.x <= v.width + slop &&
-                            event.y >= -v.height && event.y <= v.height * 2
-                        if (!inBounds && touchStarted) {
+                        val session = slideSession
+                        if (session != null) {
+                            // The popup owns the gesture. Route only the tracked
+                            // finger; a second pointer must not move the highlight.
+                            val idx = event.findPointerIndex(activePointerId)
+                            if (idx < 0) {
+                                cancelSlide(session)
+                                slideSession = null
+                            } else {
+                                session.onMove(
+                                    anchorScreenX + event.getX(idx),
+                                    anchorScreenY + event.getY(idx)
+                                )
+                            }
+                        } else {
+                            // 4dp horizontal slop so a fast diagonal swipe does not
+                            // prematurely cancel the tap (issue #22).
+                            val slop = dpToPx(4)
+                            val inBounds = event.x >= -slop && event.x <= v.width + slop &&
+                                event.y >= -v.height && event.y <= v.height * 2
+                            if (!inBounds && touchStarted) {
+                                touchStarted = false
+                                v.isPressed = false
+                                keyPreview?.hide()
+                                longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                                longPressRunnable = null
+                            }
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_POINTER_UP -> {
+                        // If the tracked finger is the one lifting, end the gesture
+                        // here; a non-tracked finger lifting is ignored.
+                        if (event.getPointerId(event.actionIndex) == activePointerId) {
+                            val session = slideSession
+                            if (session != null) {
+                                commitSlide(session, anchorScreenX, anchorScreenY, event, activePointerId)
+                                slideSession = null
+                            } else {
+                                keyPreview?.hide()
+                                longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                                longPressRunnable = null
+                                if (touchStarted && v.isPressed) {
+                                    handleKeyPress(holder.key)
+                                }
+                            }
                             touchStarted = false
                             v.isPressed = false
-                            keyPreview?.hide()
-                            longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
-                            longPressRunnable = null
                         }
                         true
                     }
@@ -346,11 +541,16 @@ class QwertyKeyboard(
                         longPressHandler.postDelayed(hideRunnable, 300L)
                         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         longPressRunnable = null
-                        if (touchStarted && v.isPressed) {
-                            handleKeyPress(key)
+                        val session = slideSession
+                        if (session != null) {
+                            commitSlide(session, anchorScreenX, anchorScreenY, event, activePointerId)
+                            slideSession = null
+                        } else if (touchStarted && v.isPressed) {
+                            handleKeyPress(holder.key)
                         }
                         touchStarted = false
                         v.isPressed = false
+                        activePointerId = MotionEvent.INVALID_POINTER_ID
                         true
                     }
                     MotionEvent.ACTION_CANCEL -> {
@@ -359,49 +559,86 @@ class QwertyKeyboard(
                         longPressHandler.postDelayed(hideRunnable, 300L)
                         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         longPressRunnable = null
+                        slideSession?.let { cancelSlide(it) }
+                        slideSession = null
                         touchStarted = false
                         v.isPressed = false
+                        activePointerId = MotionEvent.INVALID_POINTER_ID
                         true
                     }
                     else -> false
                 }
             }
-        }
 
-        // Wrap character keys that have alts in a FrameLayout with a hint label
-        if (key.output is KeyOutput.Character && alts != null) {
-            val hintChar = if (alts.size == 1) alts[0] else alts[0]
-            button.background = null
-            val frame = FrameLayout(context).apply {
-                if (tm != null) {
-                    background = tm.createKeyDrawable(tm.keyBg())
-                } else {
-                    setBackgroundResource(R.drawable.key_bg)
+            // Wrap character keys that have alts in a FrameLayout with a hint
+            // label. The button background was never built for these keys (see top
+            // of createKeyView); the key surface lives on the wrapping frame. The
+            // hint TextView is captured on the holder so applyShiftCase() can
+            // update it to the case-correct alt in place.
+            if (alts != null) {
+                val frame = FrameLayout(context).apply {
+                    if (tm != null) {
+                        background = tm.createKeyDrawable(tm.keyBg())
+                    } else {
+                        setBackgroundResource(R.drawable.key_bg)
+                    }
                 }
-            }
-            button.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            frame.addView(button)
-            val hint = TextView(context).apply {
-                text = hintChar
-                setTextColor(if (tm != null) tm.keyHint() else context.getColor(R.color.key_hint))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.TOP or Gravity.END
-                ).apply {
-                    topMargin = dpToPx(1)
-                    marginEnd = dpToPx(2)
+                button.layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                frame.addView(button)
+                val hint = TextView(context).apply {
+                    text = alts[0]
+                    setTextColor(if (tm != null) tm.keyHint() else context.getColor(R.color.key_hint))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        Gravity.TOP or Gravity.END
+                    ).apply {
+                        topMargin = dpToPx(1)
+                        marginEnd = dpToPx(2)
+                    }
                 }
+                frame.addView(hint)
+                holder.hint = hint
+                return frame
             }
-            frame.addView(hint)
-            return frame
         }
 
         return button
+    }
+
+    /**
+     * Resolve the slide release at the tracked finger's position. Commits the
+     * hovered alt (if any) and dismisses the popup. Lifting outside all
+     * candidates sends nothing.
+     */
+    private fun commitSlide(
+        session: AltKeyPopup.SlideSession,
+        anchorScreenX: Int,
+        anchorScreenY: Int,
+        event: MotionEvent,
+        activePointerId: Int
+    ) {
+        val idx = event.findPointerIndex(activePointerId)
+        val selected = if (idx >= 0) {
+            session.onRelease(anchorScreenX + event.getX(idx), anchorScreenY + event.getY(idx))
+        } else {
+            null
+        }
+        if (selected != null) {
+            inputConnectionProvider()?.let { ic -> keySender.sendText(ic, selected) }
+        }
+        session.dismiss()
+        if (currentSlideSession === session) currentSlideSession = null
+    }
+
+    /** Dismiss the slide popup without committing (cancel, lost pointer). */
+    private fun cancelSlide(session: AltKeyPopup.SlideSession) {
+        session.dismiss()
+        if (currentSlideSession === session) currentSlideSession = null
     }
 
     private fun performHaptic(type: Int = HapticFeedbackConstants.KEYBOARD_TAP) {
@@ -430,8 +667,7 @@ class QwertyKeyboard(
             is KeyOutput.Character -> {
                 val ctrlActive = extraRowManager.isCtrlActive()
                 if (ctrlActive) {
-                    val charCode = key.output.char.lowercase()[0]
-                    val keyCode = KeyEvent.keyCodeFromString("KEYCODE_${charCode.uppercaseChar()}")
+                    val keyCode = ctrlKeyCode(key.output.char.firstOrNull() ?: ' ')
                     if (keyCode == KeyEvent.KEYCODE_UNKNOWN) {
                         keySender.sendText(ic, key.output.char)
                     } else {
@@ -561,8 +797,60 @@ class QwertyKeyboard(
         }
     }
 
+    /**
+     * Relabels the existing character buttons in place for a lower<->upper shift
+     * toggle, instead of tearing the grid down and rebuilding it. The lower and
+     * upper layers are position-identical, so every holder's (rowIndex, colIndex)
+     * maps to a Character key in the target layer and only its label, alt hint,
+     * and the holder's key binding change. No view is added or removed, so no
+     * relayout is needed.
+     *
+     * Safety net: if any holder's position falls outside the target layer or the
+     * target key at that position is not a Character (a structural divergence
+     * between the two layers that does not exist today but a future layout edit
+     * could introduce), fall back to a full forced rebuild so the grid can never
+     * end up with a stale or mismatched key. This keeps the core typing path
+     * correct over a fragile fast path.
+     */
+    private fun applyShiftCase(targetLayer: Int) {
+        val layout = KeyboardLayouts.getLayer(targetLayer)
+        for (holder in charHolders) {
+            val row = layout.getOrNull(holder.rowIndex)
+            val targetKey = row?.getOrNull(holder.colIndex)
+            if (targetKey == null || targetKey.output !is KeyOutput.Character) {
+                render(force = true)
+                return
+            }
+            holder.key = targetKey
+            holder.button.text = targetKey.label
+            holder.hint?.let { hint ->
+                AltKeyMappings.getAlts(targetKey.label)?.let { alts ->
+                    hint.text = alts[0]
+                }
+            }
+        }
+        renderedLayer = targetLayer
+        updateShiftAppearance(shiftButton)
+    }
+
     private fun dpToPx(dp: Int): Int {
-        val density = container.context.resources.displayMetrics.density
         return (dp * density + 0.5f).toInt()
+    }
+
+    companion object {
+        /**
+         * Maps a character to its Ctrl-combo key code without a reflective
+         * KeyEvent.keyCodeFromString parse. Letters map directly via the
+         * contiguous KEYCODE_A..KEYCODE_Z range; any non-letter returns
+         * KEYCODE_UNKNOWN so the caller falls back to sending plain text.
+         */
+        fun ctrlKeyCode(c: Char): Int {
+            val lower = c.lowercaseChar()
+            return if (lower in 'a'..'z') {
+                KeyEvent.KEYCODE_A + (lower - 'a')
+            } else {
+                KeyEvent.KEYCODE_UNKNOWN
+            }
+        }
     }
 }

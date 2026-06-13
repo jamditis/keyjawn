@@ -2,7 +2,9 @@ package com.keyjawn
 
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.View
 import android.view.inputmethod.InputConnection
+import android.widget.TextView
 import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.*
@@ -135,5 +137,94 @@ class ExtraRowManagerTest {
         val captor = argumentCaptor<KeyEvent>()
         verify(ic, atLeast(1)).sendKeyEvent(captor.capture())
         assertTrue(captor.allValues.any { it.keyCode == KeyEvent.KEYCODE_TAB })
+    }
+
+    // --- Critical tooltips bypass the tooltips-disabled preference (Codex 5.4 finding) ---
+    // The tooltips toggle is meant to silence transient hints, not operation
+    // results and errors. These gate that distinction.
+
+    private fun managerWith(
+        prefs: AppPrefs,
+        voice: VoiceInputHandler? = null
+    ): Pair<View, ExtraRowManager> {
+        val context = RuntimeEnvironment.getApplication()
+        val view = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null)
+        val ic: InputConnection = mock()
+        whenever(ic.sendKeyEvent(any())).thenReturn(true)
+        val erm = ExtraRowManager(
+            view = view,
+            keySender = KeySender(),
+            inputConnectionProvider = { ic },
+            voiceInputHandler = voice,
+            appPrefs = prefs
+        )
+        return view to erm
+    }
+
+    @Test
+    fun `critical tooltip shows even when tooltips disabled`() {
+        val prefs = AppPrefs(RuntimeEnvironment.getApplication())
+        prefs.setTooltipsEnabled(false)
+        val (view, erm) = managerWith(prefs)
+
+        erm.showTooltip("Uploaded photo.jpg", critical = true)
+
+        val bar = view.findViewById<TextView>(R.id.tooltip_bar)
+        assertEquals(View.VISIBLE, bar.visibility)
+        assertEquals("Uploaded photo.jpg", bar.text.toString())
+    }
+
+    @Test
+    fun `non-critical tooltip is suppressed when tooltips disabled`() {
+        val prefs = AppPrefs(RuntimeEnvironment.getApplication())
+        prefs.setTooltipsEnabled(false)
+        val (view, erm) = managerWith(prefs)
+
+        erm.showTooltip("press and hold for options")
+
+        val bar = view.findViewById<TextView>(R.id.tooltip_bar)
+        assertEquals(View.GONE, bar.visibility)
+    }
+
+    @Test
+    fun `non-critical tooltip shows when tooltips enabled`() {
+        val prefs = AppPrefs(RuntimeEnvironment.getApplication())
+        prefs.setTooltipsEnabled(true)
+        val (view, erm) = managerWith(prefs)
+
+        erm.showTooltip("press and hold for options")
+
+        val bar = view.findViewById<TextView>(R.id.tooltip_bar)
+        assertEquals(View.VISIBLE, bar.visibility)
+    }
+
+    @Test
+    fun `voice unavailable tap shows tooltip when tooltips disabled`() {
+        val prefs = AppPrefs(RuntimeEnvironment.getApplication())
+        prefs.setTooltipsEnabled(false)
+        val (view, _) = managerWith(prefs, voice = null)
+
+        view.findViewById<View>(R.id.key_mic).performClick()
+
+        val bar = view.findViewById<TextView>(R.id.tooltip_bar)
+        assertEquals(View.VISIBLE, bar.visibility)
+        assertEquals("Voice input not available", bar.text.toString())
+    }
+
+    @Test
+    fun `voice recognition error shows tooltip when tooltips disabled`() {
+        val prefs = AppPrefs(RuntimeEnvironment.getApplication())
+        prefs.setTooltipsEnabled(false)
+        val voice: VoiceInputHandler = mock()
+        val (view, _) = managerWith(prefs, voice = voice)
+
+        // The manager registers an anonymous VoiceInputListener on the handler;
+        // capture it and drive an error through the real onError path.
+        val captor = argumentCaptor<VoiceInputListener>()
+        verify(voice).listener = captor.capture()
+        captor.lastValue.onError(2)
+
+        val bar = view.findViewById<TextView>(R.id.tooltip_bar)
+        assertEquals(View.VISIBLE, bar.visibility)
     }
 }

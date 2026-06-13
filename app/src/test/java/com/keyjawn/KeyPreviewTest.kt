@@ -74,4 +74,20 @@ class KeyPreviewTest {
         assertSame(view1, view2)
         assertEquals("B", (view2 as TextView).text.toString())
     }
+
+    @Test
+    fun `multiple shows reuse the same background drawable`() {
+        // The background depends only on the theme, which does not change between
+        // presses, so it is built once in init and reused. The pre-#35 code rebuilt
+        // a fresh GradientDrawable on every show(); against that code these two
+        // references would differ.
+        val anchor = Button(RuntimeEnvironment.getApplication())
+        anchor.layout(100, 200, 200, 260)
+        container.addView(anchor)
+        keyPreview.show(anchor, "A")
+        val background1 = keyPreview.previewView.background
+        keyPreview.show(anchor, "B")
+        val background2 = keyPreview.previewView.background
+        assertSame(background1, background2)
+    }
 }

@@ -20,7 +20,17 @@ interface VoiceInputListener {
     fun onPartialResult(text: String)
     fun onFinalResult(text: String)
     fun onRmsChanged(rmsdB: Float)
-    fun onError()
+    fun onError(error: Int)
+}
+
+/** Maps a [SpeechRecognizer] error code to a short user-facing message. */
+fun voiceErrorMessage(error: Int): String = when (error) {
+    SpeechRecognizer.ERROR_NO_MATCH,
+    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Didn't catch that"
+    SpeechRecognizer.ERROR_NETWORK,
+    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "No network"
+    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Busy, try again"
+    else -> "Voice input failed"
 }
 
 class VoiceInputHandler(private val context: Context) {
@@ -110,7 +120,7 @@ class VoiceInputHandler(private val context: Context) {
 
             override fun onError(error: Int) {
                 listening = false
-                listener?.onError()
+                listener?.onError(error)
                 listener?.onVoiceStop()
             }
 

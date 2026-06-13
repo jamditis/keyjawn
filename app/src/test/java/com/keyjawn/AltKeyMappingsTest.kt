@@ -135,4 +135,38 @@ class AltKeyMappingsTest {
         assertNull(AltKeyMappings.getAlts("Z"))
         assertNull(AltKeyMappings.getAlts("Q"))
     }
+
+    @Test
+    fun `getAlts returns the same precomputed list instance across calls for lowercase`() {
+        val first = AltKeyMappings.getAlts("a")
+        val second = AltKeyMappings.getAlts("a")
+        // Precomputed lookup: no per-call list allocation.
+        assertSame(first, second)
+    }
+
+    @Test
+    fun `getAlts returns the same precomputed list instance across calls for uppercase`() {
+        val first = AltKeyMappings.getAlts("A")
+        val second = AltKeyMappings.getAlts("A")
+        // Uppercase variant is precomputed once, not rebuilt per call.
+        assertSame(first, second)
+    }
+
+    @Test
+    fun `uppercase variants are uppercased element by element`() {
+        val lower = AltKeyMappings.getAlts("e")!!
+        val upper = AltKeyMappings.getAlts("E")!!
+        assertEquals(lower.size, upper.size)
+        for (i in lower.indices) {
+            assertEquals(lower[i].uppercase(), upper[i])
+        }
+    }
+
+    @Test
+    fun `uppercase digit and punctuation keys keep their alts unchanged`() {
+        // Digits and punctuation have no case, so the lower and upper lookups
+        // (label == label.lowercase()) resolve to the same precomputed list.
+        assertEquals(listOf("!"), AltKeyMappings.getAlts("1"))
+        assertEquals(listOf("—", "–"), AltKeyMappings.getAlts("-"))
+    }
 }

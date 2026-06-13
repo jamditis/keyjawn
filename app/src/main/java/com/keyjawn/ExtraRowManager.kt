@@ -4,6 +4,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableString
+import android.text.style.UnderlineSpan
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.View
@@ -31,7 +33,8 @@ class ExtraRowManager(
     private val isFullFlavor: Boolean = false,
     private val onOpenSettings: (() -> Unit)? = null,
     private val onThemeChanged: (() -> Unit)? = null,
-    private val currentPackageProvider: (() -> String)? = null
+    private val currentPackageProvider: (() -> String)? = null,
+    private val onAutocorrectChanged: (() -> Unit)? = null
 ) {
 
     val ctrlState = CtrlState()
@@ -68,12 +71,25 @@ class ExtraRowManager(
 
         applyThemeColors()
 
-        ctrlState.onStateChanged = { mode -> updateCtrlAppearance(mode) }
+        ctrlState.onStateChanged = { mode ->
+            updateCtrlAppearance(mode)
+            // Brief transition feedback; OFF (fired on every armed-key consumption)
+            // returns null so it doesn't pop a tooltip on every keystroke.
+            ctrlTransitionMessage(mode)?.let { showTooltip(it, 900L) }
+        }
     }
 
-    fun showTooltip(message: String, durationMs: Long = 1500L) {
+    fun showTooltip(message: String, durationMs: Long = 1500L, critical: Boolean = false) {
         val bar = tooltipBar ?: return
-        if (!AppPrefs(view.context).isTooltipsEnabled()) return
+        // The tooltips preference governs transient hints only (long-press
+        // discoverability, paste no-ops, state-transition feedback). Critical
+        // messages -- upload results and speech-recognition errors/permission
+        // prompts -- are the user's only feedback for an action they took, so
+        // they bypass the gate. Reuse the injected long-lived AppPrefs instead
+        // of constructing a new one (and a getSharedPreferences lookup) on every
+        // tooltip. Wiring paths that pass no appPrefs keep the prior default-on
+        // behavior.
+        if (!critical && appPrefs?.isTooltipsEnabled() == false) return
         tooltipDismissRunnable?.let { handler.removeCallbacks(it) }
         bar.text = message
         extraRow.visibility = View.GONE
@@ -254,6 +270,12 @@ class ExtraRowManager(
 
     private fun wireUpload() {
         val uploadButton = view.findViewById<View>(R.id.key_upload)
+        // Route upload status to the in-keyboard tooltip bar instead of a Toast.
+        // Upload results land after a picker round-trip, so use the longer duration
+        // (the same the voice permission path uses) to give the user time to read.
+        // Critical: an upload's success/failure is its only feedback, so it must
+        // surface even when transient tooltips are disabled (was a Toast before).
+        uploadHandler?.onShowStatus = { msg -> showTooltip(msg, 2500L, critical = true) }
         if (menuPanelView != null && menuListView != null && themeManager != null && appPrefs != null) {
             val mp = MenuPanel(
                 panel = menuPanelView,
@@ -266,7 +288,8 @@ class ExtraRowManager(
                 onThemeChanged = { onThemeChanged?.invoke() },
                 onShowTooltip = { msg -> showTooltip(msg) },
                 currentPackageProvider = currentPackageProvider ?: { "unknown" },
-                onBottomPaddingChanged = { onBottomPaddingChanged?.invoke() }
+                onBottomPaddingChanged = { onBottomPaddingChanged?.invoke() },
+                onAutocorrectChanged = { onAutocorrectChanged?.invoke() }
             )
             menuPanel = mp
             uploadButton.setOnClickListener {
@@ -301,7 +324,9 @@ class ExtraRowManager(
             }
         } else {
             micButton.setOnClickListener {
-                showTooltip("Voice input not available")
+                // Critical: tapping the mic with no handler must explain why
+                // nothing happened, even when transient tooltips are off.
+                showTooltip("Voice input not available", critical = true)
             }
         }
 
@@ -309,7 +334,9 @@ class ExtraRowManager(
             voiceInputHandler?.stopListening()
         }
 
-        voiceInputHandler?.onPermissionNeeded = { msg -> showTooltip(msg, 2500L) }
+        // Critical: a permission prompt is actionable feedback the user must see
+        // to proceed, so it bypasses the transient-tooltips gate.
+        voiceInputHandler?.onPermissionNeeded = { msg -> showTooltip(msg, 2500L, critical = true) }
 
         voiceInputHandler?.listener = object : VoiceInputListener {
             override fun onVoiceStart() {
@@ -324,7 +351,11 @@ class ExtraRowManager(
 
             override fun onVoiceStop() {
                 voiceBar?.visibility = View.GONE
-                extraRow.visibility = View.VISIBLE
+                // An error in onError() may have raised the tooltip bar in place
+                // of the extra row; don't clobber it by re-showing the extra row.
+                if (tooltipBar?.visibility != View.VISIBLE) {
+                    extraRow.visibility = View.VISIBLE
+                }
             }
 
             override fun onPartialResult(text: String) {
@@ -342,8 +373,11 @@ class ExtraRowManager(
                 voiceWaveform?.updateRms(rmsdB)
             }
 
-            override fun onError() {
+            override fun onError(error: Int) {
                 voiceText?.text = ""
+                // Critical: a speech-recognition failure is the only signal the
+                // user gets that dictation stopped, so it must always surface.
+                showTooltip(voiceErrorMessage(error), critical = true)
             }
         }
     }
@@ -356,6 +390,7 @@ class ExtraRowManager(
 
     private fun updateCtrlAppearance(mode: CtrlMode) {
         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+        applyCtrlLabel(mode)
         val tm = themeManager
         if (tm != null) {
             when (mode) {
@@ -370,6 +405,21 @@ class ExtraRowManager(
                 CtrlMode.LOCKED -> R.drawable.key_bg_locked
             }
             ctrlButton.setBackgroundResource(bgRes)
+        }
+    }
+
+    /**
+     * Carries the locked distinction through shape, not color alone: LOCKED
+     * underlines the label so it survives color-blindness and dim screens, while
+     * OFF and ARMED keep the plain label.
+     */
+    private fun applyCtrlLabel(mode: CtrlMode) {
+        if (mode == CtrlMode.LOCKED) {
+            val locked = SpannableString("Ctrl")
+            locked.setSpan(UnderlineSpan(), 0, locked.length, SpannableString.SPAN_INCLUSIVE_EXCLUSIVE)
+            ctrlButton.text = locked
+        } else {
+            ctrlButton.text = "Ctrl"
         }
     }
 }
