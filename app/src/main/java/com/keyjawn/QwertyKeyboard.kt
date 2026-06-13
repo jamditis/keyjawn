@@ -38,6 +38,12 @@ class QwertyKeyboard(
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider, themeManager)
     private var quickKeyButton: Button? = null
 
+    // The slide-and-release session for the currently open alt-key popup, or null
+    // when no multi-alt popup is up. The character key's touch listener routes the
+    // tracked finger's MOVE/UP into it. Exposed for tests to drive the gesture.
+    internal var currentSlideSession: AltKeyPopup.SlideSession? = null
+        private set
+
     // The layer the current view tree was last built for. render() compares it
     // against currentLayer and bails when nothing structural changed, so the most
     // common interactions (same-layer re-renders) do not tear the grid down.
@@ -398,12 +404,20 @@ class QwertyKeyboard(
             charHolders.add(holder)
             var touchStarted = false
             var longPressRunnable: Runnable? = null
+            // Slide-and-release state. slideSession is non-null once a multi-alt
+            // popup is open for this key; while it is, the tracked finger's
+            // MOVE/UP route into the popup instead of typing the base char.
+            var slideSession: AltKeyPopup.SlideSession? = null
+            var activePointerId = MotionEvent.INVALID_POINTER_ID
+            var anchorScreenX = 0
+            var anchorScreenY = 0
 
             button.setOnClickListener(null) // Remove default click -- handled by touch
             button.setOnTouchListener { v, event ->
-                when (event.action) {
+                when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         touchStarted = true
+                        activePointerId = event.getPointerId(0)
                         v.isPressed = true
                         keyPreview?.show(v, holder.key.label)
 
@@ -418,7 +432,16 @@ class QwertyKeyboard(
                                     val ic = inputConnectionProvider() ?: return@Runnable
                                     keySender.sendText(ic, currentAlts[0])
                                 } else {
-                                    altKeyPopup.show(v, currentAlts)
+                                    // Open the slide popup and capture the anchor's
+                                    // screen position so MOVE can convert key-local
+                                    // pointer coords into the popup's screen space.
+                                    val loc = IntArray(2)
+                                    v.getLocationOnScreen(loc)
+                                    anchorScreenX = loc[0]
+                                    anchorScreenY = loc[1]
+                                    val session = altKeyPopup.openForSlide(v, currentAlts)
+                                    slideSession = session
+                                    currentSlideSession = session
                                 }
                             }
                             longPressRunnable = runnable
@@ -427,14 +450,51 @@ class QwertyKeyboard(
                         true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        val inBounds = event.x >= 0 && event.x <= v.width &&
-                            event.y >= -v.height && event.y <= v.height * 2
-                        if (!inBounds && touchStarted) {
+                        val session = slideSession
+                        if (session != null) {
+                            // The popup owns the gesture. Route only the tracked
+                            // finger; a second pointer must not move the highlight.
+                            val idx = event.findPointerIndex(activePointerId)
+                            if (idx < 0) {
+                                cancelSlide(session)
+                                slideSession = null
+                            } else {
+                                session.onMove(
+                                    anchorScreenX + event.getX(idx),
+                                    anchorScreenY + event.getY(idx)
+                                )
+                            }
+                        } else {
+                            val inBounds = event.x >= 0 && event.x <= v.width &&
+                                event.y >= -v.height && event.y <= v.height * 2
+                            if (!inBounds && touchStarted) {
+                                touchStarted = false
+                                v.isPressed = false
+                                keyPreview?.hide()
+                                longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                                longPressRunnable = null
+                            }
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_POINTER_UP -> {
+                        // If the tracked finger is the one lifting, end the gesture
+                        // here; a non-tracked finger lifting is ignored.
+                        if (event.getPointerId(event.actionIndex) == activePointerId) {
+                            val session = slideSession
+                            if (session != null) {
+                                commitSlide(session, anchorScreenX, anchorScreenY, event, activePointerId)
+                                slideSession = null
+                            } else {
+                                keyPreview?.hide()
+                                longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                                longPressRunnable = null
+                                if (touchStarted && v.isPressed) {
+                                    handleKeyPress(holder.key)
+                                }
+                            }
                             touchStarted = false
                             v.isPressed = false
-                            keyPreview?.hide()
-                            longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
-                            longPressRunnable = null
                         }
                         true
                     }
@@ -442,19 +502,27 @@ class QwertyKeyboard(
                         keyPreview?.hide()
                         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         longPressRunnable = null
-                        if (touchStarted && v.isPressed) {
+                        val session = slideSession
+                        if (session != null) {
+                            commitSlide(session, anchorScreenX, anchorScreenY, event, activePointerId)
+                            slideSession = null
+                        } else if (touchStarted && v.isPressed) {
                             handleKeyPress(holder.key)
                         }
                         touchStarted = false
                         v.isPressed = false
+                        activePointerId = MotionEvent.INVALID_POINTER_ID
                         true
                     }
                     MotionEvent.ACTION_CANCEL -> {
                         keyPreview?.hide()
                         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         longPressRunnable = null
+                        slideSession?.let { cancelSlide(it) }
+                        slideSession = null
                         touchStarted = false
                         v.isPressed = false
+                        activePointerId = MotionEvent.INVALID_POINTER_ID
                         true
                     }
                     else -> false
@@ -499,6 +567,37 @@ class QwertyKeyboard(
         }
 
         return button
+    }
+
+    /**
+     * Resolve the slide release at the tracked finger's position. Commits the
+     * hovered alt (if any) and dismisses the popup. Lifting outside all
+     * candidates sends nothing.
+     */
+    private fun commitSlide(
+        session: AltKeyPopup.SlideSession,
+        anchorScreenX: Int,
+        anchorScreenY: Int,
+        event: MotionEvent,
+        activePointerId: Int
+    ) {
+        val idx = event.findPointerIndex(activePointerId)
+        val selected = if (idx >= 0) {
+            session.onRelease(anchorScreenX + event.getX(idx), anchorScreenY + event.getY(idx))
+        } else {
+            null
+        }
+        if (selected != null) {
+            inputConnectionProvider()?.let { ic -> keySender.sendText(ic, selected) }
+        }
+        session.dismiss()
+        if (currentSlideSession === session) currentSlideSession = null
+    }
+
+    /** Dismiss the slide popup without committing (cancel, lost pointer). */
+    private fun cancelSlide(session: AltKeyPopup.SlideSession) {
+        session.dismiss()
+        if (currentSlideSession === session) currentSlideSession = null
     }
 
     private fun performHaptic(type: Int = HapticFeedbackConstants.KEYBOARD_TAP) {
