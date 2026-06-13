@@ -79,12 +79,17 @@ class ExtraRowManager(
         }
     }
 
-    fun showTooltip(message: String, durationMs: Long = 1500L) {
+    fun showTooltip(message: String, durationMs: Long = 1500L, critical: Boolean = false) {
         val bar = tooltipBar ?: return
-        // Reuse the injected long-lived AppPrefs instead of constructing a new
-        // one (and a getSharedPreferences lookup) on every tooltip. Wiring paths
-        // that pass no appPrefs keep the prior default-on behavior.
-        if (appPrefs?.isTooltipsEnabled() == false) return
+        // The tooltips preference governs transient hints only (long-press
+        // discoverability, paste no-ops, state-transition feedback). Critical
+        // messages -- upload results and speech-recognition errors/permission
+        // prompts -- are the user's only feedback for an action they took, so
+        // they bypass the gate. Reuse the injected long-lived AppPrefs instead
+        // of constructing a new one (and a getSharedPreferences lookup) on every
+        // tooltip. Wiring paths that pass no appPrefs keep the prior default-on
+        // behavior.
+        if (!critical && appPrefs?.isTooltipsEnabled() == false) return
         tooltipDismissRunnable?.let { handler.removeCallbacks(it) }
         bar.text = message
         extraRow.visibility = View.GONE
@@ -268,7 +273,9 @@ class ExtraRowManager(
         // Route upload status to the in-keyboard tooltip bar instead of a Toast.
         // Upload results land after a picker round-trip, so use the longer duration
         // (the same the voice permission path uses) to give the user time to read.
-        uploadHandler?.onShowStatus = { msg -> showTooltip(msg, 2500L) }
+        // Critical: an upload's success/failure is its only feedback, so it must
+        // surface even when transient tooltips are disabled (was a Toast before).
+        uploadHandler?.onShowStatus = { msg -> showTooltip(msg, 2500L, critical = true) }
         if (menuPanelView != null && menuListView != null && themeManager != null && appPrefs != null) {
             val mp = MenuPanel(
                 panel = menuPanelView,
@@ -317,7 +324,9 @@ class ExtraRowManager(
             }
         } else {
             micButton.setOnClickListener {
-                showTooltip("Voice input not available")
+                // Critical: tapping the mic with no handler must explain why
+                // nothing happened, even when transient tooltips are off.
+                showTooltip("Voice input not available", critical = true)
             }
         }
 
@@ -325,7 +334,9 @@ class ExtraRowManager(
             voiceInputHandler?.stopListening()
         }
 
-        voiceInputHandler?.onPermissionNeeded = { msg -> showTooltip(msg, 2500L) }
+        // Critical: a permission prompt is actionable feedback the user must see
+        // to proceed, so it bypasses the transient-tooltips gate.
+        voiceInputHandler?.onPermissionNeeded = { msg -> showTooltip(msg, 2500L, critical = true) }
 
         voiceInputHandler?.listener = object : VoiceInputListener {
             override fun onVoiceStart() {
@@ -364,7 +375,9 @@ class ExtraRowManager(
 
             override fun onError(error: Int) {
                 voiceText?.text = ""
-                showTooltip(voiceErrorMessage(error))
+                // Critical: a speech-recognition failure is the only signal the
+                // user gets that dictation stopped, so it must always surface.
+                showTooltip(voiceErrorMessage(error), critical = true)
             }
         }
     }

@@ -52,6 +52,12 @@ class KeyJawnService : InputMethodService() {
         // onCreate() and reused so the user's unpinned clip history survives a reskin.
         voiceInputHandler?.destroy()
         uploadHandler?.destroy()
+        // Nulling pendingUploadHandler here cannot strand an in-flight picker
+        // result. This method and PickerActivity.onActivityResult both run on the
+        // main thread, and for the full flavor this same synchronous call repoints
+        // pendingUploadHandler to the freshly built handler below before returning.
+        // A result delivered after a rebuild therefore always observes the live
+        // handler (wired to the current input connection), never this transient null.
         pendingUploadHandler = null
 
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
