@@ -95,8 +95,9 @@ class AltKeyPopup(
         val popupWidth = alts.size * (btnSize + 2 * margin) + (8 * density + 0.5f).toInt()
 
         // The popup top-left in screen space. showAsDropDown places the window at
-        // (anchorScreen + offset), so the same arithmetic gives candidate bounds
-        // without waiting for a layout pass.
+        // the anchor's bottom-left plus the offset, so the same arithmetic gives
+        // candidate bounds without waiting for a layout pass (see popupScreenTop
+        // for the vertical anchoring, clampPopupLeft for the horizontal clamp).
         val anchorLoc = IntArray(2)
         anchor.getLocationOnScreen(anchorLoc)
         val anchorScreenX = anchorLoc[0]
@@ -118,7 +119,7 @@ class AltKeyPopup(
         val requestedLeft = anchorScreenX + (anchor.width - popupWidth) / 2
         val clampedLeft = clampPopupLeft(requestedLeft, popupWidth, displayFrame.left, displayFrame.right)
         val clampedXOffset = clampedLeft - anchorScreenX
-        val popupTop = anchorScreenY + yOffset
+        val popupTop = popupScreenTop(anchorScreenY, anchor.height, yOffset)
 
         // Each candidate sits at popup-internal x = pad + i*(btnSize + 2*margin) +
         // margin (the LinearLayout's left padding, the preceding buttons' cells,
@@ -143,6 +144,18 @@ class AltKeyPopup(
     }
 
     companion object {
+        /**
+         * The popup's actual top edge in screen space. showAsDropDown anchors the
+         * window to the anchor's BOTTOM-left, so the real top is the anchor bottom
+         * ([anchorScreenY] + [anchorHeight]) plus [yOffset] -- not [anchorScreenY] +
+         * [yOffset]. The candidate hit-test rects derive from this value, so the
+         * naive form shifts every Rect up by one key height and a slide onto the
+         * visible candidate row hit-tests as outside, committing nothing. Pure
+         * arithmetic so it is unit-testable without a rendered popup.
+         */
+        fun popupScreenTop(anchorScreenY: Int, anchorHeight: Int, yOffset: Int): Int =
+            anchorScreenY + anchorHeight + yOffset
+
         /**
          * Clamp the requested popup left edge to the anchor window's visible display
          * frame -- the same frame showAsDropDown clips against -- so the precomputed

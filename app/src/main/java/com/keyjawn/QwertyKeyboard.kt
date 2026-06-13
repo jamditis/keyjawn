@@ -95,6 +95,16 @@ class QwertyKeyboard(
     // EditorInfo inputType hints (item 11)
     private var inputTypeQuickKeyOverride: String? = null
 
+    // Set by updateImeAction/updateInputType when the editor-derived display state
+    // (adaptive Enter label, input-type quick-key override) actually changes.
+    // updatePackage consumes it to force one render on a same-package focus switch
+    // -- e.g. moving from a text field to a search or URL field in the same app --
+    // which the #29 same-package early-return would otherwise skip, leaving a stale
+    // Enter label or quick key. Change-detection in the setters keeps a refocus
+    // with identical editor state from forcing a needless rebuild. Cleared by
+    // render() once a rebuild consumes it.
+    private var editorDisplayDirty = false
+
     // Touch drag-off long-press handler
     private val longPressHandler = Handler(Looper.getMainLooper())
 
@@ -108,14 +118,21 @@ class QwertyKeyboard(
     private var previewHideRunnable: Runnable? = null
 
     fun updatePackage(packageName: String) {
-        if (packageName == currentPackage) return
-        currentPackage = packageName
-        refreshAutocorrect()
-        // Per-package autocorrect can flip the spacebar keycap ("space" vs
-        // "SPACE") without a layer change, so force a re-render even though the
-        // layer is unchanged. The same-package early-return above means this only
-        // runs on a genuine package switch.
-        refreshRender()
+        val packageChanged = packageName != currentPackage
+        if (packageChanged) {
+            currentPackage = packageName
+            refreshAutocorrect()
+        }
+        // This is the single render point for a focus change: onStartInputView
+        // calls updateImeAction/updateInputType first (recording any editor-state
+        // change), then this. Render once when the package changed (per-package
+        // autocorrect can flip the spacebar "space"/"SPACE" keycap) OR the editor
+        // display state changed (adaptive Enter label, input-type quick-key
+        // override). A same-package refocus with no change keeps the existing
+        // grid (issue #29). render() clears editorDisplayDirty.
+        if (packageChanged || editorDisplayDirty) {
+            refreshRender()
+        }
     }
 
     /** Re-read the autocorrect flag for the current package into the cache. */
@@ -129,16 +146,25 @@ class QwertyKeyboard(
     }
 
     fun updateImeAction(action: Int, flags: Int) {
-        currentImeAction = action
-        currentImeFlags = flags
+        // Mark the display dirty only on a real change so a refocus with the same
+        // action does not force a rebuild (preserves the #29 same-package skip).
+        if (action != currentImeAction || flags != currentImeFlags) {
+            currentImeAction = action
+            currentImeFlags = flags
+            editorDisplayDirty = true
+        }
     }
 
     fun updateInputType(inputType: Int) {
         val variation = inputType and InputType.TYPE_MASK_VARIATION
-        inputTypeQuickKeyOverride = when (variation) {
+        val override = when (variation) {
             InputType.TYPE_TEXT_VARIATION_URI -> "/"
             InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS -> "@"
             else -> null
+        }
+        if (override != inputTypeQuickKeyOverride) {
+            inputTypeQuickKeyOverride = override
+            editorDisplayDirty = true
         }
     }
 
@@ -212,6 +238,9 @@ class QwertyKeyboard(
             container.addView(rowLayout)
         }
         renderedLayer = currentLayer
+        // This rebuild reflects the current editor state (Enter label, quick-key
+        // override), so any pending editor-display change is now consumed.
+        editorDisplayDirty = false
 
         // Swipe gestures on each row's padding area (not on the container,
         // which can interfere with child button touch dispatch)

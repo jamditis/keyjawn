@@ -3,9 +3,11 @@ package com.keyjawn
 import android.app.Activity
 import android.os.Looper
 import android.os.SystemClock
+import android.text.InputType
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.widget.Button
 import android.widget.FrameLayout
@@ -400,6 +402,53 @@ class QwertyKeyboardTest {
         val rowAfter = container.getChildAt(0)
 
         assertNotSame(rowBefore, rowAfter)
+    }
+
+    @Test
+    fun `same-package field switch refreshes the adaptive enter label`() {
+        keyboard.updatePackage("com.example.app")
+        val enterBefore = findButton((container.getChildAt(3) as LinearLayout).getChildAt(4))
+        assertNotEquals("Search", enterBefore.text.toString())
+
+        // Focus moves to a search field in the SAME app: only the IME action
+        // changes, so updatePackage takes its same-package path -- but the Enter
+        // label must still refresh to "Search".
+        keyboard.updateImeAction(EditorInfo.IME_ACTION_SEARCH, 0)
+        keyboard.updatePackage("com.example.app")
+
+        val enterAfter = findButton((container.getChildAt(3) as LinearLayout).getChildAt(4))
+        assertEquals("Search", enterAfter.text.toString())
+    }
+
+    @Test
+    fun `same-package field switch refreshes the input-type quick key override`() {
+        keyboard.updatePackage("com.example.app")
+        val quickBefore = findButton((container.getChildAt(3) as LinearLayout).getChildAt(3))
+        assertEquals("/", quickBefore.text.toString())
+
+        // Focus moves to an email field in the SAME app: the quick key must switch
+        // to "@" even though the package is unchanged.
+        keyboard.updateInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
+        keyboard.updatePackage("com.example.app")
+
+        val quickAfter = findButton((container.getChildAt(3) as LinearLayout).getChildAt(3))
+        assertEquals("@", quickAfter.text.toString())
+    }
+
+    @Test
+    fun `same-package refocus with unchanged editor state does not rebuild`() {
+        keyboard.updateImeAction(EditorInfo.IME_ACTION_SEARCH, 0)
+        keyboard.updatePackage("com.example.app")
+        val rowBefore = container.getChildAt(0)
+
+        // Re-focus a field of the same kind in the same app: identical action and
+        // input type, so the #29 optimization must still skip the rebuild.
+        keyboard.updateImeAction(EditorInfo.IME_ACTION_SEARCH, 0)
+        keyboard.updateInputType(0)
+        keyboard.updatePackage("com.example.app")
+        val rowAfter = container.getChildAt(0)
+
+        assertSame(rowBefore, rowAfter)
     }
 
     @Test

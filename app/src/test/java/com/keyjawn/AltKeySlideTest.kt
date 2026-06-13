@@ -443,6 +443,31 @@ class AltKeySlideTest {
     }
 
     @Test
+    fun `popupScreenTop lands the row popupHeight above the anchor top`() {
+        // openForSlide picks yOffset = -(anchorHeight + popupHeight) to lift the
+        // candidate row above the key. Because showAsDropDown anchors to the anchor
+        // BOTTOM, the row's real top must be popupHeight above the anchor TOP. The
+        // naive anchorScreenY + yOffset lands a full anchor height too high, which
+        // is the regression this guards.
+        val anchorScreenY = 1200
+        val anchorHeight = 132
+        val popupHeight = 154
+        val yOffset = -(anchorHeight + popupHeight)
+        assertEquals(
+            anchorScreenY - popupHeight,
+            AltKeyPopup.popupScreenTop(anchorScreenY, anchorHeight, yOffset)
+        )
+    }
+
+    @Test
+    fun `popupScreenTop adds the anchor height to the bottom-anchored offset`() {
+        // General contract: top = anchorBottom + yOffset = anchorScreenY +
+        // anchorHeight + yOffset. A positive yOffset (drop-down below the key)
+        // exercises the same arithmetic the buggy form got wrong.
+        assertEquals(560, AltKeyPopup.popupScreenTop(anchorScreenY = 500, anchorHeight = 40, yOffset = 20))
+    }
+
+    @Test
     fun `slide popup on a far-left wide-alt key keeps every rect on screen and ordered`() {
         // "a" sits at the far-left column and carries ~6 accented alts, so the
         // centered candidate row is far wider than the key and its requested left
