@@ -273,6 +273,63 @@ class AltKeySlideTest {
         verify(keySender).sendText(any(), eq(alts[1]))
     }
 
+    // ---- Fix A: popup clamping keeps hit-test rects on the visible buttons ----
+
+    @Test
+    fun `clampPopupLeft pins a negative requested left to zero`() {
+        // A wide candidate row centered over a narrow edge key requests a negative
+        // left; the clamp must pin it to 0 so the visible popup and the rects agree.
+        assertEquals(0, AltKeyPopup.clampPopupLeft(requestedLeft = -120, popupWidth = 300, screenWidth = 1080))
+    }
+
+    @Test
+    fun `clampPopupLeft slides an overflowing-right popup back on screen`() {
+        // Requested right edge (1000 + 300 = 1300) overflows the 1080 screen, so the
+        // left clamps to screenWidth - popupWidth = 780.
+        assertEquals(780, AltKeyPopup.clampPopupLeft(requestedLeft = 1000, popupWidth = 300, screenWidth = 1080))
+    }
+
+    @Test
+    fun `clampPopupLeft leaves a popup that already fits unchanged`() {
+        assertEquals(400, AltKeyPopup.clampPopupLeft(requestedLeft = 400, popupWidth = 300, screenWidth = 1080))
+    }
+
+    @Test
+    fun `clampPopupLeft pins a popup wider than the screen to zero`() {
+        assertEquals(0, AltKeyPopup.clampPopupLeft(requestedLeft = -50, popupWidth = 1200, screenWidth = 1080))
+    }
+
+    @Test
+    fun `slide popup on a far-left wide-alt key keeps every rect on screen and ordered`() {
+        // "a" sits at the far-left column and carries ~6 accented alts, so the
+        // centered candidate row is far wider than the key and its requested left
+        // goes negative. Before clamping, the rects started off screen and a slide
+        // onto the leftmost visible candidate hit-tested the wrong index or -1.
+        val aButton = charButtonAt(1, 0)
+        val alts = AltKeyMappings.getAlts("a")!!
+        assertTrue("test needs a wide-alt key", alts.size >= 4)
+
+        openSlideOn(aButton)
+        val session = keyboard.currentSlideSession
+        assertNotNull("long-press on a multi-alt key opens a slide session", session)
+
+        val screenWidth = aButton.context.resources.displayMetrics.widthPixels
+        val rects = session!!.candidateRectsForTest()
+        assertEquals(alts.size, rects.size)
+
+        var previousRight = Int.MIN_VALUE
+        for ((i, rect) in rects.withIndex()) {
+            assertTrue("rect $i must not start off the left edge: ${rect.left}", rect.left >= 0)
+            assertTrue("rect $i must not run off the right edge: ${rect.right} > $screenWidth", rect.right <= screenWidth)
+            assertTrue("rects must be left-to-right ordered", rect.left > previousRight)
+            previousRight = rect.right
+        }
+
+        // The leftmost visible candidate must map to alts[0]. Against the old code
+        // the first rect started negative, so its center hit-tested to -1.
+        assertEquals(0, session.indexAt(rects[0].centerX().toFloat(), rects[0].centerY().toFloat()))
+    }
+
     // ---- SlideSession unit tests (pure hit-testing) ----
 
     private fun synthSession(rects: List<Rect>): AltKeyPopup.SlideSession {

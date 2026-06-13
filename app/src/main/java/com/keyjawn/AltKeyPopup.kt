@@ -17,93 +17,12 @@ class AltKeyPopup(
 
     private var popup: PopupWindow? = null
 
-    fun show(anchor: android.view.View, alts: List<String>, onSelect: ((String) -> Unit)? = null) {
-        dismiss()
-        val context = anchor.context
-        val density = context.resources.displayMetrics.density
-
-        val row = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            val pad = (4 * density + 0.5f).toInt()
-            setPadding(pad, pad, pad, pad)
-        }
-
-        val btnSize = (40 * density + 0.5f).toInt()
-        val btnHeight = (44 * density + 0.5f).toInt()
-        val margin = (2 * density + 0.5f).toInt()
-
-        for (alt in alts) {
-            val btn = Button(context).apply {
-                text = alt
-                isAllCaps = false
-                val tm = themeManager
-                if (tm != null) {
-                    background = tm.createKeyDrawable(tm.keyBg())
-                    setTextColor(tm.keyText())
-                } else {
-                    setBackgroundResource(R.drawable.key_bg)
-                    setTextColor(context.getColor(R.color.key_text))
-                }
-                gravity = Gravity.CENTER
-                setPadding(0, 0, 0, 0)
-                minWidth = 0
-                minimumWidth = 0
-                minHeight = 0
-                minimumHeight = 0
-                typeface = Typeface.MONOSPACE
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-                setOnClickListener {
-                    if (onSelect != null) {
-                        onSelect(alt)
-                    } else {
-                        val ic = inputConnectionProvider() ?: return@setOnClickListener
-                        keySender.sendText(ic, alt)
-                    }
-                    dismiss()
-                }
-            }
-            val params = LinearLayout.LayoutParams(btnSize, btnHeight)
-            params.setMargins(margin, 0, margin, 0)
-            btn.layoutParams = params
-            row.addView(btn)
-        }
-
-        val window = PopupWindow(
-            row,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        val bg = android.graphics.drawable.GradientDrawable().apply {
-            setColor(themeManager?.keyboardBg() ?: 0xFF2B2B30.toInt())
-            cornerRadius = 8 * density
-            setStroke((1 * density + 0.5f).toInt(), themeManager?.divider() ?: 0xFF38383E.toInt())
-        }
-        window.setBackgroundDrawable(bg)
-        window.elevation = 8 * density
-        window.isOutsideTouchable = true
-        window.isTouchable = true
-
-        // Position above the anchor key
-        val anchorLoc = IntArray(2)
-        anchor.getLocationInWindow(anchorLoc)
-        val popupHeight = btnHeight + (8 * density + 0.5f).toInt()
-        val yOffset = -(anchor.height + popupHeight)
-
-        // Center the popup horizontally on the anchor
-        val popupWidth = alts.size * (btnSize + 2 * margin) + (8 * density + 0.5f).toInt()
-        val xOffset = (anchor.width - popupWidth) / 2
-
-        window.showAsDropDown(anchor, xOffset, yOffset)
-        popup = window
-    }
-
     /**
      * Opens the candidate row for a slide-and-release gesture and returns a
-     * [SlideSession] the host key's touch listener drives. Unlike [show], the
-     * candidates carry no click listeners (selection comes from the in-flight
-     * finger, not a second tap) and the window is non-focusable so it does not
-     * steal the gesture the host view already owns.
+     * [SlideSession] the host key's touch listener drives. The candidates carry
+     * no click listeners (selection comes from the in-flight finger, not a second
+     * tap) and the window is non-focusable so it does not steal the gesture the
+     * host view already owns.
      *
      * Candidate screen-space [Rect]s are precomputed from the same sizing
      * constants the button row is built with, so hit-testing never depends on
@@ -170,9 +89,10 @@ class AltKeyPopup(
         window.isTouchable = false
 
         val popupHeight = btnHeight + (8 * density + 0.5f).toInt()
+        // Vertical is not clamped: a bottom-anchored IME always has room above the
+        // key for the candidate row, so popupTop stays on screen.
         val yOffset = -(anchor.height + popupHeight)
         val popupWidth = alts.size * (btnSize + 2 * margin) + (8 * density + 0.5f).toInt()
-        val xOffset = (anchor.width - popupWidth) / 2
 
         // The popup top-left in screen space. showAsDropDown places the window at
         // (anchorScreen + offset), so the same arithmetic gives candidate bounds
@@ -181,7 +101,19 @@ class AltKeyPopup(
         anchor.getLocationOnScreen(anchorLoc)
         val anchorScreenX = anchorLoc[0]
         val anchorScreenY = anchorLoc[1]
-        val popupLeft = anchorScreenX + xOffset
+
+        // Centering a wide candidate row over a narrow edge key pushes the
+        // requested left off screen. showAsDropDown (clipping enabled by default)
+        // would slide the window back on screen but leave our precomputed rects at
+        // the off-screen origin, desyncing hit-testing from the visible buttons.
+        // Clamp horizontally ourselves to the same bounds the framework would, then
+        // derive both the rects AND the offset we pass to showAsDropDown from the
+        // clamped left, so the framework finds the window already fits and leaves
+        // it where we put it.
+        val screenWidth = context.resources.displayMetrics.widthPixels
+        val requestedLeft = anchorScreenX + (anchor.width - popupWidth) / 2
+        val clampedLeft = clampPopupLeft(requestedLeft, popupWidth, screenWidth)
+        val clampedXOffset = clampedLeft - anchorScreenX
         val popupTop = anchorScreenY + yOffset
 
         // Each candidate sits at popup-internal x = pad + i*(btnSize + 2*margin) +
@@ -190,12 +122,12 @@ class AltKeyPopup(
         // top y = pad.
         val rects = ArrayList<Rect>(alts.size)
         for (i in alts.indices) {
-            val left = popupLeft + pad + i * (btnSize + 2 * margin) + margin
+            val left = clampedLeft + pad + i * (btnSize + 2 * margin) + margin
             val top = popupTop + pad
             rects.add(Rect(left, top, left + btnSize, top + btnHeight))
         }
 
-        window.showAsDropDown(anchor, xOffset, yOffset)
+        window.showAsDropDown(anchor, clampedXOffset, yOffset)
         popup = window
 
         return SlideSession(buttons, rects, themeManager) { dismiss() }
@@ -204,6 +136,23 @@ class AltKeyPopup(
     fun dismiss() {
         popup?.dismiss()
         popup = null
+    }
+
+    companion object {
+        /**
+         * Clamp the requested popup left edge to the screen so the precomputed
+         * candidate rects stay aligned with where showAsDropDown actually places
+         * the window. A popup wider than the screen pins to 0; one that overflows
+         * left or right is slid inward by exactly the overflow; one that already
+         * fits is unchanged. Pure arithmetic so it is unit-testable without a
+         * rendered popup.
+         */
+        fun clampPopupLeft(requestedLeft: Int, popupWidth: Int, screenWidth: Int): Int = when {
+            popupWidth >= screenWidth -> 0
+            requestedLeft < 0 -> 0
+            requestedLeft + popupWidth > screenWidth -> screenWidth - popupWidth
+            else -> requestedLeft
+        }
     }
 
     /**
