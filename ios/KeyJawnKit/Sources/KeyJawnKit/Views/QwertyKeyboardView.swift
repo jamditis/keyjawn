@@ -44,6 +44,12 @@ public final class QwertyKeyboardView: UIView {
     // MARK: Key views
 
     private var keyButtons: [QwertyKeyButton] = []
+    // The theme the current buttons were built under. Each QwertyKeyButton captures
+    // its theme at init for title and tint colours, so the in-place fast path is only
+    // valid while this matches the view's theme. It diverges when theme is set
+    // directly (the keyboard extension does qwerty.theme = ... rather than going
+    // through applyTheme), and the fast path must fall back to a full rebuild then.
+    private var builtTheme: KeyboardTheme?
 
     // MARK: - Init
 
@@ -61,11 +67,10 @@ public final class QwertyKeyboardView: UIView {
 
     // MARK: - Rebuild / layout
 
-    // Rebuild the key set for the current layer/shift. Reuses the existing buttons
-    // in place when the new layer is position-identical in kind, and only tears down
-    // and reallocates when the structure actually changes. Pass force to skip the
-    // fast path (a theme change has to rebuild so buttons pick up the new colours).
-    private func rebuild(force: Bool = false) {
+    // Rebuild the key set for the current layer/shift. Reuses the existing buttons in
+    // place when the new layer is position-identical in kind and they were built under
+    // the current theme; otherwise tears down and reallocates.
+    private func rebuild() {
         let rows = KeyboardLayers.rows(for: layer_, shiftState: shiftState)
         let newKeys = rows.flatMap { $0 }
 
@@ -77,11 +82,14 @@ public final class QwertyKeyboardView: UIView {
         // and SF Symbol lookups on every shift -- the churn issue #45 set out to kill.
         // The tap target and long-press recogniser stay attached for the button's
         // lifetime, and because the kind is unchanged a character button stays a
-        // character button, so the recogniser stays valid. A structural change (to or
-        // from the symbols layer, or the first build) falls through to the full
-        // rebuild, so a diverging layout degrades to the old behaviour rather than
-        // mislabelling a key. Mirrors the Android applyShiftCase fast path (#28).
-        if !force,
+        // character button, so the recogniser stays valid. Skip the fast path when the
+        // structure changed (to or from the symbols layer, or the first build) or when
+        // the buttons were built under a different theme -- each button keeps the theme
+        // it was created with for its title and tint colours, so reusing them after a
+        // theme change would leave the old text colour on the new background. Either
+        // case degrades to the full rebuild below. Mirrors the Android applyShiftCase
+        // fast path (#28).
+        if builtTheme == theme,
            keyButtons.count == newKeys.count,
            zip(keyButtons, newKeys).allSatisfy({ $0.key.structuralKind == $1.structuralKind }) {
             for (btn, key) in zip(keyButtons, newKeys) {
@@ -105,6 +113,7 @@ public final class QwertyKeyboardView: UIView {
             addSubview(btn)
             keyButtons.append(btn)
         }
+        builtTheme = theme
     }
 
     public override func layoutSubviews() {
@@ -218,10 +227,9 @@ public final class QwertyKeyboardView: UIView {
     public func applyTheme(_ theme: KeyboardTheme) {
         self.theme = theme
         backgroundColor = bg
-        // Force a full rebuild: each button captures the theme at init, so reusing
-        // them would keep the old title colours and shadow. Theme changes are rare
-        // and not latency-sensitive, so the reallocation cost is fine here.
-        rebuild(force: true)
+        // rebuild() sees builtTheme != theme and does a full reallocation, so the
+        // buttons pick up the new title and tint colours rather than being reused.
+        rebuild()
         setNeedsLayout()
     }
 
