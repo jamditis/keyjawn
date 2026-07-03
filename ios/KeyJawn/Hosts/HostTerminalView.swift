@@ -60,6 +60,19 @@ struct HostTerminalView: View {
                 startConnection()
             }
         }
+        .onDisappear {
+            // Tear the session down on any removal (back chevron, swipe-pop,
+            // programmatic pop). connect only runs on .onAppear and the toolbar
+            // Disconnect button is the sole other teardown trigger, so a plain
+            // back-navigation would otherwise leave the detached pump task, the
+            // SwiftNIO channel, and the remote shell alive for a view the user
+            // has left. disconnect() is idempotent (all handles are optionals it
+            // nils out), so this is a no-op when the user already disconnected.
+            // Deferred onto the main actor so we do not mutate @Published state
+            // inside the disappearing transaction; SSHSession is @MainActor and
+            // therefore Sendable, so capturing it here is concurrency-clean.
+            Task { @MainActor [session] in session.disconnect() }
+        }
         .sheet(isPresented: $showingPasswordPrompt) {
             PasswordPromptView(host: host) { password in
                 session.connect(to: host, password: password)
