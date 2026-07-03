@@ -248,4 +248,78 @@ class KeyboardLayoutTest {
     fun `getLayer returns symbols2 for index 3`() {
         assertSame(KeyboardLayouts.symbols2, KeyboardLayouts.getLayer(3))
     }
+
+    // --- lower<->upper position-identity: the invariant the in-place shift
+    // relabel relies on ---
+    //
+    // QwertyKeyboard.applyShiftCase() relabels the existing letter buttons in
+    // place on a lower<->upper toggle instead of tearing the grid down, which is
+    // only safe because the two layers are position-identical: every (row, col)
+    // holds the same KeyOutput type, so a held Character button always maps to a
+    // Character key in the target layer. applyShiftCase has a safety net that
+    // falls back to a full rebuild if a position diverges, so a broken invariant
+    // would not corrupt the grid, but it would silently defeat the optimization
+    // (every shift would rebuild again). These tests lock the invariant so that
+    // regression is caught at build time instead.
+
+    @Test
+    fun `lowercase and uppercase are position-identical in output type`() {
+        val lower = KeyboardLayouts.lowercase
+        val upper = KeyboardLayouts.uppercase
+        assertEquals("row count differs", lower.size, upper.size)
+        for (r in lower.indices) {
+            assertEquals("row $r key count differs", lower[r].size, upper[r].size)
+            for (c in lower[r].indices) {
+                assertEquals(
+                    "output type at ($r,$c) differs between lowercase and uppercase",
+                    lower[r][c].output::class,
+                    upper[r][c].output::class
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `every lowercase character position is a character in uppercase`() {
+        // applyShiftCase iterates only the Character positions (charHolders) and
+        // requires the same position in the target layer to also be a Character.
+        val lower = KeyboardLayouts.lowercase
+        val upper = KeyboardLayouts.uppercase
+        for (r in lower.indices) {
+            for (c in lower[r].indices) {
+                if (lower[r][c].output is KeyOutput.Character) {
+                    assertTrue(
+                        "($r,$c) is a Character in lowercase but not in uppercase",
+                        upper[r][c].output is KeyOutput.Character
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `symbol layers are not position-identical to lowercase so they must rebuild`() {
+        // The counterpart to the fast path: a switch to a symbol layer swaps the
+        // key set and count, so QwertyKeyboard rebuilds rather than relabeling.
+        // Assert the symbol layers genuinely are not position-identical, which
+        // documents why the in-place path is scoped to lower<->upper only.
+        val lower = KeyboardLayouts.lowercase
+        for ((name, symLayer) in listOf(
+            "symbols" to KeyboardLayouts.symbols,
+            "symbols2" to KeyboardLayouts.symbols2
+        )) {
+            val shapeMatches = lower.size == symLayer.size &&
+                lower.indices.all { lower[it].size == symLayer[it].size }
+            val positionIdentical = shapeMatches &&
+                lower.indices.all { r ->
+                    lower[r].indices.all { c ->
+                        lower[r][c].output::class == symLayer[r][c].output::class
+                    }
+                }
+            assertFalse(
+                "$name should not be position-identical to lowercase",
+                positionIdentical
+            )
+        }
+    }
 }
