@@ -49,6 +49,22 @@ final class TerminalViewController: UIViewController {
         wireSession()
     }
 
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        // Tear the SSH session down only when the terminal is actually going away
+        // (a navigation pop or a modal dismissal), not when it is merely hidden.
+        // HostTerminalView is a pushed destination inside the Hosts tab of a
+        // TabView, so a plain tab switch also hides it; isMovingFromParent and
+        // isBeingDismissed are both false in that case, so the live session
+        // survives tab switches and is torn down only on a real removal. Without
+        // this the detached SSH pump task, the SwiftNIO channel, and the remote
+        // shell would leak on every back-navigation (#43). disconnect() is
+        // idempotent, so the toolbar Disconnect button having fired first is fine.
+        if isMovingFromParent || isBeingDismissed {
+            session?.disconnect()
+        }
+    }
+
     // MARK: - Setup
 
     private func setupTerminal() {
