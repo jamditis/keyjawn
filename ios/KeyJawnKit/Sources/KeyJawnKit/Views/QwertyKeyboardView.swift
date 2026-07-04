@@ -44,6 +44,12 @@ public final class QwertyKeyboardView: UIView {
     // MARK: Key views
 
     private var keyButtons: [QwertyKeyButton] = []
+    // The theme the current buttons were built under. Each QwertyKeyButton captures
+    // its theme at init for title and tint colours, so the in-place fast path is only
+    // valid while this matches the view's theme. It diverges when theme is set
+    // directly (the keyboard extension does qwerty.theme = ... rather than going
+    // through applyTheme), and the fast path must fall back to a full rebuild then.
+    private var builtTheme: KeyboardTheme?
 
     // MARK: - Init
 
@@ -61,25 +67,53 @@ public final class QwertyKeyboardView: UIView {
 
     // MARK: - Rebuild / layout
 
+    // Rebuild the key set for the current layer/shift. Reuses the existing buttons in
+    // place when the new layer is position-identical in kind and they were built under
+    // the current theme; otherwise tears down and reallocates.
     private func rebuild() {
+        let rows = KeyboardLayers.rows(for: layer_, shiftState: shiftState)
+        let newKeys = rows.flatMap { $0 }
+
+        // Fast path: every lowercase<->uppercase transition (shift off/once/caps and
+        // the one-shot-shift after a capital letter) keeps the same key count and the
+        // same kind at each position, differing only in per-key title, image, and
+        // colour. Relabel the buttons already on screen instead of destroying and
+        // reallocating ~35 UIButtons with fresh shadow layers, gesture recognisers,
+        // and SF Symbol lookups on every shift -- the churn issue #45 set out to kill.
+        // The tap target and long-press recogniser stay attached for the button's
+        // lifetime, and because the kind is unchanged a character button stays a
+        // character button, so the recogniser stays valid. Skip the fast path when the
+        // structure changed (to or from the symbols layer, or the first build) or when
+        // the buttons were built under a different theme -- each button keeps the theme
+        // it was created with for its title and tint colours, so reusing them after a
+        // theme change would leave the old text colour on the new background. Either
+        // case degrades to the full rebuild below. Mirrors the Android applyShiftCase
+        // fast path (#28).
+        if builtTheme == theme,
+           keyButtons.count == newKeys.count,
+           zip(keyButtons, newKeys).allSatisfy({ $0.key.structuralKind == $1.structuralKind }) {
+            for (btn, key) in zip(keyButtons, newKeys) {
+                btn.apply(key: key)
+                btn.backgroundColor = bgColor(for: key)
+            }
+            return
+        }
+
         keyButtons.forEach { $0.removeFromSuperview() }
         keyButtons.removeAll()
-
-        let rows = KeyboardLayers.rows(for: layer_, shiftState: shiftState)
-        for row in rows {
-            for key in row {
-                let btn = QwertyKeyButton(key: key, theme: theme)
-                btn.backgroundColor = bgColor(for: key)
-                btn.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside)
-                if case .character = key {
-                    let lp = UILongPressGestureRecognizer(target: self, action: #selector(keyLongPressed(_:)))
-                    lp.minimumPressDuration = 0.4
-                    btn.addGestureRecognizer(lp)
-                }
-                addSubview(btn)
-                keyButtons.append(btn)
+        for key in newKeys {
+            let btn = QwertyKeyButton(key: key, theme: theme)
+            btn.backgroundColor = bgColor(for: key)
+            btn.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside)
+            if case .character = key {
+                let lp = UILongPressGestureRecognizer(target: self, action: #selector(keyLongPressed(_:)))
+                lp.minimumPressDuration = 0.4
+                btn.addGestureRecognizer(lp)
             }
+            addSubview(btn)
+            keyButtons.append(btn)
         }
+        builtTheme = theme
     }
 
     public override func layoutSubviews() {
@@ -193,6 +227,8 @@ public final class QwertyKeyboardView: UIView {
     public func applyTheme(_ theme: KeyboardTheme) {
         self.theme = theme
         backgroundColor = bg
+        // rebuild() sees builtTheme != theme and does a full reallocation, so the
+        // buttons pick up the new title and tint colours rather than being reused.
         rebuild()
         setNeedsLayout()
     }
@@ -284,35 +320,76 @@ public final class QwertyKeyboardView: UIView {
     }
 }
 
+// MARK: - Structural kind
+
+private extension QwertyKey {
+    // A discriminator that ignores a character key's specific value, so two layers
+    // built from the same sequence of kinds (lowercase and uppercase) compare equal
+    // and their buttons can be relabelled in place. Distinct from Equatable, which
+    // treats .character("a") and .character("A") as different.
+    var structuralKind: Int {
+        switch self {
+        case .character:        return 0
+        case .space:            return 1
+        case .return:           return 2
+        case .backspace:        return 3
+        case .shift:            return 4
+        case .symbolsToggle:    return 5
+        case .alphabeticToggle: return 6
+        case .globe:            return 7
+        case .more:             return 8
+        }
+    }
+}
+
 // MARK: - QwertyKeyButton
 
 @MainActor
 final class QwertyKeyButton: UIButton {
 
-    let key: QwertyKey
+    private(set) var key: QwertyKey
     private let theme: KeyboardTheme
+
+    // Resolve the three SF Symbols once per process rather than on every rebuild:
+    // UIImage(systemName:) is a non-trivial lookup and these images never change.
+    private static let backspaceImage = UIImage(systemName: "delete.backward")
+    private static let shiftImage = UIImage(systemName: "shift")
+    private static let globeImage = UIImage(systemName: "globe")
 
     init(key: QwertyKey, theme: KeyboardTheme) {
         self.key = key
         self.theme = theme
         super.init(frame: .zero)
-        configure()
+        configureChrome()
+        apply(key: key)
     }
 
     required init?(coder: NSCoder) { fatalError("use init(key:theme:)") }
 
-    private func configure() {
+    // One-time visual setup that does not depend on which key this is: title colours
+    // and the rounded-rect drop shadow. Set once at init and never touched again, so
+    // an in-place relabel does not re-run the four CALayer shadow writes.
+    private func configureChrome() {
         let text = theme.keyText
-        let textFaded = text.withAlphaComponent(0.4)
         setTitleColor(text, for: .normal)
-        setTitleColor(textFaded, for: .highlighted)
+        setTitleColor(text.withAlphaComponent(0.4), for: .highlighted)
         layer.cornerRadius    = 5
         layer.masksToBounds   = false
         layer.shadowColor     = UIColor.black.cgColor
         layer.shadowOffset    = CGSize(width: 0, height: 1)
         layer.shadowOpacity   = 0.35
         layer.shadowRadius    = 0.5
+    }
 
+    // Per-key appearance: font, title, and image. Safe to call repeatedly to relabel
+    // a reused button, which QwertyKeyboardView does on a lowercase<->uppercase
+    // toggle. Both the title and the image are cleared first so no stale glyph
+    // survives even if a caller ever reuses a button across kinds.
+    func apply(key: QwertyKey) {
+        self.key = key
+        setTitle(nil, for: .normal)
+        setImage(nil, for: .normal)
+        let text = theme.keyText
         switch key {
         case .character(let s):
             titleLabel?.font = .systemFont(ofSize: 17, weight: .light)
@@ -327,11 +404,11 @@ final class QwertyKeyButton: UIButton {
             setTitle("return", for: .normal)
 
         case .backspace:
-            setImage(UIImage(systemName: "delete.backward"), for: .normal)
+            setImage(Self.backspaceImage, for: .normal)
             tintColor = text
 
         case .shift:
-            setImage(UIImage(systemName: "shift"), for: .normal)
+            setImage(Self.shiftImage, for: .normal)
             tintColor = text
 
         case .symbolsToggle:
@@ -343,7 +420,7 @@ final class QwertyKeyButton: UIButton {
             setTitle("ABC", for: .normal)
 
         case .globe:
-            setImage(UIImage(systemName: "globe"), for: .normal)
+            setImage(Self.globeImage, for: .normal)
             tintColor = text
 
         case .more:
