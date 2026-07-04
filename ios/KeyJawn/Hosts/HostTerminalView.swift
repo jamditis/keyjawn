@@ -64,8 +64,9 @@ struct HostTerminalView: View {
         // destination inside the Hosts tab of a TabView, and SwiftUI fires
         // .onDisappear on a plain tab switch too, which would drop a live session
         // the user is still using. Teardown lives in TerminalViewController's
-        // viewDidDisappear, gated on isMovingFromParent/isBeingDismissed, so it
-        // runs on a real pop or dismiss but never on a tab switch.
+        // viewDidDisappear, gated on whether the controller or any ancestor is
+        // actually being removed, so it runs on a real pop or dismiss but never
+        // on a tab switch.
         .sheet(isPresented: $showingPasswordPrompt) {
             PasswordPromptView(host: host) { password in
                 session.connect(to: host, password: password)
