@@ -49,6 +49,44 @@ final class TerminalViewController: UIViewController {
         wireSession()
     }
 
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        // Tear the SSH session down only when the terminal is actually going away
+        // (a navigation pop or a modal dismissal), not when it is merely hidden.
+        // HostTerminalView is a pushed destination inside the Hosts tab of a
+        // TabView, so a plain tab switch also hides it; on a tab switch nothing is
+        // removed from its parent, so isBeingRemoved stays false and the live
+        // session survives. Without this the detached SSH pump task, the SwiftNIO
+        // channel, and the remote shell would leak on every back-navigation (#43).
+        // disconnect() is idempotent, so the toolbar Disconnect button having
+        // fired first is fine.
+        if isBeingRemoved {
+            session?.disconnect()
+        }
+    }
+
+    /// True when this controller or any ancestor is leaving for good (a
+    /// navigation pop or a modal dismissal), and false on a plain tab switch
+    /// where the containers are only hidden.
+    ///
+    /// This controller is embedded in SwiftUI via UIViewControllerRepresentable,
+    /// so it is a child of the destination's hosting controller rather than a
+    /// direct child of the navigation controller. On a pop it is that
+    /// hosting-controller ancestor that reports isMovingFromParent, not this
+    /// represented child, whose own flag is unreliable across iOS versions.
+    /// Walking the parent chain catches the removal wherever UIKit reports it,
+    /// while a tab switch removes nothing and leaves every level false.
+    private var isBeingRemoved: Bool {
+        var controller: UIViewController? = self
+        while let current = controller {
+            if current.isMovingFromParent || current.isBeingDismissed {
+                return true
+            }
+            controller = current.parent
+        }
+        return false
+    }
+
     // MARK: - Setup
 
     private func setupTerminal() {
