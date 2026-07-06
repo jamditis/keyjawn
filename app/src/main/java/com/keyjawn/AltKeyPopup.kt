@@ -89,9 +89,14 @@ class AltKeyPopup(
         window.isTouchable = false
 
         val popupHeight = btnHeight + (8 * density + 0.5f).toInt()
-        // Vertical is not clamped: a bottom-anchored IME always has room above the
-        // key for the candidate row, so popupTop stays on screen.
-        val yOffset = -(anchor.height + popupHeight)
+        // Lift the candidate row above the key. A bottom-anchored IME normally has
+        // room above the pressed key, but a compact or landscape IME whose top row
+        // sits near the screen top would not: showAsDropDown (clipping enabled) would
+        // then flip the row below the anchor and leave our precomputed rects above it,
+        // desyncing the hit-test the same way an unclamped left did before #38. So the
+        // top is clamped to the visible frame below, and both the rects and the offset
+        // derive from that clamped top (see clampPopupTop, mirroring clampPopupLeft).
+        val requestedYOffset = -(anchor.height + popupHeight)
         val popupWidth = alts.size * (btnSize + 2 * margin) + (8 * density + 0.5f).toInt()
 
         // The popup top-left in screen space. showAsDropDown places the window at
@@ -119,7 +124,14 @@ class AltKeyPopup(
         val requestedLeft = anchorScreenX + (anchor.width - popupWidth) / 2
         val clampedLeft = clampPopupLeft(requestedLeft, popupWidth, displayFrame.left, displayFrame.right)
         val clampedXOffset = clampedLeft - anchorScreenX
-        val popupTop = popupScreenTop(anchorScreenY, anchor.height, yOffset)
+
+        // Same clamp on the vertical axis: pin the requested top into the visible
+        // frame so showAsDropDown finds the row already fits above the key and does not
+        // flip it below, then derive both the rects and the offset from the clamped top
+        // (dropDownYOffset inverts popupScreenTop to recover the anchor-bottom offset).
+        val requestedTop = popupScreenTop(anchorScreenY, anchor.height, requestedYOffset)
+        val clampedTop = clampPopupTop(requestedTop, popupHeight, displayFrame.top, displayFrame.bottom)
+        val clampedYOffset = dropDownYOffset(clampedTop, anchorScreenY, anchor.height)
 
         // Each candidate sits at popup-internal x = pad + i*(btnSize + 2*margin) +
         // margin (the LinearLayout's left padding, the preceding buttons' cells,
@@ -128,11 +140,11 @@ class AltKeyPopup(
         val rects = ArrayList<Rect>(alts.size)
         for (i in alts.indices) {
             val left = clampedLeft + pad + i * (btnSize + 2 * margin) + margin
-            val top = popupTop + pad
+            val top = clampedTop + pad
             rects.add(Rect(left, top, left + btnSize, top + btnHeight))
         }
 
-        window.showAsDropDown(anchor, clampedXOffset, yOffset)
+        window.showAsDropDown(anchor, clampedXOffset, clampedYOffset)
         popup = window
 
         return SlideSession(buttons, rects, themeManager) { dismiss() }
@@ -157,13 +169,27 @@ class AltKeyPopup(
             anchorScreenY + anchorHeight + yOffset
 
         /**
+         * The showAsDropDown yOffset that lands the popup's top edge at [clampedTop].
+         * showAsDropDown measures its offset from the anchor BOTTOM, so this is the
+         * exact inverse of [popupScreenTop]: feeding this offset back through
+         * popupScreenTop returns [clampedTop]. openForSlide derives the offset from the
+         * clamped top (not the raw requested offset) so the shown window and the
+         * precomputed candidate rects share one top edge; a naive offset that dropped
+         * [anchorHeight] would misplace the window while every rect stayed put. Pure
+         * arithmetic so it is unit-testable without a rendered popup.
+         */
+        fun dropDownYOffset(clampedTop: Int, anchorScreenY: Int, anchorHeight: Int): Int =
+            clampedTop - (anchorScreenY + anchorHeight)
+
+        /**
          * Clamp the requested popup left edge to the anchor window's visible display
          * frame -- the same frame showAsDropDown clips against -- so the precomputed
          * candidate rects stay aligned with where the window actually lands in any
          * window mode (full-screen, split-screen, or freeform). [frameLeft] and
          * [frameRight] are screen-space, matching getLocationOnScreen. A popup wider
          * than the frame pins to [frameLeft]; one that overflows left or right is slid
-         * inward to the frame edge; one that already fits is unchanged. Pure arithmetic
+         * inward to the frame edge; one that already fits is unchanged. The horizontal
+         * half of the pair -- [clampPopupTop] mirrors it on the Y axis. Pure arithmetic
          * so it is unit-testable without a rendered popup.
          */
         fun clampPopupLeft(requestedLeft: Int, popupWidth: Int, frameLeft: Int, frameRight: Int): Int {
@@ -173,6 +199,27 @@ class AltKeyPopup(
                 requestedLeft < frameLeft -> frameLeft
                 requestedLeft > maxLeft -> maxLeft
                 else -> requestedLeft
+            }
+        }
+
+        /**
+         * Clamp the requested popup top edge to the anchor window's visible display
+         * frame -- the same frame showAsDropDown clips and flips against -- so the
+         * precomputed candidate rects stay aligned with where the window lands. The
+         * vertical mirror of [clampPopupLeft]: [frameTop] and [frameBottom] are
+         * screen-space. A popup taller than the frame pins to [frameTop]; a requested
+         * top above the frame (where showAsDropDown would flip the row below the anchor
+         * and desync the rects) is pushed down to [frameTop]; one that overflows the
+         * bottom is slid up to the frame; one that already fits is unchanged. Pure
+         * arithmetic so it is unit-testable without a rendered popup.
+         */
+        fun clampPopupTop(requestedTop: Int, popupHeight: Int, frameTop: Int, frameBottom: Int): Int {
+            val maxTop = frameBottom - popupHeight
+            return when {
+                maxTop <= frameTop -> frameTop
+                requestedTop < frameTop -> frameTop
+                requestedTop > maxTop -> maxTop
+                else -> requestedTop
             }
         }
     }
