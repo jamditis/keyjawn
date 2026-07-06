@@ -61,9 +61,10 @@ final class SSHSession: ObservableObject {
         connectionState = .connecting
         isHostKeyVerified = host.hostPublicKey != nil
 
-        let onReceive: @Sendable ([UInt8]) -> Void = { [weak self] bytes in
-            Task { @MainActor in self?.onData?(bytes) }
-        }
+        // Coalesce SSH output off-main and hand it to the terminal one batch per
+        // main-actor hop, instead of one Task and one array copy per network
+        // chunk (see SSHOutputCoalescer).
+        let coalescer = SSHOutputCoalescer { [weak self] bytes in self?.onData?(bytes) }
         let onStateChange: @Sendable (ConnectionState) -> Void = { [weak self] state in
             Task { @MainActor in self?.connectionState = state }
         }
@@ -81,7 +82,7 @@ final class SSHSession: ObservableObject {
             return
         }
 
-        sessionTask = Task.detached { [host, authenticationMethod, inputStream, resizeStream, onReceive, onStateChange, validator] in
+        sessionTask = Task.detached { [host, authenticationMethod, inputStream, resizeStream, coalescer, onStateChange, validator] in
             do {
                 let client = try await SSHClient.connect(
                     host: host.hostname,
@@ -104,15 +105,16 @@ final class SSHSession: ObservableObject {
 
                 try await client.withPTY(ptyRequest) { ttyOutput, stdinWriter in
                     await withThrowingTaskGroup(of: Void.self) { group in
-                        // Pump SSH output → onReceive callback
+                        // Pump SSH output → coalescer → main-actor terminal feed
                         group.addTask {
                             for try await chunk in ttyOutput {
-                                let bytes: [UInt8]
+                                // Copy the readable bytes straight into the
+                                // coalescer's pending batch; it owns the single
+                                // main-actor hop and the array hand-off.
                                 switch chunk {
-                                case .stdout(let buf): bytes = Array(buf.readableBytesView)
-                                case .stderr(let buf): bytes = Array(buf.readableBytesView)
+                                case .stdout(let buf): coalescer.append(buf.readableBytesView)
+                                case .stderr(let buf): coalescer.append(buf.readableBytesView)
                                 }
-                                onReceive(bytes)
                             }
                         }
                         // Pump keyboard input → SSH channel
@@ -183,3 +185,70 @@ private func hostPublicKey(from host: HostConfig) throws -> NIOSSHPublicKey? {
 }
 
 private struct HostKeyParseError: Error {}
+
+/// Coalesces SSH output chunks that arrive off the main actor into one batched
+/// hand-off per main-actor hop, instead of one unstructured `Task` and one array
+/// copy per network chunk.
+///
+/// Under high-throughput output (an agent streaming tokens, a file dump) NIO SSH
+/// delivers many small chunks in a burst. Feeding each through its own
+/// `Task { @MainActor }` floods the main thread with hops and array copies at the
+/// exact moment it is busiest with key handling and rendering, which the user
+/// feels as input lag and choppy scrolling. Here each chunk is appended under a
+/// lock, and only the first append after an idle stretch schedules a single
+/// main-actor flush; every chunk that lands before that flush runs is folded into
+/// the same batch. A burst of N chunks collapses to one hop and one delivered
+/// array, with no timer or display link and no added latency beyond the
+/// main-actor hop that was already happening. It does not remove the terminal's
+/// VT-parse cost, which is per-byte regardless; it removes the per-chunk hop and
+/// allocation churn around it.
+///
+/// Delivery preserves arrival order, and not only within a batch. The lock keeps
+/// each batch's bytes in arrival order, and `flushScheduled` keeps at most one
+/// flush in flight, so batch N is delivered before batch N+1 is ever scheduled.
+/// That makes cross-batch order structural rather than dependent on the order in
+/// which unstructured tasks happen to run, which Swift does not guarantee.
+///
+/// `@unchecked Sendable` because the mutable batch is reached from both the
+/// off-main read loop and the main-actor flush; the lock below is what keeps
+/// those touches race-free, so do not drop it.
+final class SSHOutputCoalescer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var pending: [UInt8] = []
+    private var flushScheduled = false
+    private let deliver: @MainActor ([UInt8]) -> Void
+
+    /// - Parameter deliver: called on the main actor with each coalesced batch,
+    ///   in arrival order.
+    init(deliver: @escaping @MainActor ([UInt8]) -> Void) {
+        self.deliver = deliver
+    }
+
+    /// Append one chunk's bytes. Called off the main actor from the SSH read
+    /// loop. The bytes are copied into the pending batch synchronously, so the
+    /// caller's `ByteBuffer` is free to be reused the moment this returns, and a
+    /// main-actor flush is scheduled only when one is not already pending.
+    func append<Bytes: Sequence>(_ bytes: Bytes) where Bytes.Element == UInt8 {
+        lock.lock()
+        pending.append(contentsOf: bytes)
+        let scheduleFlush = !flushScheduled
+        if scheduleFlush { flushScheduled = true }
+        lock.unlock()
+        guard scheduleFlush else { return }
+        Task { @MainActor in self.flush() }
+    }
+
+    @MainActor
+    private func flush() {
+        lock.lock()
+        let batch = pending
+        pending = []
+        flushScheduled = false
+        lock.unlock()
+        // Deliver outside the lock on purpose: the terminal feed (VT parsing and
+        // rendering) can be slow, and holding the lock across it would stall an
+        // off-main append that only wants to add bytes to the next batch.
+        guard !batch.isEmpty else { return }
+        deliver(batch)
+    }
+}
