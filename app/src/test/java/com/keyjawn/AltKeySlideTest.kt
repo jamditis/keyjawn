@@ -442,6 +442,59 @@ class AltKeySlideTest {
         assertEquals(200, AltKeyPopup.clampPopupLeft(requestedLeft = 250, popupWidth = 900, frameLeft = 200, frameRight = 1000))
     }
 
+    // ---- Fix B (#48): the vertical mirror of the left clamp ----
+    // openForSlide lifts the candidate row above the key with a negative yOffset. If
+    // the requested top ever falls above the visible frame, showAsDropDown flips the
+    // row below the anchor and the rects desync -- the same class the left clamp fixed
+    // on the X axis. clampPopupTop is clampPopupLeft with left->top, width->height.
+
+    @Test
+    fun `clampPopupTop pins a requested top above the frame to the frame top`() {
+        // A row lifted above a key near the screen top requests a negative top; the
+        // clamp pins it to the frame top so the visible popup and the rects agree.
+        // Portrait full-height IME: frame is [0, 1920].
+        assertEquals(0, AltKeyPopup.clampPopupTop(requestedTop = -120, popupHeight = 300, frameTop = 0, frameBottom = 1920))
+    }
+
+    @Test
+    fun `clampPopupTop slides an overflowing-bottom popup back inside the frame`() {
+        // Requested bottom edge (1800 + 300 = 2100) overflows the [0, 1920] frame, so
+        // the top clamps to frameBottom - popupHeight = 1620.
+        assertEquals(1620, AltKeyPopup.clampPopupTop(requestedTop = 1800, popupHeight = 300, frameTop = 0, frameBottom = 1920))
+    }
+
+    @Test
+    fun `clampPopupTop leaves a popup that already fits unchanged`() {
+        assertEquals(800, AltKeyPopup.clampPopupTop(requestedTop = 800, popupHeight = 300, frameTop = 0, frameBottom = 1920))
+    }
+
+    @Test
+    fun `clampPopupTop pins a popup taller than the frame to the frame top`() {
+        assertEquals(0, AltKeyPopup.clampPopupTop(requestedTop = -50, popupHeight = 2000, frameTop = 0, frameBottom = 1920))
+    }
+
+    @Test
+    fun `clampPopupTop pins a top-overflowing popup to a non-zero frame top`() {
+        // Split-screen/freeform: the anchor window's visible frame is [200, 1000]. A
+        // requested top of 150 falls above the frame, so it pins to frameTop. A clamp
+        // that ignored frameTop would leave the rects above the window's top edge.
+        assertEquals(200, AltKeyPopup.clampPopupTop(requestedTop = 150, popupHeight = 300, frameTop = 200, frameBottom = 1000))
+    }
+
+    @Test
+    fun `clampPopupTop slides a bottom-overflowing popup to the non-zero frame bottom`() {
+        // Frame [200, 1000], popupHeight 300: requested top 850 would push the bottom
+        // edge to 1150, past frameBottom, so it clamps to frameBottom - popupHeight = 700.
+        assertEquals(700, AltKeyPopup.clampPopupTop(requestedTop = 850, popupHeight = 300, frameTop = 200, frameBottom = 1000))
+    }
+
+    @Test
+    fun `clampPopupTop pins a popup taller than a non-zero frame to the frame top`() {
+        // Frame [200, 1000] is 800 tall; a 900-tall popup cannot fit, so it pins to
+        // frameTop (200), not 0.
+        assertEquals(200, AltKeyPopup.clampPopupTop(requestedTop = 250, popupHeight = 900, frameTop = 200, frameBottom = 1000))
+    }
+
     @Test
     fun `popupScreenTop lands the row popupHeight above the anchor top`() {
         // openForSlide picks yOffset = -(anchorHeight + popupHeight) to lift the
@@ -465,6 +518,21 @@ class AltKeySlideTest {
         // anchorHeight + yOffset. A positive yOffset (drop-down below the key)
         // exercises the same arithmetic the buggy form got wrong.
         assertEquals(560, AltKeyPopup.popupScreenTop(anchorScreenY = 500, anchorHeight = 40, yOffset = 20))
+    }
+
+    @Test
+    fun `dropDownYOffset is the exact inverse of popupScreenTop`() {
+        // The offset handed to showAsDropDown must land the window's top at the same
+        // clampedTop the hit-test rects derive from -- otherwise the visible buttons
+        // and the rects sit at different tops and a slide commits the wrong candidate.
+        // Every gesture test hit-tests against the rects, so none would catch a broken
+        // offset; this round-trip pins it. A form that dropped anchorHeight would fail
+        // here (offset short by one key height) while leaving the rects untouched.
+        val anchorScreenY = 1400
+        val anchorHeight = 132
+        val clampedTop = 900
+        val offset = AltKeyPopup.dropDownYOffset(clampedTop, anchorScreenY, anchorHeight)
+        assertEquals(clampedTop, AltKeyPopup.popupScreenTop(anchorScreenY, anchorHeight, offset))
     }
 
     @Test
