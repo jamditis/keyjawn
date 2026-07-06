@@ -188,23 +188,51 @@ extension KeyboardViewController: ExtraRowDelegate {
         panel.frame = view.bounds
         panel.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         panel.hosts = AppGroupHostStore.shared.hosts
+        panel.onDismiss = { [weak self] in self?.hideUploadPanel() }
 
-        guard let imageData = UIPasteboard.general.image?.jpegData(compressionQuality: 0.85) else {
-            panel.statusMessage = "Copy an image first, then tap SCP"
-            panel.onDismiss = { [weak self] in self?.hideUploadPanel() }
+        // Grab the raw encoded image bytes on the main actor (cheap: no decode),
+        // so the heavy decode/downsample/encode can run off it. Reading
+        // UIPasteboard.image here instead would decode the full bitmap on the
+        // keyboard's main thread and freeze key input the moment SCP is tapped (#46).
+        guard let rawImageData = UIPasteboard.general.firstImageData else {
+            // hasImages true here means an image is present but exposes no
+            // readable data representation, so say that instead of implying the
+            // user copied nothing.
+            panel.statusMessage = UIPasteboard.general.hasImages
+                ? "Couldn't read that image. Try copying it again."
+                : "Copy an image first, then tap SCP"
             panel.onUpload = { _ in }
             view.addSubview(panel)
             uploadPanel = panel
             return
         }
 
-        panel.statusMessage = "Select a host to upload"
-        panel.onDismiss = { [weak self] in self?.hideUploadPanel() }
-        panel.onUpload = { [weak self] host in
-            self?.performUpload(imageData: imageData, to: host)
-        }
+        // Show the panel immediately in a preparing state with upload gated off,
+        // then downsample and JPEG-encode off the main actor. A host tap before
+        // the data is ready is a no-op (UploadPanel.isUploadEnabled).
+        panel.statusMessage = "Preparing image..."
+        panel.isUploadEnabled = false
+        panel.onUpload = { _ in }
         view.addSubview(panel)
         uploadPanel = panel
+
+        Task { [weak self] in
+            let imageData = await Task.detached(priority: .userInitiated) {
+                PasteboardImagePreparer.downsampledJPEGData(from: rawImageData)
+            }.value
+
+            // Bail if the panel was dismissed (or replaced) while preparing.
+            guard let self, self.uploadPanel === panel else { return }
+            guard let imageData else {
+                panel.statusMessage = "Couldn't read that image. Try copying it again."
+                return
+            }
+            panel.statusMessage = "Select a host to upload"
+            panel.onUpload = { [weak self] host in
+                self?.performUpload(imageData: imageData, to: host)
+            }
+            panel.isUploadEnabled = true
+        }
     }
 
     private func hideUploadPanel() {

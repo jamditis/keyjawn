@@ -16,6 +16,13 @@ public final class UploadPanel: UIView {
     public var hosts: [HostConfig] = [] { didSet { tableView.reloadData() } }
     public var statusMessage: String = "" { didSet { statusLabel.text = statusMessage } }
 
+    /// Gates host taps while the upload image is still being prepared off the
+    /// main actor, so a tap before the data exists is a no-op instead of a crash.
+    /// The host rows dim while disabled to show they are not tappable yet.
+    public var isUploadEnabled: Bool = true {
+        didSet { tableView.alpha = isUploadEnabled ? 1.0 : 0.5 }
+    }
+
     public override init(frame: CGRect) {
         super.init(frame: frame)
         setup()
@@ -135,7 +142,7 @@ extension UploadPanel: UITableViewDataSource, UITableViewDelegate {
 
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        guard !hosts.isEmpty else { return }
+        guard isUploadEnabled, !hosts.isEmpty else { return }
         onUpload?(hosts[indexPath.row])
     }
 }
