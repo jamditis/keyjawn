@@ -43,7 +43,7 @@ adb install app/build/outputs/apk/full/debug/app-full-debug.apk
 ## Build environment
 
 - Gradle 8.13, AGP 8.13.2, Kotlin 2.1.0
-- JDK 17, compileSdk 35, minSdk 26
+- JDK 17+ launcher, pinned Gradle daemon JDK 21, compileSdk 36, minSdk 26
 - CI runs on GitHub Actions (`.github/workflows/build.yml`) — builds both flavors, uploads APK artifacts, creates releases on version tags
 
 ## Product flavors

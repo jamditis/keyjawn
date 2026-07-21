@@ -101,7 +101,7 @@ Anyone who SSHs into a server from their phone to use a CLI-based AI assistant. 
 ./gradlew testLiteDebugUnitTest
 ```
 
-Requires JDK 17, Android SDK with compileSdk 35.
+Requires JDK 17+ and Android SDK 36. The Gradle wrapper provisions its pinned JDK 21 daemon toolchain.
 
 ### iOS
 

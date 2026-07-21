@@ -40,17 +40,6 @@
     </issue>
 
     <issue
-        id="OldTargetApi"
-        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
-        errorLine1="        targetSdk = 35"
-        errorLine2="        ~~~~~~~~~~~~~~">
-        <location
-            file="build.gradle.kts"
-            line="36"
-            column="9"/>
-    </issue>
-
-    <issue
         id="PropertyEscape"
         message="Windows file separators (`\`) and drive letter separators (&apos;:&apos;) must be escaped (`\\`) in property files; use C\\:\\\\Users\\\\amdit\\\\AppData\\\\Local\\\\Android\\\\Sdk\\r"
         errorLine1="sdk.dir=C:\\Users\\amdit\\AppData\\Local\\Android\\Sdk"
@@ -92,17 +81,6 @@
             file="src/full/AndroidManifest.xml"
             line="4"
             column="36"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of `compileSdkVersion` than 35 is available: 36"
-        errorLine1="    compileSdk = 35"
-        errorLine2="    ~~~~~~~~~~~~~~~">
-        <location
-            file="build.gradle.kts"
-            line="16"
-            column="5"/>
     </issue>
 
     <issue
@@ -180,17 +158,6 @@
             file="build.gradle.kts"
             line="101"
             column="26"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of org.robolectric:robolectric than 4.14.1 is available: 4.16.1"
-        errorLine1="    testImplementation(&quot;org.robolectric:robolectric:4.14.1&quot;)"
-        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="build.gradle.kts"
-            line="107"
-            column="24"/>
     </issue>
 
     <issue
