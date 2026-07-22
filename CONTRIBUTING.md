@@ -16,8 +16,9 @@ KeyJawn is a standard Android Kotlin project:
 
 - **Android Studio** (latest stable) or command-line Android SDK
 - **JDK 17+**
+- The Gradle wrapper provisions its pinned **JDK 21** daemon toolchain
 - **Min SDK 26** (Android 8.0)
-- **Target SDK 35**
+- **Target SDK 36**
 
 ### Building
 

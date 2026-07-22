@@ -14,7 +14,7 @@ if (localPropsFile.exists()) {
 
 android {
     namespace = "com.keyjawn"
-    compileSdk = 35
+    compileSdk = 36
 
     signingConfigs {
         create("release") {
@@ -34,9 +34,9 @@ android {
     defaultConfig {
         applicationId = "com.keyjawn"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 9
-        versionName = "1.3.0"
+        targetSdk = 36
+        versionCode = 10
+        versionName = "1.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -119,7 +119,7 @@ dependencies {
     "fullImplementation"("com.android.billingclient:billing-ktx:7.1.1")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("org.robolectric:robolectric:4.16.1")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
