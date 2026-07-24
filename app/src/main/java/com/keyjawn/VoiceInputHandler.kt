@@ -108,8 +108,26 @@ class VoiceInputHandler(
      */
     private var utteranceContext: CharSequence? = null
 
+    /**
+     * The user cancelled deliberately, so the recognizer's own abort callback
+     * must not surface as a failure. SpeechRecognizer.cancel() commonly answers
+     * with ERROR_CLIENT, and reporting it would put "Voice input failed" on
+     * screen immediately after the user asked for nothing to happen.
+     */
+    private var suppressErrors = false
+
     private val handler = Handler(Looper.getMainLooper())
     private var restartRunnable: Runnable? = null
+
+    /**
+     * Guards the explicit-stop path. Some recognizer implementations never
+     * answer a stopListening() that arrived before any speech, which would
+     * strand the voice bar over the keyboard with no way back.
+     */
+    private var stopWatchdog: Runnable? = null
+
+    /** A partial result has arrived for the current utterance. */
+    private var sawPartial = false
 
     var listener: VoiceInputListener? = null
     var onPermissionNeeded: ((String) -> Unit)? = null
@@ -140,7 +158,10 @@ class VoiceInputHandler(
      * continuous-dictation preference.
      */
     fun startListening(holdToTalk: Boolean = false) {
-        if (!isAvailable() || listening) return
+        // sessionActive covers the gap between utterances in continuous mode,
+        // where listening is briefly false but dictation is still running --
+        // starting again there would reset the session's own idle bound.
+        if (!isAvailable() || listening || sessionActive) return
 
         if (!hasRecordAudioPermission()) {
             onPermissionNeeded?.invoke("Mic permission required. Opening settings.")
@@ -152,6 +173,7 @@ class VoiceInputHandler(
         sessionActive = true
         emptyRounds = 0
         recreatedForBusy = false
+        suppressErrors = false
         listener?.onVoiceStart()
         beginUtterance()
     }
@@ -160,6 +182,7 @@ class VoiceInputHandler(
     private fun beginUtterance() {
         val recognizer = ensureRecognizer() ?: return
         listening = true
+        sawPartial = false
         utteranceContext = inputConnectionProvider?.invoke()?.getTextBeforeCursor(CONTEXT_CHARS, 0)
         recognizer.startListening(buildIntent())
     }
@@ -208,6 +231,7 @@ class VoiceInputHandler(
         if (listening) {
             listening = false
             speechRecognizer?.stopListening()
+            armStopWatchdog()
         } else {
             finishSession()
         }
@@ -221,6 +245,9 @@ class VoiceInputHandler(
     fun cancel() {
         sessionActive = false
         listening = false
+        // Set before the abort so the ERROR_CLIENT that cancel() typically
+        // answers with does not reach the user as a failure.
+        suppressErrors = true
         cancelPendingRestart()
         clearComposing()
         speechRecognizer?.cancel()
@@ -230,6 +257,7 @@ class VoiceInputHandler(
     fun destroy() {
         sessionActive = false
         listening = false
+        suppressErrors = true
         cancelPendingRestart()
         clearComposing()
         speechRecognizer?.destroy()
@@ -256,7 +284,30 @@ class VoiceInputHandler(
         restartRunnable = null
     }
 
+    private fun cancelStopWatchdog() {
+        stopWatchdog?.let { handler.removeCallbacks(it) }
+        stopWatchdog = null
+    }
+
+    /**
+     * Closes the session if the recognizer never answers an explicit stop. The
+     * voice bar replaces the terminal key row while dictation runs, so a stop
+     * that goes unanswered would leave the user staring at a bar with no keys.
+     */
+    private fun armStopWatchdog() {
+        cancelStopWatchdog()
+        val runnable = Runnable {
+            stopWatchdog = null
+            suppressErrors = true
+            speechRecognizer?.cancel()
+            finishSession()
+        }
+        stopWatchdog = runnable
+        handler.postDelayed(runnable, STOP_TIMEOUT_MS)
+    }
+
     private fun finishSession() {
+        cancelStopWatchdog()
         sessionActive = false
         holdToTalk = false
         listener?.onVoiceStop()
@@ -306,6 +357,7 @@ class VoiceInputHandler(
         return object : RecognitionListener {
             override fun onResults(results: Bundle?) {
                 listening = false
+                cancelStopWatchdog()
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val text = matches?.firstOrNull() ?: ""
                 if (text.isNotEmpty()) {
@@ -319,16 +371,16 @@ class VoiceInputHandler(
                     clearComposing()
                     emptyRounds++
                 }
-                if (sessionActive && continuousEnabled() && emptyRounds < MAX_EMPTY_ROUNDS) {
-                    scheduleRestart()
-                } else {
-                    finishSession()
-                }
+                val step = VoiceSessionPolicy.afterUtterance(
+                    sessionActive, continuousEnabled(), emptyRounds
+                )
+                if (step == VoiceNextStep.Restart) scheduleRestart() else finishSession()
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
                 val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val text = matches?.firstOrNull()?.takeIf { it.isNotEmpty() } ?: return
+                sawPartial = true
                 listener?.onPartialResult(text)
                 if (!livePreviewEnabled()) return
                 val ic = inputConnectionProvider?.invoke() ?: return
@@ -338,35 +390,39 @@ class VoiceInputHandler(
 
             override fun onError(error: Int) {
                 listening = false
+                cancelStopWatchdog()
                 clearComposing()
 
+                // A deliberate cancel or teardown asked the recognizer to abort;
+                // its complaint about being aborted is not news to the user.
+                if (suppressErrors) {
+                    if (sessionActive) finishSession()
+                    return
+                }
+
                 // A silent round is the normal end of a sentence in continuous
-                // mode, not a failure -- re-arm without bothering the user.
-                val silent = error == SpeechRecognizer.ERROR_NO_MATCH ||
-                    error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
-                if (silent && sessionActive && continuousEnabled()) {
-                    emptyRounds++
-                    if (emptyRounds < MAX_EMPTY_ROUNDS) {
+                // mode, not a failure -- so it counts against the idle bound
+                // rather than being reported.
+                if (VoiceSessionPolicy.isSilent(error)) emptyRounds++
+
+                when (
+                    val step = VoiceSessionPolicy.afterError(
+                        error, sessionActive, continuousEnabled(), emptyRounds, !recreatedForBusy
+                    )
+                ) {
+                    VoiceNextStep.Restart -> scheduleRestart()
+                    VoiceNextStep.RecreateAndRestart -> {
+                        recreatedForBusy = true
+                        speechRecognizer?.destroy()
+                        speechRecognizer = null
                         scheduleRestart()
-                        return
                     }
-                    finishSession()
-                    return
+                    is VoiceNextStep.Report -> {
+                        listener?.onError(step.error)
+                        finishSession()
+                    }
+                    VoiceNextStep.Finish -> finishSession()
                 }
-
-                // The platform recognizer can hold its previous session past our
-                // restart delay. Rebuild it once per session and try again
-                // rather than reporting a failure the user cannot act on.
-                if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY && sessionActive && !recreatedForBusy) {
-                    recreatedForBusy = true
-                    speechRecognizer?.destroy()
-                    speechRecognizer = null
-                    scheduleRestart()
-                    return
-                }
-
-                listener?.onError(error)
-                finishSession()
             }
 
             override fun onReadyForSpeech(params: Bundle?) {
@@ -382,7 +438,10 @@ class VoiceInputHandler(
             override fun onBufferReceived(buffer: ByteArray?) {}
 
             override fun onEndOfSpeech() {
-                listener?.onVoiceProcessing()
+                // Only worth announcing when nothing was heard yet: with a
+                // partial already on screen, replacing it with a status word
+                // would take information away.
+                if (!sawPartial) listener?.onVoiceProcessing()
             }
 
             override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -390,11 +449,11 @@ class VoiceInputHandler(
     }
 
     companion object {
-        /** Consecutive silent utterances that end an idle continuous session. */
-        const val MAX_EMPTY_ROUNDS = 3
-
         /** Breath between utterances so the platform recognizer can re-arm. */
         const val RESTART_DELAY_MS = 180L
+
+        /** How long an explicit stop waits for the recognizer's final answer. */
+        const val STOP_TIMEOUT_MS = 3000L
 
         /** Pause tolerated inside one utterance before the recognizer cuts it. */
         private const val SILENCE_MS = 1500L

@@ -155,19 +155,33 @@ class QwertyKeyboard(
     }
 
     /**
-     * Arms one-shot shift when the cursor sits at the start of a sentence, so
-     * the first letter typed into an empty field or after a full stop is capital
-     * without a shift tap. Gated on autocorrect, the per-app switch that already
-     * governs the other assistive text behaviours.
+     * Re-evaluates one-shot shift for the editor that just took focus: arms it
+     * when the cursor sits at the start of a sentence, so the first letter typed
+     * into an empty field or after a full stop is capital without a shift tap --
+     * and disarms it when it does not, so a shift armed for the previous field
+     * cannot leak in and capitalize a word mid-sentence.
+     *
+     * Gated on autocorrect, the per-app switch that already governs the other
+     * assistive text behaviours. Caps lock is deliberate and sticky, so a focus
+     * change leaves it alone.
      */
     fun applyAutoCapitalize() {
-        if (!autocorrectOn) return
-        if (shiftState != ShiftState.OFF) return
-        if (currentLayer != KeyboardLayouts.LAYER_LOWER) return
-        val ic = inputConnectionProvider() ?: return
-        if (!isSentenceStart(ic.getTextBeforeCursor(2, 0))) return
-        shiftState = ShiftState.SINGLE
-        setLayer(KeyboardLayouts.LAYER_UPPER)
+        if (shiftState == ShiftState.CAPS_LOCK) return
+        if (currentLayer != KeyboardLayouts.LAYER_LOWER &&
+            currentLayer != KeyboardLayouts.LAYER_UPPER
+        ) {
+            return
+        }
+        val context = inputConnectionProvider()?.getTextBeforeCursor(2, 0)
+        val wantsCapital = autocorrectOn && isSentenceStart(context)
+
+        if (wantsCapital && shiftState == ShiftState.OFF) {
+            shiftState = ShiftState.SINGLE
+            setLayer(KeyboardLayouts.LAYER_UPPER)
+        } else if (!wantsCapital && shiftState == ShiftState.SINGLE) {
+            shiftState = ShiftState.OFF
+            setLayer(KeyboardLayouts.LAYER_LOWER)
+        }
     }
 
     fun resetTransientState() {
@@ -526,7 +540,16 @@ class QwertyKeyboard(
                         v.isPressed = true
                         previewHideRunnable?.let { longPressHandler.removeCallbacks(it) }
                         previewHideRunnable = null
-                        keyPreview?.show(v, holder.key.label)
+
+                        // The label as the finger landed. Emitting on press can
+                        // consume a one-shot shift and relabel this very key to
+                        // lowercase before the long-press timer fires, so the
+                        // alts must be resolved against the key the user
+                        // actually pressed -- long-pressing a capital N owes
+                        // them N-with-tilde, not the lowercase one.
+                        val pressedLabel = holder.key.label
+                        val ctrlWasActive = extraRowManager.isCtrlActive()
+                        keyPreview?.show(v, pressedLabel)
 
                         // Emit on press rather than on release: the character
                         // lands as the finger touches down, so the press-to-lift
@@ -536,7 +559,6 @@ class QwertyKeyboard(
                         emitted = false
                         emittedLength = 0
                         if (fastKeyOutput) {
-                            val ctrlWasActive = extraRowManager.isCtrlActive()
                             val output = holder.key.output
                             handleKeyPress(holder.key)
                             emitted = true
@@ -547,17 +569,18 @@ class QwertyKeyboard(
                             }
                         }
 
-                        // Schedule long-press for alt keys. Resolve alts from the
-                        // CURRENT label so the case matches what is on screen --
-                        // and resolve them again when the timer fires, because a
-                        // one-shot shift may have relabelled the key in between.
-                        val currentAlts = AltKeyMappings.getAlts(holder.key.label)
+                        // Schedule long-press for alt keys -- but never once a
+                        // Ctrl combo has already gone out. A key event cannot be
+                        // taken back the way a character can, so letting the
+                        // timer run would leave the editor with Ctrl+C *and* a
+                        // stray alt character.
+                        val ctrlComboSent = fastKeyOutput && ctrlWasActive
+                        val currentAlts =
+                            if (ctrlComboSent) null else AltKeyMappings.getAlts(pressedLabel)
                         if (currentAlts != null) {
                             val runnable = Runnable {
                                 touchStarted = false
                                 keyPreview?.hide()
-                                val alts = AltKeyMappings.getAlts(holder.key.label)
-                                    ?: return@Runnable
                                 // Emit-on-press already typed the base
                                 // character; take it back so a long-press never
                                 // leaves both it and the alt.
@@ -566,9 +589,9 @@ class QwertyKeyboard(
                                         ?.deleteSurroundingText(emittedLength, 0)
                                     emittedLength = 0
                                 }
-                                if (alts.size == 1) {
+                                if (currentAlts.size == 1) {
                                     val ic = inputConnectionProvider() ?: return@Runnable
-                                    keySender.sendText(ic, alts[0])
+                                    keySender.sendText(ic, currentAlts[0])
                                 } else {
                                     // Open the slide popup and capture the anchor's
                                     // screen position so MOVE can convert key-local
@@ -577,7 +600,7 @@ class QwertyKeyboard(
                                     v.getLocationOnScreen(loc)
                                     anchorScreenX = loc[0]
                                     anchorScreenY = loc[1]
-                                    val session = altKeyPopup.openForSlide(v, alts)
+                                    val session = altKeyPopup.openForSlide(v, currentAlts)
                                     slideSession = session
                                     currentSlideSession = session
                                 }

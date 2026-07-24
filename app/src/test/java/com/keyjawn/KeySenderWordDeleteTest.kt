@@ -75,6 +75,18 @@ class KeySenderWordDeleteTest {
     }
 
     @Test
+    fun `deleteWordBefore reports the editor's refusal so callers can fall back`() {
+        // Some input connections expose text and still reject a surrounding-text
+        // delete. Claiming success there would skip the caller's single-character
+        // fallback and make a held backspace look frozen.
+        val ic = mock<android.view.inputmethod.InputConnection>()
+        whenever(ic.getTextBeforeCursor(any(), any())).thenReturn("git status")
+        whenever(ic.deleteSurroundingText(any(), any())).thenReturn(false)
+
+        assertFalse(KeySender().deleteWordBefore(ic))
+    }
+
+    @Test
     fun `deleteWordBefore reports nothing to delete on an empty field`() {
         val ic = mock<android.view.inputmethod.InputConnection>()
         whenever(ic.getTextBeforeCursor(any(), any())).thenReturn("")

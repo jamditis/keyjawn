@@ -56,6 +56,12 @@ class ExtraRowManager(
     private val handler = Handler(Looper.getMainLooper())
     private var tooltipDismissRunnable: Runnable? = null
 
+    /** Pending push-to-talk start, cancelled if the press turns out to be a tap. */
+    private var micHoldRunnable: Runnable? = null
+
+    /** The next mic click is the tail of a hold and must not re-open the mic. */
+    private var suppressNextMicClick = false
+
     var onQuickKeyChanged: ((String) -> Unit)? = null
     var onBottomPaddingChanged: (() -> Unit)? = null
 
@@ -159,6 +165,7 @@ class ExtraRowManager(
                 }
                 button.text = AppPrefs.getExtraSlotLabel(config)
                 button.setOnClickListener {
+                    performHaptic(HapticFeedbackConstants.KEYBOARD_TAP)
                     val ic = inputConnectionProvider() ?: return@setOnClickListener
                     keySender.sendKey(ic, keyCode)
                 }
@@ -170,6 +177,7 @@ class ExtraRowManager(
                 val text = config.removePrefix("text:")
                 button.text = text
                 button.setOnClickListener {
+                    performHaptic(HapticFeedbackConstants.KEYBOARD_TAP)
                     val ic = inputConnectionProvider() ?: return@setOnClickListener
                     keySender.sendText(ic, text)
                 }
@@ -261,7 +269,9 @@ class ExtraRowManager(
 
     private fun wireArrow(buttonId: Int, keyCode: Int) {
         val button = view.findViewById<Button>(buttonId)
-        val listener = RepeatTouchListener {
+        val listener = RepeatTouchListener(
+            onPress = { performHaptic(HapticFeedbackConstants.KEYBOARD_TAP) }
+        ) {
             val ic = inputConnectionProvider() ?: return@RepeatTouchListener
             val ctrl = ctrlState.isActive()
             keySender.sendKey(ic, keyCode, ctrl)
@@ -319,6 +329,11 @@ class ExtraRowManager(
         if (voiceInputHandler != null) {
             voiceInputHandler.setup(micButton, inputConnectionProvider)
             micButton.setOnClickListener {
+                // A release that ended a push-to-talk hold is not a tap.
+                if (suppressNextMicClick) {
+                    suppressNextMicClick = false
+                    return@setOnClickListener
+                }
                 // A tap toggles a hands-free session; isSessionActive covers the
                 // gap between utterances in continuous mode, where the mic is
                 // momentarily not listening but dictation is still running.
@@ -331,25 +346,41 @@ class ExtraRowManager(
             // Push-to-talk: hold the mic, speak, let go. Faster than tap-speak-tap
             // for the one-line corrections that make up most terminal dictation,
             // and it cannot leave the microphone armed by accident.
-            micButton.setOnLongClickListener {
-                if (!voiceInputHandler.isSessionActive()) {
-                    voiceInputHandler.startListening(holdToTalk = true)
-                }
-                true
-            }
-            micButton.setOnTouchListener { v, event ->
+            //
+            // The session starts on its own short timer rather than on the
+            // platform long-click, which does not fire until 500ms. People start
+            // speaking the instant they press, so waiting for the long-click
+            // would clip the front of every short correction -- exactly the
+            // phrases push-to-talk exists for.
+            micButton.setOnTouchListener { _, event ->
                 when (event.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        val runnable = Runnable {
+                            micHoldRunnable = null
+                            if (!voiceInputHandler.isSessionActive()) {
+                                voiceInputHandler.startListening(holdToTalk = true)
+                            }
+                        }
+                        micHoldRunnable = runnable
+                        handler.postDelayed(runnable, MIC_HOLD_START_MS)
+                    }
                     android.view.MotionEvent.ACTION_UP,
                     android.view.MotionEvent.ACTION_CANCEL -> {
+                        micHoldRunnable?.let { handler.removeCallbacks(it) }
+                        micHoldRunnable = null
                         // Only a hold ends on release; a tap-started session
                         // keeps running until the user taps again.
                         if (voiceInputHandler.isHoldToTalk()) {
                             voiceInputHandler.stopListening()
+                            // The click still fires after this touch listener
+                            // returns, and it must not read the just-closed
+                            // session as an invitation to open a new one.
+                            suppressNextMicClick = true
                         }
                     }
                 }
-                // Never consume: the click and long-click listeners above still
-                // need the event to reach the default View handling.
+                // Never consume: the click listener above still needs the event
+                // to reach the default View handling.
                 false
             }
         } else {
@@ -391,9 +422,9 @@ class ExtraRowManager(
             }
 
             override fun onVoiceProcessing() {
-                // Only stand in for text that has not arrived; a partial result
-                // already on screen is more useful than a status word.
-                if (voiceText?.text.isNullOrEmpty()) voiceText?.text = "Transcribing"
+                // Reached only when no partial arrived for this utterance, so
+                // there is no transcription on screen to overwrite.
+                voiceText?.text = "Transcribing"
             }
 
             override fun onVoiceContinue() {
@@ -437,14 +468,33 @@ class ExtraRowManager(
         }
     }
 
+    companion object {
+        /**
+         * How long the mic key must be held before the press counts as
+         * push-to-talk. Well under the platform's 500ms long-click so the
+         * recognizer is already warming up as the user starts speaking, and far
+         * enough above a deliberate tap (typically under 150ms) to stay
+         * distinguishable from one.
+         */
+        const val MIC_HOLD_START_MS = 250L
+    }
+
     private fun wirePlaceholder(buttonId: Int, message: String) {
         view.findViewById<View>(buttonId).setOnClickListener {
             showTooltip(message)
         }
     }
 
+    private fun performHaptic(type: Int) {
+        if (appPrefs?.isHapticEnabled() != false) {
+            view.performHapticFeedback(type)
+        }
+    }
+
     private fun updateCtrlAppearance(mode: CtrlMode) {
-        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+        // Gated like every other haptic: the toggle claims to govern feedback
+        // for the whole keyboard, and Ctrl was the one key still ignoring it.
+        performHaptic(HapticFeedbackConstants.CONTEXT_CLICK)
         applyCtrlLabel(mode)
         val tm = themeManager
         if (tm != null) {

@@ -878,6 +878,99 @@ class QwertyKeyboardTest {
     }
 
     @Test
+    fun `a shift armed for one field does not leak into the next`() {
+        // Auto-capitalize arms one-shot shift on focus. Moving to a field whose
+        // cursor sits mid-sentence must disarm it, or the first character typed
+        // there is capitalized for a reason that belonged to the previous field.
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
+        val prefs = AppPrefs(context)
+        prefs.setAutocorrect("com.example.app", true)
+
+        val kb = QwertyKeyboard(container, keySender, extraRowManager, { ic }, prefs)
+        kb.updatePackage("com.example.app")
+
+        whenever(ic.getTextBeforeCursor(2, 0)).thenReturn("")
+        kb.applyAutoCapitalize()
+        idleMainLooper()
+        assertEquals(ShiftState.SINGLE, kb.shiftState)
+
+        // Focus moves to a field with the cursor mid-word, without typing first.
+        whenever(ic.getTextBeforeCursor(2, 0)).thenReturn("ab")
+        kb.applyAutoCapitalize()
+        idleMainLooper()
+
+        assertEquals(ShiftState.OFF, kb.shiftState)
+        assertEquals(KeyboardLayouts.LAYER_LOWER, kb.currentLayer)
+        assertEquals("q", charButtonAt(0, 0).text.toString())
+    }
+
+    @Test
+    fun `caps lock survives a focus change`() {
+        // Caps lock is deliberate and sticky; only the one-shot is re-evaluated.
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
+        val prefs = AppPrefs(context)
+        prefs.setAutocorrect("com.example.app", true)
+
+        val kb = QwertyKeyboard(container, keySender, extraRowManager, { ic }, prefs)
+        kb.updatePackage("com.example.app")
+
+        val shiftButton = charButtonLabelled("Shift")
+        shiftButton.performClick()
+        shiftButton.performClick()
+        idleMainLooper()
+        assertEquals(ShiftState.CAPS_LOCK, kb.shiftState)
+
+        whenever(ic.getTextBeforeCursor(2, 0)).thenReturn("ab")
+        kb.applyAutoCapitalize()
+        idleMainLooper()
+
+        assertEquals(ShiftState.CAPS_LOCK, kb.shiftState)
+        assertEquals(KeyboardLayouts.LAYER_UPPER, kb.currentLayer)
+    }
+
+    @Test
+    fun `a long press on a shifted key sends the uppercase alt`() {
+        // Emit-on-press consumes the one-shot shift and relabels the key to
+        // lowercase before the long-press timer fires, so the alts have to be
+        // resolved against the key the finger actually landed on.
+        whenever(ic.deleteSurroundingText(any(), any())).thenReturn(true)
+        // One-shot shift specifically -- a plain upper layer would not be
+        // consumed by the press, so it would not exercise the relabel at all.
+        charButtonLabelled("Shift").performClick()
+        idleMainLooper()
+        assertEquals(ShiftState.SINGLE, keyboard.shiftState)
+        val n = charButtonLabelled("N")
+
+        press(n)
+        // The press consumed the one-shot and relabelled this key to lowercase.
+        assertEquals(ShiftState.OFF, keyboard.shiftState)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+
+        verify(keySender).sendText(any(), eq("Ñ"))
+        release(n)
+    }
+
+    @Test
+    fun `a long press with ctrl armed does not add an alt to the combo`() {
+        // A key event cannot be taken back the way a character can, so once
+        // Ctrl+C has gone out the long-press must not also insert a c-cedilla.
+        extraRowManager.ctrlState.tap()
+        assertTrue(extraRowManager.isCtrlActive())
+        val c = charButtonLabelled("c")
+
+        press(c)
+        verify(keySender).sendKey(any(), eq(KeyEvent.KEYCODE_C), eq(true))
+
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(600))
+        release(c)
+
+        verify(keySender, never()).sendText(any(), any())
+        verify(ic, never()).deleteSurroundingText(any(), any())
+    }
+
+    @Test
     fun `focusing mid-word leaves shift alone`() {
         val context = RuntimeEnvironment.getApplication()
         context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()

@@ -39,8 +39,11 @@ class KeySender {
         val before = ic.getTextBeforeCursor(WORD_LOOKBACK, 0) ?: return false
         val count = wordDeleteCount(before)
         if (count <= 0) return false
-        ic.deleteSurroundingText(count, 0)
-        return true
+        // Report the editor's own answer, not just that we had something to
+        // delete: an input connection can expose text and still refuse a
+        // surrounding-text delete, and the caller's single-character fallback is
+        // the difference between that reading as slow and reading as broken.
+        return ic.deleteSurroundingText(count, 0)
     }
 
     companion object {
