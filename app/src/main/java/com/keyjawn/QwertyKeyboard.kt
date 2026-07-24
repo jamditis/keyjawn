@@ -114,6 +114,10 @@ class QwertyKeyboard(
     // is the single update point so every write site invalidates the same field.
     private var autocorrectOn: Boolean = appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
 
+    // Read on every ACTION_DOWN, so it is cached alongside autocorrect rather
+    // than hitting SharedPreferences on the touch path.
+    private var fastKeyOutput: Boolean = appPrefs?.isFastKeyOutput() ?: true
+
     // Delayed key preview hide — cancelled when next key is pressed
     private var previewHideRunnable: Runnable? = null
 
@@ -121,7 +125,7 @@ class QwertyKeyboard(
         val packageChanged = packageName != currentPackage
         if (packageChanged) {
             currentPackage = packageName
-            refreshAutocorrect()
+            refreshTypingPrefs()
         }
         // This is the single render point for a focus change: onStartInputView
         // calls updateImeAction/updateInputType first (recording any editor-state
@@ -138,6 +142,32 @@ class QwertyKeyboard(
     /** Re-read the autocorrect flag for the current package into the cache. */
     fun refreshAutocorrect() {
         autocorrectOn = appPrefs?.isAutocorrectEnabled(currentPackage) ?: false
+    }
+
+    /**
+     * Re-read every pref the touch path reads per keystroke. Call this at the
+     * boundaries that can change them (focus change, settings toggle) so the
+     * hot path never touches SharedPreferences.
+     */
+    fun refreshTypingPrefs() {
+        refreshAutocorrect()
+        fastKeyOutput = appPrefs?.isFastKeyOutput() ?: true
+    }
+
+    /**
+     * Arms one-shot shift when the cursor sits at the start of a sentence, so
+     * the first letter typed into an empty field or after a full stop is capital
+     * without a shift tap. Gated on autocorrect, the per-app switch that already
+     * governs the other assistive text behaviours.
+     */
+    fun applyAutoCapitalize() {
+        if (!autocorrectOn) return
+        if (shiftState != ShiftState.OFF) return
+        if (currentLayer != KeyboardLayouts.LAYER_LOWER) return
+        val ic = inputConnectionProvider() ?: return
+        if (!isSentenceStart(ic.getTextBeforeCursor(2, 0))) return
+        shiftState = ShiftState.SINGLE
+        setLayer(KeyboardLayouts.LAYER_UPPER)
     }
 
     fun resetTransientState() {
@@ -183,9 +213,31 @@ class QwertyKeyboard(
             (previous == KeyboardLayouts.LAYER_LOWER && layer == KeyboardLayouts.LAYER_UPPER) ||
             (previous == KeyboardLayouts.LAYER_UPPER && layer == KeyboardLayouts.LAYER_LOWER)
         if (isShiftToggle && charHolders.isNotEmpty()) {
-            applyShiftCase(layer)
+            if (!applyShiftCase(layer)) render(force = true)
         } else {
             render()
+        }
+    }
+
+    /**
+     * Applies a layer change requested from inside a touch handler.
+     *
+     * A lower<->upper toggle only relabels existing buttons, which is safe with
+     * a finger down and saves the frame that posting it would cost -- and on the
+     * one-shot shift path that frame lands on every capitalized letter typed.
+     * Anything that would restructure the grid still goes through post(),
+     * because tearing down the very view currently dispatching the touch is not.
+     */
+    private fun setLayerDuringTouch(layer: Int) {
+        val previous = currentLayer
+        val isShiftToggle =
+            (previous == KeyboardLayouts.LAYER_LOWER && layer == KeyboardLayouts.LAYER_UPPER) ||
+            (previous == KeyboardLayouts.LAYER_UPPER && layer == KeyboardLayouts.LAYER_LOWER)
+        if (isShiftToggle && charHolders.isNotEmpty()) {
+            currentLayer = layer
+            if (!applyShiftCase(layer)) container.post { render(force = true) }
+        } else {
+            container.post { setLayer(layer) }
         }
     }
 
@@ -379,12 +431,26 @@ class QwertyKeyboard(
                 button.setOnClickListener { handleShiftTap() }
             }
             is KeyOutput.Backspace -> {
-                val listener = RepeatTouchListener {
-                    performHaptic()
-                    val ic = inputConnectionProvider() ?: return@RepeatTouchListener
-                    keySender.sendKey(ic, KeyEvent.KEYCODE_DEL)
-                }
-                button.setOnTouchListener(listener)
+                button.setOnTouchListener(
+                    BackspaceTouchListener(
+                        onDeleteChar = {
+                            inputConnectionProvider()?.let { ic ->
+                                keySender.sendKey(ic, KeyEvent.KEYCODE_DEL)
+                            }
+                        },
+                        onDeleteWord = {
+                            inputConnectionProvider()?.let { ic ->
+                                // Nothing to take as a word (an empty field, a
+                                // lone newline) still deletes one character, so
+                                // a hold never stalls with the finger down.
+                                if (!keySender.deleteWordBefore(ic)) {
+                                    keySender.sendKey(ic, KeyEvent.KEYCODE_DEL)
+                                }
+                            }
+                        },
+                        onHaptic = { performHaptic() }
+                    )
+                )
             }
             else -> {
                 button.setOnClickListener { handleKeyPress(key) }
@@ -436,6 +502,13 @@ class QwertyKeyboard(
             charHolders.add(holder)
             var touchStarted = false
             var longPressRunnable: Runnable? = null
+            // Emit-on-press bookkeeping. `emitted` says the key already produced
+            // its output at ACTION_DOWN so ACTION_UP must not repeat it;
+            // `emittedLength` is how many characters a following long-press has
+            // to take back before the alt lands (0 for a Ctrl combo, which sent
+            // a key event rather than text).
+            var emitted = false
+            var emittedLength = 0
             // Slide-and-release state. slideSession is non-null once a multi-alt
             // popup is open for this key; while it is, the tracked finger's
             // MOVE/UP route into the popup instead of typing the base char.
@@ -455,16 +528,47 @@ class QwertyKeyboard(
                         previewHideRunnable = null
                         keyPreview?.show(v, holder.key.label)
 
+                        // Emit on press rather than on release: the character
+                        // lands as the finger touches down, so the press-to-lift
+                        // delay is off every keystroke and the next key can fire
+                        // while this one is still held (rollover). A long-press
+                        // that follows takes the character back below.
+                        emitted = false
+                        emittedLength = 0
+                        if (fastKeyOutput) {
+                            val ctrlWasActive = extraRowManager.isCtrlActive()
+                            val output = holder.key.output
+                            handleKeyPress(holder.key)
+                            emitted = true
+                            emittedLength = if (ctrlWasActive || output !is KeyOutput.Character) {
+                                0
+                            } else {
+                                output.char.length
+                            }
+                        }
+
                         // Schedule long-press for alt keys. Resolve alts from the
-                        // CURRENT label so the case matches what is on screen.
+                        // CURRENT label so the case matches what is on screen --
+                        // and resolve them again when the timer fires, because a
+                        // one-shot shift may have relabelled the key in between.
                         val currentAlts = AltKeyMappings.getAlts(holder.key.label)
                         if (currentAlts != null) {
                             val runnable = Runnable {
                                 touchStarted = false
                                 keyPreview?.hide()
-                                if (currentAlts.size == 1) {
+                                val alts = AltKeyMappings.getAlts(holder.key.label)
+                                    ?: return@Runnable
+                                // Emit-on-press already typed the base
+                                // character; take it back so a long-press never
+                                // leaves both it and the alt.
+                                if (emittedLength > 0) {
+                                    inputConnectionProvider()
+                                        ?.deleteSurroundingText(emittedLength, 0)
+                                    emittedLength = 0
+                                }
+                                if (alts.size == 1) {
                                     val ic = inputConnectionProvider() ?: return@Runnable
-                                    keySender.sendText(ic, currentAlts[0])
+                                    keySender.sendText(ic, alts[0])
                                 } else {
                                     // Open the slide popup and capture the anchor's
                                     // screen position so MOVE can convert key-local
@@ -473,7 +577,7 @@ class QwertyKeyboard(
                                     v.getLocationOnScreen(loc)
                                     anchorScreenX = loc[0]
                                     anchorScreenY = loc[1]
-                                    val session = altKeyPopup.openForSlide(v, currentAlts)
+                                    val session = altKeyPopup.openForSlide(v, alts)
                                     slideSession = session
                                     currentSlideSession = session
                                 }
@@ -526,10 +630,11 @@ class QwertyKeyboard(
                                 keyPreview?.hide()
                                 longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                                 longPressRunnable = null
-                                if (touchStarted && v.isPressed) {
+                                if (!emitted && touchStarted && v.isPressed) {
                                     handleKeyPress(holder.key)
                                 }
                             }
+                            emitted = false
                             touchStarted = false
                             v.isPressed = false
                         }
@@ -545,9 +650,10 @@ class QwertyKeyboard(
                         if (session != null) {
                             commitSlide(session, anchorScreenX, anchorScreenY, event, activePointerId)
                             slideSession = null
-                        } else if (touchStarted && v.isPressed) {
+                        } else if (!emitted && touchStarted && v.isPressed) {
                             handleKeyPress(holder.key)
                         }
+                        emitted = false
                         touchStarted = false
                         v.isPressed = false
                         activePointerId = MotionEvent.INVALID_POINTER_ID
@@ -561,6 +667,7 @@ class QwertyKeyboard(
                         longPressRunnable = null
                         slideSession?.let { cancelSlide(it) }
                         slideSession = null
+                        emitted = false
                         touchStarted = false
                         v.isPressed = false
                         activePointerId = MotionEvent.INVALID_POINTER_ID
@@ -679,7 +786,7 @@ class QwertyKeyboard(
                 }
                 if (shiftState == ShiftState.SINGLE) {
                     shiftState = ShiftState.OFF
-                    container.post { setLayer(KeyboardLayouts.LAYER_LOWER) }
+                    setLayerDuringTouch(KeyboardLayouts.LAYER_LOWER)
                 }
             }
             is KeyOutput.Enter -> {
@@ -704,7 +811,7 @@ class QwertyKeyboard(
                     if (shiftState == ShiftState.OFF &&
                         (currentLayer == KeyboardLayouts.LAYER_LOWER || currentLayer == KeyboardLayouts.LAYER_UPPER)) {
                         shiftState = ShiftState.SINGLE
-                        container.post { setLayer(KeyboardLayouts.LAYER_UPPER) }
+                        setLayerDuringTouch(KeyboardLayouts.LAYER_UPPER)
                     }
                 } else {
                     keySender.sendChar(ic, " ")
@@ -713,10 +820,9 @@ class QwertyKeyboard(
                     // Auto-capitalize after sentence-ending punctuation (item 10)
                     if (isAutocorrectOn() && shiftState == ShiftState.OFF &&
                         (currentLayer == KeyboardLayouts.LAYER_LOWER || currentLayer == KeyboardLayouts.LAYER_UPPER)) {
-                        val before = ic.getTextBeforeCursor(2, 0)?.toString()
-                        if (before == ". " || before == "? " || before == "! ") {
+                        if (isSentenceStart(ic.getTextBeforeCursor(2, 0))) {
                             shiftState = ShiftState.SINGLE
-                            container.post { setLayer(KeyboardLayouts.LAYER_UPPER) }
+                            setLayerDuringTouch(KeyboardLayouts.LAYER_UPPER)
                         }
                     }
                 }
@@ -808,18 +914,19 @@ class QwertyKeyboard(
      * Safety net: if any holder's position falls outside the target layer or the
      * target key at that position is not a Character (a structural divergence
      * between the two layers that does not exist today but a future layout edit
-     * could introduce), fall back to a full forced rebuild so the grid can never
-     * end up with a stale or mismatched key. This keeps the core typing path
-     * correct over a fragile fast path.
+     * could introduce), returns false so the caller can fall back to a full
+     * rebuild -- and can choose to defer that rebuild when a touch is in flight.
+     * This keeps the core typing path correct over a fragile fast path.
+     *
+     * Returns true when every holder was relabelled in place.
      */
-    private fun applyShiftCase(targetLayer: Int) {
+    private fun applyShiftCase(targetLayer: Int): Boolean {
         val layout = KeyboardLayouts.getLayer(targetLayer)
         for (holder in charHolders) {
             val row = layout.getOrNull(holder.rowIndex)
             val targetKey = row?.getOrNull(holder.colIndex)
             if (targetKey == null || targetKey.output !is KeyOutput.Character) {
-                render(force = true)
-                return
+                return false
             }
             holder.key = targetKey
             holder.button.text = targetKey.label
@@ -831,6 +938,7 @@ class QwertyKeyboard(
         }
         renderedLayer = targetLayer
         updateShiftAppearance(shiftButton)
+        return true
     }
 
     private fun dpToPx(dp: Int): Int {
@@ -838,6 +946,19 @@ class QwertyKeyboard(
     }
 
     companion object {
+        /**
+         * Whether the cursor sits where a new sentence begins, given the text
+         * immediately before it. An empty context (a fresh, empty field) counts,
+         * as does the start of a new line and the space after a full stop,
+         * question mark, or exclamation mark.
+         */
+        fun isSentenceStart(before: CharSequence?): Boolean {
+            if (before.isNullOrEmpty()) return true
+            if (before.last() == '\n') return true
+            if (before.length < 2) return false
+            return before.last() == ' ' && before[before.length - 2] in ".?!"
+        }
+
         /**
          * Maps a character to its Ctrl-combo key code without a reflective
          * KeyEvent.keyCodeFromString parse. Letters map directly via the

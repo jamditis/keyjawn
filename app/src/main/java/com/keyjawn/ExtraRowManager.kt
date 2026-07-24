@@ -34,7 +34,8 @@ class ExtraRowManager(
     private val onOpenSettings: (() -> Unit)? = null,
     private val onThemeChanged: (() -> Unit)? = null,
     private val currentPackageProvider: (() -> String)? = null,
-    private val onAutocorrectChanged: (() -> Unit)? = null
+    private val onAutocorrectChanged: (() -> Unit)? = null,
+    private val onTypingPrefsChanged: (() -> Unit)? = null
 ) {
 
     val ctrlState = CtrlState()
@@ -50,6 +51,7 @@ class ExtraRowManager(
     private val voiceWaveform: VoiceWaveformView? = voiceBar?.findViewById(R.id.voice_waveform)
     private val voiceText: TextView? = voiceBar?.findViewById(R.id.voice_text)
     private val voiceStop: View? = voiceBar?.findViewById(R.id.voice_stop)
+    private val voiceCancel: View? = voiceBar?.findViewById(R.id.voice_cancel)
 
     private val handler = Handler(Looper.getMainLooper())
     private var tooltipDismissRunnable: Runnable? = null
@@ -289,7 +291,8 @@ class ExtraRowManager(
                 onShowTooltip = { msg -> showTooltip(msg) },
                 currentPackageProvider = currentPackageProvider ?: { "unknown" },
                 onBottomPaddingChanged = { onBottomPaddingChanged?.invoke() },
-                onAutocorrectChanged = { onAutocorrectChanged?.invoke() }
+                onAutocorrectChanged = { onAutocorrectChanged?.invoke() },
+                onTypingPrefsChanged = { onTypingPrefsChanged?.invoke() }
             )
             menuPanel = mp
             uploadButton.setOnClickListener {
@@ -316,11 +319,38 @@ class ExtraRowManager(
         if (voiceInputHandler != null) {
             voiceInputHandler.setup(micButton, inputConnectionProvider)
             micButton.setOnClickListener {
-                if (voiceInputHandler.isListening()) {
+                // A tap toggles a hands-free session; isSessionActive covers the
+                // gap between utterances in continuous mode, where the mic is
+                // momentarily not listening but dictation is still running.
+                if (voiceInputHandler.isSessionActive()) {
                     voiceInputHandler.stopListening()
                 } else {
                     voiceInputHandler.startListening()
                 }
+            }
+            // Push-to-talk: hold the mic, speak, let go. Faster than tap-speak-tap
+            // for the one-line corrections that make up most terminal dictation,
+            // and it cannot leave the microphone armed by accident.
+            micButton.setOnLongClickListener {
+                if (!voiceInputHandler.isSessionActive()) {
+                    voiceInputHandler.startListening(holdToTalk = true)
+                }
+                true
+            }
+            micButton.setOnTouchListener { v, event ->
+                when (event.actionMasked) {
+                    android.view.MotionEvent.ACTION_UP,
+                    android.view.MotionEvent.ACTION_CANCEL -> {
+                        // Only a hold ends on release; a tap-started session
+                        // keeps running until the user taps again.
+                        if (voiceInputHandler.isHoldToTalk()) {
+                            voiceInputHandler.stopListening()
+                        }
+                    }
+                }
+                // Never consume: the click and long-click listeners above still
+                // need the event to reach the default View handling.
+                false
             }
         } else {
             micButton.setOnClickListener {
@@ -334,6 +364,13 @@ class ExtraRowManager(
             voiceInputHandler?.stopListening()
         }
 
+        // Stop keeps what was heard; cancel throws the utterance away, including
+        // the live preview already sitting in the editor. A misfire needs an
+        // undo that does not require deleting text by hand.
+        voiceCancel?.setOnClickListener {
+            voiceInputHandler?.cancel()
+        }
+
         // Critical: a permission prompt is actionable feedback the user must see
         // to proceed, so it bypasses the transient-tooltips gate.
         voiceInputHandler?.onPermissionNeeded = { msg -> showTooltip(msg, 2500L, critical = true) }
@@ -345,7 +382,25 @@ class ExtraRowManager(
                 tooltipBar?.visibility = View.GONE
                 extraRow.visibility = View.GONE
                 voiceBar?.visibility = View.VISIBLE
-                voiceText?.text = ""
+                voiceText?.text = "Listening"
+                voiceWaveform?.reset()
+            }
+
+            override fun onVoiceReady() {
+                voiceText?.text = "Listening"
+            }
+
+            override fun onVoiceProcessing() {
+                // Only stand in for text that has not arrived; a partial result
+                // already on screen is more useful than a status word.
+                if (voiceText?.text.isNullOrEmpty()) voiceText?.text = "Transcribing"
+            }
+
+            override fun onVoiceContinue() {
+                // The utterance was committed and the mic is re-arming. Clear the
+                // bar so the next sentence starts from an empty line instead of
+                // reading as though it is still being heard.
+                voiceText?.text = "Listening"
                 voiceWaveform?.reset()
             }
 

@@ -230,11 +230,16 @@ class AltKeySlideTest {
     }
 
     @Test
-    fun `drag off the key before long-press opens no popup and sends nothing`() {
+    fun `drag off the key before long-press opens no popup`() {
+        // With instant key output on (the default), the character was already
+        // committed on press, so drag-off can no longer take it back -- what it
+        // still guarantees is that no alt popup opens and no alt is sent.
         val aButton = charButtonAt(1, 0)
         val down = obtain(MotionEvent.ACTION_DOWN, aButton.width / 2f, aButton.height / 2f)
         aButton.dispatchTouchEvent(down)
         down.recycle()
+
+        verify(keySender).sendChar(any(), eq("a"), any())
 
         // Drag far below the key (out of the listener's vertical bounds) BEFORE
         // the long-press timer fires.
@@ -248,6 +253,45 @@ class AltKeySlideTest {
         assertNull("drag-off before long-press opens no popup", keyboard.currentSlideSession)
 
         val up = obtain(MotionEvent.ACTION_UP, aButton.width / 2f, aButton.height * 5f)
+        aButton.dispatchTouchEvent(up)
+        up.recycle()
+
+        // Exactly once: the release must not type it a second time.
+        verify(keySender, times(1)).sendChar(any(), eq("a"), any())
+        verify(keySender, never()).sendText(any(), any())
+    }
+
+    @Test
+    fun `with instant output off, drag off the key still cancels the keypress`() {
+        // The escape hatch users know from other keyboards is preserved behind
+        // the preference: turn instant output off and sliding away from a key
+        // types nothing at all.
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
+        val prefs = AppPrefs(context)
+        prefs.setFastKeyOutput(false)
+        val kb = QwertyKeyboard(container, keySender, extraRowManager, { ic }, prefs)
+        kb.setLayer(KeyboardLayouts.LAYER_LOWER)
+        clearInvocations(keySender)
+
+        val aButton = charButtonAt(1, 0)
+        val down = obtain(MotionEvent.ACTION_DOWN, 0f, 0f)
+        aButton.dispatchTouchEvent(down)
+        down.recycle()
+
+        // A fixed offscreen Y rather than a multiple of the key height: this
+        // keyboard's grid was built after the activity laid out, so its keys
+        // still measure zero and height-relative coordinates would land inside
+        // the (empty) bounds instead of outside them.
+        val offKey = 400f
+        val move = obtain(MotionEvent.ACTION_MOVE, 0f, offKey)
+        aButton.dispatchTouchEvent(move)
+        move.recycle()
+
+        shadowOf(Looper.getMainLooper()).idleFor(600, java.util.concurrent.TimeUnit.MILLISECONDS)
+        assertNull("drag-off before long-press opens no popup", kb.currentSlideSession)
+
+        val up = obtain(MotionEvent.ACTION_UP, 0f, offKey)
         aButton.dispatchTouchEvent(up)
         up.recycle()
 

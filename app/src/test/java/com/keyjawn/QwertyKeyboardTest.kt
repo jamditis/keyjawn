@@ -740,4 +740,195 @@ class QwertyKeyboardTest {
         simulateTap(charButtonAt(0, 0))
         verify(keySender).sendChar(any(), eq("Q"), any())
     }
+
+    // ---- Emit-on-press ----
+
+    /** Dispatch only the DOWN half of a tap, leaving the finger down. */
+    private fun press(button: Button) {
+        val now = SystemClock.uptimeMillis()
+        val down = MotionEvent.obtain(
+            now, now, MotionEvent.ACTION_DOWN, button.width / 2f, button.height / 2f, 0
+        )
+        button.dispatchTouchEvent(down)
+        down.recycle()
+    }
+
+    /** Dispatch only the UP half of a tap. */
+    private fun release(button: Button) {
+        val now = SystemClock.uptimeMillis()
+        val up = MotionEvent.obtain(
+            now, now, MotionEvent.ACTION_UP, button.width / 2f, button.height / 2f, 0
+        )
+        button.dispatchTouchEvent(up)
+        up.recycle()
+    }
+
+    /** The character button currently showing [label], or fails. */
+    private fun charButtonLabelled(label: String): Button {
+        for (r in 0 until container.childCount) {
+            val row = container.getChildAt(r) as LinearLayout
+            for (c in 0 until row.childCount) {
+                val button = findButton(row.getChildAt(c))
+                if (button.text.toString() == label) return button
+            }
+        }
+        fail("no key labelled $label")
+        error("unreachable")
+    }
+
+    @Test
+    fun `a character is emitted on press, not on release`() {
+        val q = charButtonAt(0, 0)
+
+        press(q)
+        verify(keySender).sendChar(any(), eq("q"), any())
+
+        // Releasing must not type it a second time.
+        release(q)
+        verify(keySender, times(1)).sendChar(any(), eq("q"), any())
+    }
+
+    @Test
+    fun `a second key can fire while the first is still held`() {
+        // Rollover: this is what emit-on-press buys, and it is the difference
+        // between typing that keeps up and typing that drops characters.
+        val q = charButtonAt(0, 0)
+        val w = charButtonAt(0, 1)
+
+        press(q)
+        press(w)
+        release(q)
+        release(w)
+
+        inOrder(keySender) {
+            verify(keySender).sendChar(any(), eq("q"), any())
+            verify(keySender).sendChar(any(), eq("w"), any())
+        }
+        verify(keySender, times(1)).sendChar(any(), eq("q"), any())
+        verify(keySender, times(1)).sendChar(any(), eq("w"), any())
+    }
+
+    @Test
+    fun `a long press takes back the pressed character before sending the alt`() {
+        whenever(ic.deleteSurroundingText(any(), any())).thenReturn(true)
+        val n = charButtonLabelled("n")
+
+        press(n)
+        verify(keySender).sendChar(any(), eq("n"), any())
+
+        // Hold past the long-press threshold: the emitted "n" is withdrawn and
+        // the single alt takes its place, so the field never shows both.
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+        verify(ic).deleteSurroundingText(1, 0)
+        verify(keySender).sendText(any(), eq("ñ"))
+
+        release(n)
+        verify(keySender, times(1)).sendChar(any(), eq("n"), any())
+    }
+
+    @Test
+    fun `disabling instant output moves the character back to release`() {
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
+        val prefs = AppPrefs(context)
+        prefs.setFastKeyOutput(false)
+        val kb = QwertyKeyboard(container, keySender, extraRowManager, { ic }, prefs)
+        kb.setLayer(KeyboardLayouts.LAYER_LOWER)
+        clearInvocations(keySender)
+
+        val q = charButtonAt(0, 0)
+        press(q)
+        verify(keySender, never()).sendChar(any(), eq("q"), any())
+
+        release(q)
+        verify(keySender).sendChar(any(), eq("q"), any())
+    }
+
+    // ---- Auto-capitalize on focus ----
+
+    @Test
+    fun `isSentenceStart recognizes the places a capital belongs`() {
+        assertTrue(QwertyKeyboard.isSentenceStart(null))
+        assertTrue(QwertyKeyboard.isSentenceStart(""))
+        assertTrue(QwertyKeyboard.isSentenceStart("x\n"))
+        assertTrue(QwertyKeyboard.isSentenceStart(". "))
+        assertTrue(QwertyKeyboard.isSentenceStart("? "))
+        assertTrue(QwertyKeyboard.isSentenceStart("! "))
+
+        assertFalse(QwertyKeyboard.isSentenceStart("ab"))
+        assertFalse(QwertyKeyboard.isSentenceStart("a "))
+        assertFalse(QwertyKeyboard.isSentenceStart("."))
+    }
+
+    @Test
+    fun `focusing an empty field arms shift when autocorrect is on`() {
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
+        val prefs = AppPrefs(context)
+        prefs.setAutocorrect("com.example.app", true)
+        whenever(ic.getTextBeforeCursor(2, 0)).thenReturn("")
+
+        val kb = QwertyKeyboard(container, keySender, extraRowManager, { ic }, prefs)
+        kb.updatePackage("com.example.app")
+        kb.applyAutoCapitalize()
+        idleMainLooper()
+
+        assertEquals(ShiftState.SINGLE, kb.shiftState)
+        assertEquals(KeyboardLayouts.LAYER_UPPER, kb.currentLayer)
+    }
+
+    @Test
+    fun `focusing mid-word leaves shift alone`() {
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
+        val prefs = AppPrefs(context)
+        prefs.setAutocorrect("com.example.app", true)
+        whenever(ic.getTextBeforeCursor(2, 0)).thenReturn("ab")
+
+        val kb = QwertyKeyboard(container, keySender, extraRowManager, { ic }, prefs)
+        kb.updatePackage("com.example.app")
+        kb.applyAutoCapitalize()
+        idleMainLooper()
+
+        assertEquals(ShiftState.OFF, kb.shiftState)
+        assertEquals(KeyboardLayouts.LAYER_LOWER, kb.currentLayer)
+    }
+
+    @Test
+    fun `auto-capitalize stays off when autocorrect is off`() {
+        whenever(ic.getTextBeforeCursor(2, 0)).thenReturn("")
+        keyboard.applyAutoCapitalize()
+        idleMainLooper()
+
+        assertEquals(ShiftState.OFF, keyboard.shiftState)
+        assertEquals(KeyboardLayouts.LAYER_LOWER, keyboard.currentLayer)
+    }
+
+    // ---- Backspace ----
+
+    @Test
+    fun `tapping backspace deletes one character`() {
+        val backspace = charButtonLabelled(BACKSPACE_LABEL)
+        simulateTap(backspace)
+        verify(keySender).sendKey(any(), eq(KeyEvent.KEYCODE_DEL), any())
+    }
+
+    @Test
+    fun `holding backspace escalates to deleting whole words`() {
+        val backspace = charButtonLabelled(BACKSPACE_LABEL)
+
+        press(backspace)
+        // Well past the per-character gear: the hold has clearly become a hold.
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(3000))
+        release(backspace)
+
+        verify(keySender, atLeastOnce()).deleteWordBefore(any())
+    }
 }
+
+/** The backspace keycap's label in the lowercase layer. */
+private val BACKSPACE_LABEL: String =
+    KeyboardLayouts.getLayer(KeyboardLayouts.LAYER_LOWER)
+        .flatten()
+        .first { it.output is KeyOutput.Backspace }
+        .label

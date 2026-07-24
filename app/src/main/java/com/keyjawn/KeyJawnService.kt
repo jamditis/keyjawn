@@ -75,7 +75,7 @@ class KeyJawnService : InputMethodService() {
         view.findViewById<View>(R.id.number_row)?.setBackgroundColor(tm.extraRowBg())
         view.findViewById<LinearLayout>(R.id.qwerty_container)?.setBackgroundColor(tm.qwertyBg())
 
-        val voice = VoiceInputHandler(this)
+        val voice = VoiceInputHandler(this, appPrefs)
         voiceInputHandler = voice
 
         val upload = if (isFullFlavor) {
@@ -129,13 +129,19 @@ class KeyJawnService : InputMethodService() {
                 // The layer is unchanged, so use the force path: a plain
                 // setLayer(currentLayer) is swallowed by render()'s same-layer
                 // guard and would leave the keycap stale.
-                qwertyKeyboard?.refreshAutocorrect()
+                qwertyKeyboard?.refreshTypingPrefs()
                 qwertyKeyboard?.refreshRender()
+            },
+            onTypingPrefsChanged = {
+                // Emit-on-press is read from a cached field on every touch, so a
+                // toggle has to invalidate that cache to take effect without a
+                // keyboard restart. No keycap changes, so no re-render.
+                qwertyKeyboard?.refreshTypingPrefs()
             }
         )
         extraRowManager = erm
 
-        NumberRowManager(view, keySender, { currentInputConnection }, tm)
+        NumberRowManager(view, keySender, { currentInputConnection }, tm, appPrefs)
 
         val keyboardFrame = view.findViewById<android.widget.FrameLayout>(R.id.keyboard_frame)
         val keyPreview = KeyPreview(keyboardFrame, tm)
@@ -197,6 +203,18 @@ class KeyJawnService : InputMethodService() {
 
         val packageName = info?.packageName ?: "unknown"
         qwertyKeyboard?.updatePackage(packageName)
+        // After the grid reflects the new editor, arm one-shot shift if the
+        // cursor landed where a sentence starts. Runs last so it sees the layer
+        // updatePackage settled on.
+        qwertyKeyboard?.applyAutoCapitalize()
+    }
+
+    override fun onFinishInputView(finishingInput: Boolean) {
+        super.onFinishInputView(finishingInput)
+        // Losing the editor must not leave the microphone armed against an input
+        // connection that no longer exists: the committed text would land in
+        // whatever gains focus next, or nowhere at all.
+        voiceInputHandler?.cancel()
     }
 
     override fun onWindowHidden() {
