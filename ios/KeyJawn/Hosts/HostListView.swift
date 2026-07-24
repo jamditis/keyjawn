@@ -4,6 +4,7 @@ import KeyJawnKit
 struct HostListView: View {
     @EnvironmentObject private var hostStore: HostStore
     @State private var showingAddHost = false
+    @State private var editingHost: HostConfig?
 
     var body: some View {
         NavigationStack {
@@ -23,11 +24,17 @@ struct HostListView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .accessibilityLabel("Add host")
                 }
             }
             .sheet(isPresented: $showingAddHost) {
                 HostEditView { newHost in
                     hostStore.add(newHost)
+                }
+            }
+            .sheet(item: $editingHost) { host in
+                HostEditView(host: host) { updated in
+                    hostStore.update(updated)
                 }
             }
         }
@@ -58,6 +65,24 @@ struct HostListView: View {
                 NavigationLink(value: host) {
                     HostRow(host: host)
                 }
+                // Tapping a row connects, so editing needs its own affordance. Without
+                // one there was no way to correct a hostname or add a host key after
+                // the fact short of deleting the host and typing it in again.
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    Button {
+                        editingHost = host
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    .tint(.blue)
+                }
+                .contextMenu {
+                    Button {
+                        editingHost = host
+                    } label: {
+                        Label("Edit host", systemImage: "pencil")
+                    }
+                }
             }
             .onDelete { indices in
                 hostStore.delete(at: indices)
@@ -74,8 +99,18 @@ struct HostRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(host.label)
-                .fontWeight(.medium)
+            HStack(spacing: 6) {
+                Text(host.label)
+                    .fontWeight(.medium)
+                // Surface the unverified state before the user connects, rather than
+                // only in a toolbar button once the session is already live.
+                if host.hostPublicKey == nil {
+                    Image(systemName: "shield.slash")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .accessibilityLabel("Host key not verified")
+                }
+            }
             Text("\(host.username)@\(host.hostname):\(host.port)")
                 .font(.caption)
                 .foregroundStyle(.secondary)

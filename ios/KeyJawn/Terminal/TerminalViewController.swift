@@ -103,7 +103,11 @@ final class TerminalViewController: UIViewController {
         ])
 
         if session == nil {
-            terminalView.feed(text: "KeyJawn — tap to open keyboard\r\n")
+            // Local echo, no server. Say so, so this does not read as a session that
+            // failed to connect.
+            terminalView.feed(text: "KeyJawn preview — local echo, not connected.\r\n")
+            terminalView.feed(text: "Tap to open the keyboard and try the terminal row.\r\n")
+            terminalView.feed(text: "Add a server in the Hosts tab for a real shell.\r\n\r\n")
         }
     }
 

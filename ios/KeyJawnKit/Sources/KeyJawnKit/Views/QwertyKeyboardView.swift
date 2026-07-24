@@ -6,7 +6,18 @@ import UIKit
 public protocol QwertyKeyboardDelegate: AnyObject {
     func keyboard(_ keyboard: QwertyKeyboardView, insertText text: String)
     func keyboardDeleteBackward(_ keyboard: QwertyKeyboardView)
+    /// Delete the whole word before the cursor. Sent once per repeat tick after a
+    /// held backspace has escalated past character-at-a-time deletion.
+    func keyboardDeleteWordBackward(_ keyboard: QwertyKeyboardView)
     func keyboardAdvanceToNextInputMode(_ keyboard: QwertyKeyboardView)
+}
+
+public extension QwertyKeyboardDelegate {
+    /// Falls back to a single character delete, so a host that has not implemented
+    /// word deletion degrades to the old behaviour instead of stalling on a hold.
+    func keyboardDeleteWordBackward(_ keyboard: QwertyKeyboardView) {
+        keyboardDeleteBackward(keyboard)
+    }
 }
 
 // MARK: - QwertyKeyboardView
@@ -99,21 +110,42 @@ public final class QwertyKeyboardView: UIView {
             return
         }
 
+        stopBackspaceRepeat()
         keyButtons.forEach { $0.removeFromSuperview() }
         keyButtons.removeAll()
         for key in newKeys {
             let btn = QwertyKeyButton(key: key, theme: theme)
             btn.backgroundColor = bgColor(for: key)
             btn.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside)
-            if case .character = key {
+            switch key {
+            case .character:
                 let lp = UILongPressGestureRecognizer(target: self, action: #selector(keyLongPressed(_:)))
                 lp.minimumPressDuration = 0.4
                 btn.addGestureRecognizer(lp)
+            case .backspace:
+                // Holding backspace did nothing at all before this — every deletion
+                // cost a separate tap, which is punishing on a keyboard whose whole
+                // job is editing long prompts. The recogniser cancels the button's
+                // own touch tracking once it fires, so a tap still emits exactly one
+                // delete and a hold emits the repeat below instead of both.
+                let lp = UILongPressGestureRecognizer(target: self, action: #selector(backspaceLongPressed(_:)))
+                lp.minimumPressDuration = 0.35
+                btn.addGestureRecognizer(lp)
+            default:
+                break
             }
             addSubview(btn)
             keyButtons.append(btn)
         }
         builtTheme = theme
+    }
+
+    /// Cancel auto-repeat when the keyboard leaves the hierarchy mid-hold, which
+    /// touch-up would otherwise never report. Handled here rather than in `deinit`,
+    /// which cannot reach main-actor state under Swift 6 strict concurrency.
+    public override func willMove(toWindow newWindow: UIWindow?) {
+        super.willMove(toWindow: newWindow)
+        if newWindow == nil { stopBackspaceRepeat() }
     }
 
     public override func layoutSubviews() {
@@ -199,7 +231,13 @@ public final class QwertyKeyboardView: UIView {
 
     private func rowType(_ row: [QwertyKey]) -> RowType {
         if row.contains(.space)     { return .bottomBar }
-        if row.contains(.backspace) && (row.first == .shift || row.first == .more) {
+        // The third row is always a wide leading modifier, the letters or punctuation,
+        // and a wide backspace. `.symbolsToggle` joins the list because it is the key
+        // that leads that row on the second symbols page; without it that page's row
+        // fell through to the centred branch and rendered a narrow, floating backspace.
+        if row.contains(.backspace),
+           let first = row.first,
+           first == .shift || first == .more || first == .symbolsToggle {
             return .wideSides
         }
         // If fewer keys than a full row, center them; otherwise fill equally
@@ -236,6 +274,8 @@ public final class QwertyKeyboardView: UIView {
     // MARK: - Key tap handler
 
     @objc private func keyTapped(_ sender: QwertyKeyButton) {
+        KeyboardHaptics.keyPress()
+
         switch sender.key {
 
         case .character(let s):
@@ -266,6 +306,8 @@ public final class QwertyKeyboardView: UIView {
             setNeedsLayout()
 
         case .symbolsToggle:
+            // Reached from a letter layer and from the second symbols page, and it
+            // means the same thing in both places: go to the first symbols page.
             layer_      = .symbols
             shiftState  = .off
             rebuild()
@@ -278,13 +320,68 @@ public final class QwertyKeyboardView: UIView {
             setNeedsLayout()
 
         case .more:
-            // Cycle symbols → back to symbols for now (extend later)
+            // Used to rebuild the layer it was already on, so #+= looked like a
+            // broken key and the shell symbols behind it were unreachable.
+            layer_      = .symbols2
+            shiftState  = .off
             rebuild()
             setNeedsLayout()
 
         case .globe:
             delegate?.keyboardAdvanceToNextInputMode(self)
         }
+    }
+
+    // MARK: - Backspace auto-repeat
+
+    private var backspaceTimer: Timer?
+    private var backspaceTicks = 0
+
+    /// Ticks of character-at-a-time deletion before a held backspace switches to whole
+    /// words. At the interval below that is a little over a second of holding, which
+    /// is long enough to be a decision rather than an accident.
+    private static let backspaceWordThreshold = 12
+    private static let backspaceRepeatInterval: TimeInterval = 0.09
+
+    @objc private func backspaceLongPressed(_ gr: UILongPressGestureRecognizer) {
+        switch gr.state {
+        case .began:
+            // The recogniser cancelled the button's touch, so the press that started
+            // the hold has not deleted anything yet. Emit it here before repeating.
+            backspaceTicks = 0
+            delegate?.keyboardDeleteBackward(self)
+            startBackspaceRepeat()
+        case .ended, .cancelled, .failed:
+            stopBackspaceRepeat()
+        default:
+            break
+        }
+    }
+
+    private func startBackspaceRepeat() {
+        backspaceTimer?.invalidate()
+        backspaceTimer = Timer.scheduledTimer(
+            withTimeInterval: Self.backspaceRepeatInterval,
+            repeats: true
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.backspaceTick() }
+        }
+    }
+
+    private func backspaceTick() {
+        backspaceTicks += 1
+        // No haptic per tick on purpose: eleven pulses a second reads as a fault.
+        if backspaceTicks > Self.backspaceWordThreshold {
+            delegate?.keyboardDeleteWordBackward(self)
+        } else {
+            delegate?.keyboardDeleteBackward(self)
+        }
+    }
+
+    private func stopBackspaceRepeat() {
+        backspaceTimer?.invalidate()
+        backspaceTimer = nil
+        backspaceTicks = 0
     }
 
     // MARK: - Long-press alt characters
@@ -298,13 +395,15 @@ public final class QwertyKeyboardView: UIView {
         let alts = AltKeyMappings.alts(for: s)
         if alts.isEmpty { return }
 
+        KeyboardHaptics.keyPress()
+
         if alts.count == 1 {
             delegate?.keyboard(self, insertText: alts[0])
             return
         }
 
         guard let window = gr.view?.window else { return }
-        let popup = AltKeyPopup(alts: alts)
+        let popup = AltKeyPopup(alts: alts, theme: theme)
         popup.onSelect = { [weak self] alt in
             guard let self else { return }
             self.delegate?.keyboard(self, insertText: alt)
@@ -312,15 +411,45 @@ public final class QwertyKeyboardView: UIView {
 
         let btnFrame = btn.convert(btn.bounds, to: window)
         let popupW = min(CGFloat(alts.count) * 52, window.bounds.width - 16)
+        let popupH: CGFloat = 44
         let popupX = max(8, min(btnFrame.midX - popupW / 2, window.bounds.width - popupW - 8))
-        let popupY = btnFrame.minY - 52
-        popup.frame = CGRect(x: popupX, y: popupY, width: popupW, height: 44)
+
+        // Preferred position is above the key. Clamp it into the window, and flip
+        // below the key when there is no room above, so a long-press on the top row
+        // (or in landscape, where the keyboard sits close to the top of a short
+        // window) does not push the popup off screen. Mirrors the Android fix in #62.
+        let minY = window.safeAreaInsets.top + 4
+        let maxY = window.bounds.height - window.safeAreaInsets.bottom - popupH - 4
+        var popupY = btnFrame.minY - popupH - 8
+        if popupY < minY {
+            popupY = btnFrame.maxY + 8
+        }
+        popupY = min(max(popupY, minY), max(minY, maxY))
+
+        popup.frame = CGRect(x: popupX, y: popupY, width: popupW, height: popupH)
         window.addSubview(popup)
         popup.attachDimmer(to: window)
     }
 }
 
 // MARK: - Structural kind
+
+extension QwertyKey {
+    /// What VoiceOver announces for this key.
+    var spokenName: String? {
+        switch self {
+        case .character(let s):  return s
+        case .space:             return "Space"
+        case .return:            return "Return"
+        case .backspace:         return "Delete. Hold to repeat, keep holding to delete whole words."
+        case .shift:             return "Shift"
+        case .symbolsToggle:     return "Numbers and symbols"
+        case .alphabeticToggle:  return "Letters"
+        case .globe:             return "Next keyboard"
+        case .more:              return "More symbols"
+        }
+    }
+}
 
 private extension QwertyKey {
     // A discriminator that ignores a character key's specific value, so two layers
@@ -389,6 +518,9 @@ final class QwertyKeyButton: UIButton {
         self.key = key
         setTitle(nil, for: .normal)
         setImage(nil, for: .normal)
+        // The image keys carry no title for VoiceOver to read, and "#+=" and "123"
+        // are announced character by character. Name each one instead.
+        accessibilityLabel = key.spokenName
         let text = theme.keyText
         switch key {
         case .character(let s):

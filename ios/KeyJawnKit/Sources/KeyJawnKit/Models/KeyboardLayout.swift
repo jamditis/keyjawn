@@ -59,6 +59,26 @@ public struct ExtraRowKey: Sendable {
     public let label: String
     public let output: KeyOutput?   // nil for action keys (clipboard, upload)
 
+    /// What VoiceOver announces for this key.
+    ///
+    /// The visible labels are glyphs and abbreviations chosen to fit a ten-key row —
+    /// "▲", "^C", "SCP". Read literally they are useless, so each one gets a spoken
+    /// name here.
+    public var accessibilityLabel: String {
+        switch slot {
+        case .ctrlC:      return "Control C. Double tap and hold to lock the Control modifier."
+        case .tab:        return "Tab"
+        case .arrowUp:    return "Up arrow"
+        case .arrowDown:  return "Down arrow"
+        case .arrowLeft:  return "Left arrow"
+        case .arrowRight: return "Right arrow"
+        case .slash:      return "Slash commands"
+        case .escape:     return "Escape"
+        case .clipboard:  return "Clipboard history"
+        case .upload:     return "Upload image over SFTP"
+        }
+    }
+
     public static let defaults: [ExtraRowKey] = [
         ExtraRowKey(slot: .ctrlC,      label: "^C",  output: .ctrlC),
         ExtraRowKey(slot: .tab,        label: "Tab", output: .tab),
@@ -107,5 +127,17 @@ public enum ANSISequence {
             return ctrlActive ? [byte & 0x1f] : [byte]
         case .slash:                return nil  // handled by slash command popup
         }
+    }
+
+    /// The same sequence as a string, for the keyboard extension.
+    ///
+    /// The extension has no socket to write bytes to — its only channel to the host
+    /// app is `UITextDocumentProxy.insertText`. Terminal apps forward inserted text
+    /// straight to the pty, which is why Esc has always worked there as a literal
+    /// `\u{1b}`; this lets Ctrl+C and the arrow keys reach the shell the same way
+    /// instead of being dropped on the floor.
+    public static func text(for output: KeyOutput, ctrlActive: Bool = false) -> String? {
+        bytes(for: output, ctrlActive: ctrlActive)
+            .map { String(decoding: $0, as: UTF8.self) }
     }
 }

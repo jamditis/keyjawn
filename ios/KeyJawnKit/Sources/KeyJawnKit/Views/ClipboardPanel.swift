@@ -19,6 +19,7 @@ public final class ClipboardPanel: UIView, UITableViewDataSource, UITableViewDel
     private let tableView = UITableView(frame: .zero, style: .grouped)
 
     private let cellReuseID = "ClipCell"
+    private let theme: KeyboardTheme
 
     // MARK: - Section constants
 
@@ -43,20 +44,18 @@ public final class ClipboardPanel: UIView, UITableViewDataSource, UITableViewDel
 
     // MARK: - Init
 
-    public override init(frame: CGRect) {
-        super.init(frame: frame)
+    public init(theme: KeyboardTheme = .dark) {
+        self.theme = theme
+        super.init(frame: .zero)
         setupView()
     }
 
-    public required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setupView()
-    }
+    public required init?(coder: NSCoder) { fatalError("use init(theme:)") }
 
     // MARK: - Setup
 
     private func setupView() {
-        backgroundColor = UIColor(red: 0.13, green: 0.13, blue: 0.13, alpha: 0.97)
+        backgroundColor = theme.panelBg
 
         // Round only the top corners
         layer.cornerRadius = 12
@@ -74,20 +73,20 @@ public final class ClipboardPanel: UIView, UITableViewDataSource, UITableViewDel
 
         titleLabel.text = "Clipboard"
         titleLabel.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = theme.panelText
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         toolbar.addSubview(titleLabel)
 
         doneButton.setTitle("Done", for: .normal)
         doneButton.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .regular)
-        doneButton.setTitleColor(.systemBlue, for: .normal)
+        doneButton.setTitleColor(theme.accent, for: .normal)
         doneButton.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
         doneButton.translatesAutoresizingMaskIntoConstraints = false
         toolbar.addSubview(doneButton)
 
         // Thin separator below toolbar
         let separator = UIView()
-        separator.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+        separator.backgroundColor = theme.panelSeparator
         separator.translatesAutoresizingMaskIntoConstraints = false
         toolbar.addSubview(separator)
 
@@ -180,12 +179,12 @@ public final class ClipboardPanel: UIView, UITableViewDataSource, UITableViewDel
         var config = cell.defaultContentConfiguration()
         config.textProperties.numberOfLines = 1
         config.textProperties.lineBreakMode = .byTruncatingTail
-        config.textProperties.color = .white
+        config.textProperties.color = theme.panelText
         config.textProperties.font = UIFont.monospacedSystemFont(ofSize: 13, weight: .regular)
 
         if rowData.isEmpty {
             config.text = sec.emptyMessage
-            config.textProperties.color = UIColor.white.withAlphaComponent(0.4)
+            config.textProperties.color = theme.panelSecondaryText
             cell.selectionStyle = .none
         } else {
             config.text = rowData[indexPath.row]
@@ -197,7 +196,7 @@ public final class ClipboardPanel: UIView, UITableViewDataSource, UITableViewDel
 
         // Selection highlight color
         let selectedBG = UIView()
-        selectedBG.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+        selectedBG.backgroundColor = theme.panelSelection
         cell.selectedBackgroundView = selectedBG
 
         return cell
@@ -222,7 +221,7 @@ public final class ClipboardPanel: UIView, UITableViewDataSource, UITableViewDel
         label.text = sec.title.uppercased()
         label.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
             .withSmallCaps
-        label.textColor = UIColor.white.withAlphaComponent(0.5)
+        label.textColor = theme.panelSecondaryText
         label.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(label)
 
@@ -239,6 +238,7 @@ public final class ClipboardPanel: UIView, UITableViewDataSource, UITableViewDel
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         guard !isEmptyPlaceholder(at: indexPath) else { return }
+        KeyboardHaptics.keyPress()
         let text = rows(for: section(at: indexPath.section))[indexPath.row]
         onSelect?(text)
     }

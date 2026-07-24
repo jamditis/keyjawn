@@ -82,7 +82,7 @@ public final class ExtraRowView: UIView {
         ])
 
         for key in ExtraRowKey.defaults {
-            let btn = ExtraRowButton(key: key, bgColor: keyBg)
+            let btn = ExtraRowButton(key: key, bgColor: keyBg, textColor: theme.extraRowKeyText)
             wire(btn)
             stack.addArrangedSubview(btn)
             if key.slot == .ctrlC { ctrlCButton = btn }
@@ -90,6 +90,21 @@ public final class ExtraRowView: UIView {
 
         ctrl.onChange = { [weak self] state in
             self?.applyCtrlVisual(state)
+        }
+    }
+
+    /// Stop auto-repeat when the row leaves the hierarchy.
+    ///
+    /// The repeat timer is normally cancelled on touch-up, but a panel appearing over
+    /// the row, or the keyboard being dismissed mid-hold, tears the view down without
+    /// one — and a repeating `Timer` left on the run loop keeps firing arrow keys into
+    /// whatever gains focus next. Handled here rather than in `deinit`, which cannot
+    /// touch main-actor state under Swift 6 strict concurrency.
+    public override func willMove(toWindow newWindow: UIWindow?) {
+        super.willMove(toWindow: newWindow)
+        if newWindow == nil {
+            repeatTimer?.invalidate()
+            repeatTimer = nil
         }
     }
 
@@ -126,22 +141,26 @@ public final class ExtraRowView: UIView {
     @objc private func ctrlCTapped() {
         // Always sends ^C regardless of current Ctrl modifier state.
         // Long-press is the only way to arm the modifier.
+        KeyboardHaptics.keyPress()
         fire(.ctrlC, ctrlActive: false)
     }
 
     @objc private func ctrlCLongPressed(_ gr: UILongPressGestureRecognizer) {
         guard gr.state == .began else { return }
+        KeyboardHaptics.keyPress()
         ctrl.toggle()
     }
 
     @objc private func keyTapped(_ sender: ExtraRowButton) {
         guard let output = sender.key.output else { return }
+        KeyboardHaptics.keyPress()
         fire(output, ctrlActive: ctrl.isActive)
         ctrl.consume()
     }
 
     @objc private func arrowTouchDown(_ sender: ExtraRowButton) {
         guard let output = sender.key.output else { return }
+        KeyboardHaptics.keyPress()
         fire(output, ctrlActive: ctrl.isActive)
         ctrl.consume()
 
@@ -166,10 +185,12 @@ public final class ExtraRowView: UIView {
     }
 
     @objc private func clipTapped() {
+        KeyboardHaptics.keyPress()
         delegate?.extraRowDidTapClipboard(self)
     }
 
     @objc private func uploadTapped() {
+        KeyboardHaptics.keyPress()
         delegate?.extraRowDidTapUpload(self)
     }
 
@@ -211,7 +232,7 @@ public final class ExtraRowView: UIView {
         backgroundColor = bg
         for subview in stack.arrangedSubviews {
             if let btn = subview as? ExtraRowButton {
-                btn.applyBgColor(keyBg)
+                btn.applyColors(background: keyBg, text: theme.extraRowKeyText)
             }
         }
         applyCtrlVisual(ctrl.state)
@@ -225,27 +246,28 @@ final class ExtraRowButton: UIButton {
 
     let key: ExtraRowKey
 
-    init(key: ExtraRowKey, bgColor: UIColor) {
+    init(key: ExtraRowKey, bgColor: UIColor, textColor: UIColor) {
         self.key = key
         super.init(frame: .zero)
-        configure(bgColor: bgColor)
-    }
-
-    required init?(coder: NSCoder) { fatalError("use init(key:bgColor:)") }
-
-    private func configure(bgColor: UIColor) {
-        backgroundColor = bgColor
-        setTitleColor(.white, for: .normal)
-        setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .highlighted)
         titleLabel?.font = .monospacedSystemFont(ofSize: 13, weight: .semibold)
         setTitle(key.label, for: .normal)
+        accessibilityLabel = key.accessibilityLabel
         layer.cornerRadius = 6
         layer.masksToBounds = false
         layer.shadowOpacity = 0
+        applyColors(background: bgColor, text: textColor)
     }
 
-    func applyBgColor(_ color: UIColor) {
-        backgroundColor = color
+    required init?(coder: NSCoder) { fatalError("use init(key:bgColor:textColor:)") }
+
+    /// The label colour used to be a hardcoded white, which survived every theme
+    /// change: on Light that put white glyphs on a mid-grey key at 3.3:1, below the
+    /// 4.5:1 floor, and on Terminal it broke the green-on-green treatment the rest of
+    /// the keyboard uses.
+    func applyColors(background: UIColor, text: UIColor) {
+        backgroundColor = background
+        setTitleColor(text, for: .normal)
+        setTitleColor(text.withAlphaComponent(0.4), for: .highlighted)
     }
 
     override var isHighlighted: Bool {

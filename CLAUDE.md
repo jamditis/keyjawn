@@ -119,9 +119,22 @@ xcodebuild -project KeyJawn.xcodeproj -scheme KeyJawn \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -configuration Debug build
 
+# Unit tests (KeyJawnKitTests, hosted by the app — KeyJawnKit links UIKit,
+# so these need a simulator runtime rather than `swift test`)
+xcodebuild test -project KeyJawn.xcodeproj -scheme KeyJawn \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+
 # Archive + export for TestFlight/App Store
 bash ios/scripts/build.sh
 ```
+
+**Versioning:** `CURRENT_PROJECT_VERSION` and `MARKETING_VERSION` in `ios/project.yml`
+are the single source of truth. Both targets set them and both Info.plists
+interpolate them via `$(...)`, so bumping the app target's build number and the
+extension's together is the whole job. Do not put literal version strings back into
+the `info.properties` blocks — a literal there wins over the build setting, which is
+how a "bumped" build once shipped still identifying as build 1 and got rejected as a
+duplicate upload.
 
 **Architecture:**
 - `KeyJawnKit/` — shared Swift package used by both the main app and the keyboard extension. Contains keyboard models (`KeyboardLayout`, `HostConfig`, `SlashCommand`, `CtrlState`) and UIKit views (`QwertyKeyboardView`, `ExtraRowView`, `SlashCommandPanel`).
@@ -129,7 +142,9 @@ bash ios/scripts/build.sh
 - `KeyJawnKeyboard/` — `UIInputViewController` keyboard extension. Uses `QwertyKeyboardView` + `ExtraRowView` from KeyJawnKit. Uses `group.com.keyjawn` App Group to share host configs and SSH key bytes with the main app (`AppGroupHostStore`, `AppGroupSSHKeyStore`). SCP image upload via `CitadelSCPUploader` (Citadel/SwiftNIO SFTP).
 
 **Key decisions:**
-- One Ed25519 identity key for the whole app (not per-host). Public key is shown in Settings → SSH keys for the user to copy to `authorized_keys`. Private key stored in Keychain under `com.keyjawn / ssh-identity-ed25519`.
+- One Ed25519 identity key for the whole app (not per-host). Public key is shown in Settings → SSH keys for the user to copy to `authorized_keys`. Private key stored in Keychain under `com.keyjawn / ssh-identity-ed25519`, accessible `WhenUnlockedThisDeviceOnly`.
+- The extension can't read that Keychain item, so the key is mirrored into the App Group container by `AppGroupSecretStore` as a file with `.completeFileProtectionUntilUserAuthentication` and `isExcludedFromBackup`. It is deliberately **not** a shared `UserDefaults` value: group container plists are backed up, which would have copied the private key off-device and undone the `ThisDeviceOnly` class. `SSHKeyStore.syncAppGroupMirror()` reconciles the mirror against the Keychain at every launch.
+- Keyboard preferences (`KeyboardPrefs`) live in the `group.com.keyjawn` suite, not `UserDefaults.standard` — the app and the extension have separate standard suites, so anything written there never reaches the keyboard. The extension can only read the shared suite with Full Access; without it the keyboard falls back to defaults.
 - Host key pinning via `NIOSSHPublicKey(openSSHPublicKey:)`. If no host key is stored, connects with `.acceptAnything()` (warns in UI).
 - Keyboard extension cannot use `present()`. Overlays (slash command panel) are added as `UIView` children of the extension root view.
 - Debug build uses automatic signing; Release build uses manual signing with App Store provisioning profiles (`KeyJawn AppStore`, `KeyJawn Keyboard AppStore`).
@@ -189,9 +204,20 @@ git add website/public/screenshots/ios-screenshots/ios-slash-commands.png
 git commit -m "replace slash commands screenshot with unbranded keyboard UI"
 ```
 
+**Step 2b: Run the tests**
+
+```bash
+cd ios && xcodebuild test -project KeyJawn.xcodeproj -scheme KeyJawn \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+```
+This is the first thing to run on the Mac — none of the iOS code has ever been
+compiled in a web session, so the suite is also the build check.
+
 **Step 3: Bump the build number**
 
-Open `ios/project.yml`. Find `CURRENT_PROJECT_VERSION` and increment it by 1 (e.g. `7` → `8`). Then commit:
+Open `ios/project.yml` and increment `CURRENT_PROJECT_VERSION` **on both targets**
+(`KeyJawn` and `KeyJawnKeyboard`) — they must match or App Store Connect rejects the
+upload. The Info.plists interpolate the setting, so this is the only edit needed.
 ```bash
 git add ios/project.yml
 git commit -m "bump iOS build number for 3.2.2 resubmission"

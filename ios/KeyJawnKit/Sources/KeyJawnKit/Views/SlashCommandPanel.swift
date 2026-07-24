@@ -1,29 +1,39 @@
 import UIKit
 
-/// Overlay panel that presents slash commands as a scrollable list.
+/// Overlay panel that presents slash commands as a grouped, scrollable list.
 /// Add it to the keyboard extension's root view when the slash key is tapped,
 /// then remove it when the user selects a command or dismisses.
+///
+/// Selecting a row inserts its trigger as plain text into the focused field. The
+/// panel neither launches nor links to anything else.
 @MainActor
 public final class SlashCommandPanel: UIView {
 
     public var onSelect: ((SlashCommand) -> Void)?
     public var onDismiss: (() -> Void)?
 
-    private let commands: [SlashCommand]
+    private let sections: [(category: SlashCommand.Category, commands: [SlashCommand])]
+    private let theme: KeyboardTheme
     private let table = UITableView(frame: .zero, style: .plain)
 
-    public init(commands: [SlashCommand] = SlashCommand.all) {
-        self.commands = commands
+    public init(commands: [SlashCommand] = SlashCommand.all, theme: KeyboardTheme = .dark) {
+        // Group by category so a list this long stays scannable, preserving the
+        // declared order within each group.
+        self.sections = SlashCommand.Category.allCases.compactMap { category in
+            let matching = commands.filter { $0.category == category }
+            return matching.isEmpty ? nil : (category, matching)
+        }
+        self.theme = theme
         super.init(frame: .zero)
         build()
     }
 
-    required init?(coder: NSCoder) { fatalError("use init(commands:)") }
+    required init?(coder: NSCoder) { fatalError("use init(commands:theme:)") }
 
     // MARK: - Layout
 
     private func build() {
-        backgroundColor = UIColor(red: 0.11, green: 0.11, blue: 0.11, alpha: 0.97)
+        backgroundColor = theme.panelBg
 
         // Header row
         let header = buildHeader()
@@ -32,7 +42,7 @@ public final class SlashCommandPanel: UIView {
 
         // Divider
         let div = UIView()
-        div.backgroundColor = UIColor(white: 0.25, alpha: 1)
+        div.backgroundColor = theme.panelSeparator
         div.translatesAutoresizingMaskIntoConstraints = false
         addSubview(div)
 
@@ -40,10 +50,12 @@ public final class SlashCommandPanel: UIView {
         table.dataSource = self
         table.delegate   = self
         table.backgroundColor   = .clear
-        table.separatorColor    = UIColor(white: 0.2, alpha: 1)
+        table.separatorColor    = theme.panelSeparator
         table.separatorInset    = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
         table.rowHeight         = 44
-        table.alwaysBounceVertical = false
+        table.sectionHeaderTopPadding = 0
+        table.alwaysBounceVertical = true
+        table.keyboardDismissMode = .none
         table.register(CommandCell.self, forCellReuseIdentifier: CommandCell.id)
         table.translatesAutoresizingMaskIntoConstraints = false
         addSubview(table)
@@ -72,14 +84,15 @@ public final class SlashCommandPanel: UIView {
 
         let label = UILabel()
         label.text      = "Slash commands"
-        label.textColor = UIColor(white: 0.75, alpha: 1)
+        label.textColor = theme.panelSecondaryText
         label.font      = .systemFont(ofSize: 13, weight: .semibold)
         label.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(label)
 
         let close = UIButton(type: .system)
         close.setImage(UIImage(systemName: "xmark"), for: .normal)
-        close.tintColor = UIColor(white: 0.55, alpha: 1)
+        close.tintColor = theme.panelSecondaryText
+        close.accessibilityLabel = "Close slash commands"
         close.addTarget(self, action: #selector(dismiss), for: .touchUpInside)
         close.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(close)
@@ -90,8 +103,8 @@ public final class SlashCommandPanel: UIView {
 
             close.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             close.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-            close.widthAnchor.constraint(equalToConstant: 30),
-            close.heightAnchor.constraint(equalToConstant: 30),
+            close.widthAnchor.constraint(equalToConstant: 44),
+            close.heightAnchor.constraint(equalToConstant: 36),
         ])
 
         return view
@@ -106,21 +119,49 @@ public final class SlashCommandPanel: UIView {
 
 extension SlashCommandPanel: UITableViewDataSource, UITableViewDelegate {
 
+    public func numberOfSections(in tableView: UITableView) -> Int {
+        sections.count
+    }
+
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        commands.count
+        sections[section].commands.count
+    }
+
+    public func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        26
+    }
+
+    public func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let container = UIView()
+        container.backgroundColor = .clear
+
+        let label = UILabel()
+        label.text = sections[section].category.rawValue.uppercased()
+        label.font = .systemFont(ofSize: 11, weight: .semibold)
+        label.textColor = theme.panelSecondaryText
+        label.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(label)
+
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -4),
+        ])
+
+        return container
     }
 
     public func tableView(_ tableView: UITableView,
                           cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: CommandCell.id,
-                                                for: indexPath) as! CommandCell
-        cell.configure(with: commands[indexPath.row])
+                                                 for: indexPath) as! CommandCell
+        cell.configure(with: sections[indexPath.section].commands[indexPath.row], theme: theme)
         return cell
     }
 
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: false)
-        onSelect?(commands[indexPath.row])
+        KeyboardHaptics.keyPress()
+        onSelect?(sections[indexPath.section].commands[indexPath.row])
     }
 }
 
@@ -137,18 +178,12 @@ private final class CommandCell: UITableViewCell {
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         backgroundColor = .clear
-        selectedBackgroundView = {
-            let v = UIView()
-            v.backgroundColor = UIColor(white: 0.22, alpha: 1)
-            return v
-        }()
 
-        trigger.font      = .monospacedSystemFont(ofSize: 14, weight: .semibold)
-        trigger.textColor = UIColor(red: 0.4, green: 0.75, blue: 1.0, alpha: 1)
+        trigger.font = .monospacedSystemFont(ofSize: 14, weight: .semibold)
         trigger.translatesAutoresizingMaskIntoConstraints = false
+        trigger.setContentCompressionResistancePriority(.required, for: .horizontal)
 
-        detail.font      = .systemFont(ofSize: 13, weight: .regular)
-        detail.textColor = UIColor(white: 0.6, alpha: 1)
+        detail.font = .systemFont(ofSize: 13, weight: .regular)
         detail.translatesAutoresizingMaskIntoConstraints = false
 
         contentView.addSubview(trigger)
@@ -157,7 +192,10 @@ private final class CommandCell: UITableViewCell {
         NSLayoutConstraint.activate([
             trigger.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             trigger.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 14),
-            trigger.widthAnchor.constraint(equalToConstant: 100),
+            // Reserve a column so the descriptions line up, but let a longer trigger
+            // grow past it instead of being clipped — the fixed 100pt width this
+            // replaced would truncate anything longer than "/compact".
+            trigger.widthAnchor.constraint(greaterThanOrEqualToConstant: 92),
 
             detail.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             detail.leadingAnchor.constraint(equalTo: trigger.trailingAnchor, constant: 8),
@@ -167,8 +205,16 @@ private final class CommandCell: UITableViewCell {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    func configure(with cmd: SlashCommand) {
+    func configure(with cmd: SlashCommand, theme: KeyboardTheme) {
         trigger.text = cmd.trigger
+        trigger.textColor = theme.accent
         detail.text  = cmd.description
+        detail.textColor = theme.panelSecondaryText
+
+        let selected = UIView()
+        selected.backgroundColor = theme.panelSelection
+        selectedBackgroundView = selected
+
+        accessibilityLabel = "\(cmd.trigger), \(cmd.description)"
     }
 }

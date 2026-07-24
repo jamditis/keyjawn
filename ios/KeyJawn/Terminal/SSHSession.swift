@@ -57,7 +57,14 @@ final class SSHSession: ObservableObject {
     }
 
     private func connect(to host: HostConfig, authenticationMethod: SSHAuthenticationMethod) {
-        guard connectionState == .disconnected else { return }
+        // Guard on what actually conflicts — a connection in flight or established —
+        // rather than on being exactly `.disconnected`. The old check also rejected
+        // `.failed`, so retrying after an error silently did nothing unless the caller
+        // happened to call `disconnect()` first.
+        switch connectionState {
+        case .connecting, .connected: return
+        case .disconnected, .failed: break
+        }
         connectionState = .connecting
         isHostKeyVerified = host.hostPublicKey != nil
 
