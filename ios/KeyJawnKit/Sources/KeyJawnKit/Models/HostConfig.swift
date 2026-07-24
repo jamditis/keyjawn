@@ -44,4 +44,18 @@ public struct HostConfig: Sendable, Identifiable, Codable, Hashable {
         !username.trimmingCharacters(in: .whitespaces).isEmpty &&
         port > 0
     }
+
+    /// The command that produces the key to paste into ``hostPublicKey``.
+    ///
+    /// Carries `-p` for a non-default port. Without it the instructions scan port 22
+    /// of the same hostname, which is either nothing at all or — worse — a different
+    /// service whose key gets pinned here and makes every later connection fail.
+    public var hostKeyScanCommand: String {
+        Self.hostKeyScanCommand(hostname: hostname, port: port)
+    }
+
+    public static func hostKeyScanCommand(hostname: String, port: UInt16) -> String {
+        let portFlag = port == 22 ? "" : "-p \(port) "
+        return "ssh-keyscan \(portFlag)-t ed25519 \(hostname)"
+    }
 }

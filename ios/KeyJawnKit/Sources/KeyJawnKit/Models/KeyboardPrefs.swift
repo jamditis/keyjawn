@@ -25,16 +25,46 @@ public final class KeyboardPrefs: @unchecked Sendable {
         static let migrated = "keyjawn.prefs.migrated.v2"
     }
 
-    private let defaults: UserDefaults
+    /// Storage supplied by a test. When nil the suite is looked up per access below.
+    private let injectedDefaults: UserDefaults?
 
-    /// - Parameter defaults: backing store. Defaults to the shared App Group suite,
-    ///   falling back to this process's own `standard` suite when the group is not
-    ///   reachable. Injectable so tests can run against a scratch suite.
-    public init(defaults: UserDefaults? = nil) {
-        self.defaults = defaults
-            ?? UserDefaults(suiteName: AppGroupConfig.suiteName)
-            ?? .standard
+    /// Look the suite up on every access rather than holding one wrapper for the
+    /// process's lifetime.
+    ///
+    /// The extension process outlives any single activation, and the main app writes
+    /// these values from a different process. A cached `UserDefaults` wrapper can keep
+    /// serving its own stale in-process cache until the extension restarts, so a theme
+    /// picked in Settings would not appear until the keyboard was killed — the same
+    /// staleness `AppGroupHostStore` reopens its suite to avoid, found and reverted for
+    /// exactly this reason in #46.
+    ///
+    /// Cheap enough for the read sites here, which are activation- and
+    /// interaction-scoped. It is deliberately *not* cheap enough for per-keystroke
+    /// reads: `KeyboardHaptics` caches its flag and refreshes it on appearance rather
+    /// than reopening the suite on every key press.
+    private var defaults: UserDefaults {
+        if let injectedDefaults { return injectedDefaults }
+        return UserDefaults(suiteName: AppGroupConfig.suiteName) ?? .standard
+    }
+
+    /// - Parameters:
+    ///   - defaults: backing store. Defaults to the shared App Group suite, resolved
+    ///     per access. Injectable so tests can run against a scratch suite.
+    ///   - migratesLegacyValues: whether this process should consume the pre-App-Group
+    ///     keys. Defaults to false inside an app extension; see
+    ///     ``migrateLegacyValuesIfNeeded()``.
+    public init(defaults: UserDefaults? = nil, migratesLegacyValues: Bool? = nil) {
+        self.injectedDefaults = defaults
+        self.migratesLegacyValues = migratesLegacyValues ?? !Self.isAppExtension
         migrateLegacyValuesIfNeeded()
+    }
+
+    private let migratesLegacyValues: Bool
+
+    /// True when this code is running inside an app extension rather than the app.
+    /// Extension bundles are `.appex`; the containing app's is `.app`.
+    private static var isAppExtension: Bool {
+        Bundle.main.bundleURL.pathExtension == "appex"
     }
 
     // MARK: - Preferences
@@ -86,22 +116,34 @@ public final class KeyboardPrefs: @unchecked Sendable {
     /// `@AppStorage("hapticEnabled")`. Neither was ever read by the keyboard, so
     /// migrating them is about honouring a choice the user already made rather than
     /// preserving working behaviour.
+    ///
+    /// Only the main app runs this. Both legacy keys live in the *app's* standard
+    /// suite, which an extension cannot see — so an extension running it would find
+    /// nothing, and then set the shared completion flag, and the main app's next
+    /// launch would skip the migration and quietly discard the user's saved theme.
+    /// An upgraded user opening the keyboard before the app is the ordinary case for
+    /// this product, not a corner of it.
     private func migrateLegacyValuesIfNeeded() {
-        guard !defaults.bool(forKey: Key.migrated) else { return }
-        defer { defaults.set(true, forKey: Key.migrated) }
+        guard migratesLegacyValues else { return }
+
+        let store = defaults
+        guard !store.bool(forKey: Key.migrated) else { return }
 
         let legacy = UserDefaults.standard
-        guard legacy != defaults else { return }
+        // Nothing to carry when the shared suite is unavailable and `store` has already
+        // fallen back to the same standard suite the legacy values live in.
+        guard legacy != store else { return }
+        defer { store.set(true, forKey: Key.migrated) }
 
-        if defaults.object(forKey: Key.theme) == nil,
+        if store.object(forKey: Key.theme) == nil,
            let raw = legacy.string(forKey: Key.theme) ?? legacy.string(forKey: "theme"),
            KeyboardTheme(rawValue: raw) != nil {
-            defaults.set(raw, forKey: Key.theme)
+            store.set(raw, forKey: Key.theme)
         }
 
-        if defaults.object(forKey: Key.haptics) == nil,
+        if store.object(forKey: Key.haptics) == nil,
            let legacyHaptics = legacy.object(forKey: "hapticEnabled") as? Bool {
-            defaults.set(legacyHaptics, forKey: Key.haptics)
+            store.set(legacyHaptics, forKey: Key.haptics)
         }
     }
 }

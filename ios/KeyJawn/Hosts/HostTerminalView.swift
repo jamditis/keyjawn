@@ -76,8 +76,9 @@ struct HostTerminalView: View {
             Button("OK", role: .cancel) {}
         } message: {
             // The previous wording pointed at "host settings", which did not exist —
-            // there was no edit path at all. Name the gesture that now does.
-            Text("No host key is configured for \(host.label). The server's identity cannot be confirmed, making this connection susceptible to interception.\n\nTo fix it, run: ssh-keyscan -t ed25519 \(host.hostname)\n\nThen go back to Hosts, swipe right on \(host.label), tap Edit, and paste the output into Host key. It takes effect on the next connection.")
+            // there was no edit path at all. Name the gesture that now does, and let
+            // HostConfig build the scan command so a non-default port is carried.
+            Text("No host key is configured for \(host.label). The server's identity cannot be confirmed, making this connection susceptible to interception.\n\nTo fix it, run: \(host.hostKeyScanCommand)\n\nThen go back to Hosts, swipe right on \(host.label), tap Edit, and paste the output into Host key. It takes effect on the next connection.")
         }
     }
 

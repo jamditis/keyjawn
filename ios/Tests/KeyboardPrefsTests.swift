@@ -110,6 +110,34 @@ final class KeyboardPrefsTests: XCTestCase {
         XCTAssertEqual(KeyboardPrefs(defaults: suite).theme, .oled)
     }
 
+    /// The upgrade path this migration exists for is a user who opens the *keyboard*
+    /// before the app — the ordinary case for this product. The extension cannot see
+    /// the app's standard suite, so if it ran the migration it would find nothing,
+    /// set the shared completion flag anyway, and the app's next launch would skip the
+    /// migration and silently discard the user's saved theme. A non-migrating process
+    /// must leave both the values and the flag alone.
+    func testANonMigratingProcessLeavesTheFlagUnset() {
+        let legacyKey = "theme"
+        let previous = UserDefaults.standard.string(forKey: legacyKey)
+        defer {
+            if let previous {
+                UserDefaults.standard.set(previous, forKey: legacyKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: legacyKey)
+            }
+        }
+        UserDefaults.standard.set("terminal", forKey: legacyKey)
+
+        // Stands in for the keyboard extension.
+        let extensionSide = KeyboardPrefs(defaults: suite, migratesLegacyValues: false)
+        XCTAssertEqual(extensionSide.theme, .dark, "extension should not consume app-side keys")
+        XCTAssertFalse(suite.bool(forKey: "keyjawn.prefs.migrated.v2"),
+                       "extension claimed the migration it could not perform")
+
+        // The app opens later and the choice is still recoverable.
+        XCTAssertEqual(KeyboardPrefs(defaults: suite, migratesLegacyValues: true).theme, .terminal)
+    }
+
     func testAnExplicitChoiceIsNotOverwrittenByALegacyValue() {
         let legacyKey = "theme"
         let previous = UserDefaults.standard.string(forKey: legacyKey)

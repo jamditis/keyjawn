@@ -40,6 +40,7 @@ final class TerminalInputView: UITextView {
         // Same theme the keyboard extension uses, so the row looks like one component
         // wherever it appears rather than defaulting to dark here and themed there.
         extraRow.applyTheme(KeyboardPrefs.shared.theme)
+        KeyboardHaptics.refresh()
         inputAccessoryView = extraRow
     }
 

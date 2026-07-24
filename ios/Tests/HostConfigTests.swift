@@ -52,6 +52,29 @@ final class HostConfigTests: XCTestCase {
         XCTAssertFalse(HostConfig(label: "a", hostname: "h", port: 0, username: "u").isValid)
     }
 
+    // MARK: - Host key scan command
+
+    func testScanCommandOmitsThePortFlagForTheDefaultPort() {
+        let host = HostConfig(label: "a", hostname: "example.internal", port: 22, username: "u")
+        XCTAssertEqual(host.hostKeyScanCommand, "ssh-keyscan -t ed25519 example.internal")
+    }
+
+    /// Without `-p` the instructions scan port 22 of the same hostname, which is either
+    /// nothing at all or a different service whose key gets pinned here — and then
+    /// every later connection fails on a mismatch the user cannot explain.
+    func testScanCommandCarriesANonDefaultPort() {
+        let host = HostConfig(label: "a", hostname: "example.internal", port: 2222, username: "u")
+        XCTAssertEqual(host.hostKeyScanCommand, "ssh-keyscan -p 2222 -t ed25519 example.internal")
+    }
+
+    func testScanCommandMatchesTheHostItIsBuiltFrom() {
+        for port: UInt16 in [22, 22222, 2022, 1] {
+            let host = HostConfig(label: "a", hostname: "h.internal", port: port, username: "u")
+            XCTAssertEqual(host.hostKeyScanCommand,
+                           HostConfig.hostKeyScanCommand(hostname: "h.internal", port: port))
+        }
+    }
+
     func testAuthMethodRawValuesAreStable() {
         // Persisted verbatim in the shared container; renaming a case would orphan
         // every host an existing install has saved.

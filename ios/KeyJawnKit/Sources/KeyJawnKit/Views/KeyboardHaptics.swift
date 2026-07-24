@@ -19,11 +19,22 @@ public enum KeyboardHaptics {
 
     private static let generator = UIImpactFeedbackGenerator(style: .light)
 
-    /// Warms the Taptic Engine so the first press of a session is not late.
-    /// Cheap to call repeatedly; safe to call when feedback is disabled.
-    public static func prepare() {
-        guard KeyboardPrefs.shared.hapticsEnabled else { return }
-        generator.prepare()
+    /// Cached rather than read per press.
+    ///
+    /// `KeyboardPrefs` reopens the App Group suite on every access so a preference
+    /// changed in the main app is not served stale to a long-lived extension process.
+    /// That is the right trade at activation scope and the wrong one on the keystroke
+    /// path, where it would put a `UserDefaults` construction between the finger and
+    /// the character. Refreshed on appearance instead, which is the only moment the
+    /// value can have changed — the Settings screen is in the other process, so it
+    /// cannot be reached without leaving the keyboard.
+    private static var isEnabled = true
+
+    /// Re-read the preference and warm the Taptic Engine so the first press of a
+    /// session is not late. Call when the keyboard or the terminal appears.
+    public static func refresh() {
+        isEnabled = KeyboardPrefs.shared.hapticsEnabled
+        if isEnabled { generator.prepare() }
     }
 
     /// Feedback for a single deliberate key press.
@@ -31,7 +42,7 @@ public enum KeyboardHaptics {
     /// Deliberately not called from auto-repeat ticks — a held backspace firing this
     /// eleven times a second reads as a malfunction rather than as feedback.
     public static func keyPress() {
-        guard KeyboardPrefs.shared.hapticsEnabled else { return }
+        guard isEnabled else { return }
         UIDevice.current.playInputClick()
         generator.impactOccurred(intensity: 0.55)
     }

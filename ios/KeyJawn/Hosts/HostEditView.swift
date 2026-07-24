@@ -47,6 +47,16 @@ struct HostEditView: View {
         UInt16(port.trimmingCharacters(in: .whitespaces)).flatMap { $0 > 0 ? $0 : nil }
     }
 
+    /// Built from what has been typed so far, so a non-default port shows up as `-p`
+    /// in the instructions rather than sending the user to scan port 22.
+    private var scanCommand: String {
+        let trimmedHost = hostname.trimmingCharacters(in: .whitespaces)
+        return HostConfig.hostKeyScanCommand(
+            hostname: trimmedHost.isEmpty ? "<hostname>" : trimmedHost,
+            port: parsedPort ?? 22
+        )
+    }
+
     private var isValid: Bool {
         !label.trimmingCharacters(in: .whitespaces).isEmpty &&
         !hostname.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -95,11 +105,11 @@ struct HostEditView: View {
                 } footer: {
                     let trimmed = hostPublicKey.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !trimmed.isEmpty && !isHostKeyValid {
-                        Text("Invalid key format. Paste the full line from: ssh-keyscan -t ed25519 <hostname>")
+                        Text("Invalid key format. Paste the full line from: \(scanCommand)")
                             .font(.caption)
                             .foregroundStyle(.red)
                     } else {
-                        Text("Paste output of: ssh-keyscan -t ed25519 <hostname>\nIf omitted, the server's key is not verified and the connection can be intercepted.")
+                        Text("Paste output of: \(scanCommand)\nIf omitted, the server's key is not verified and the connection can be intercepted.")
                             .font(.caption)
                     }
                 }

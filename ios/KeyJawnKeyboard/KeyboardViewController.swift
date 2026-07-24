@@ -70,7 +70,7 @@ public final class KeyboardViewController: UIInputViewController {
             theme = current
             applyTheme()
         }
-        KeyboardHaptics.prepare()
+        KeyboardHaptics.refresh()
     }
 
     public override func viewWillLayoutSubviews() {
@@ -414,6 +414,21 @@ extension KeyboardViewController: NumberRowDelegate {
 extension KeyboardViewController: QwertyKeyboardDelegate {
 
     public func keyboard(_ keyboard: QwertyKeyboardView, insertText text: String) {
+        // Apply an armed or locked Ctrl modifier to letters typed on the QWERTY grid.
+        //
+        // The modifier is armed by long-pressing ^C in the extra row, and without this
+        // the arming had nowhere to land: letters went straight to the proxy, so
+        // Ctrl+D, Ctrl+Z, Ctrl+L and Ctrl+A/E worked in the in-app terminal and not in
+        // the keyboard extension, which is the surface the product is actually for.
+        // Restricted to single characters so a multi-character insertion is not
+        // collapsed into one control byte.
+        if extraRow.ctrl.isActive,
+           text.count == 1,
+           let control = ANSISequence.text(for: .character(text), ctrlActive: true) {
+            textDocumentProxy.insertText(control)
+            extraRow.ctrl.consume()
+            return
+        }
         textDocumentProxy.insertText(text)
     }
 
