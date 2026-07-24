@@ -75,7 +75,10 @@ struct HostTerminalView: View {
         .alert("Host key not verified", isPresented: $showingKeyWarning) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("No host key is configured for \(host.label). The server's identity cannot be confirmed, making this connection susceptible to interception.\n\nAdd a host key in host settings to secure future connections.")
+            // The previous wording pointed at "host settings", which did not exist —
+            // there was no edit path at all. Name the gesture that now does, and let
+            // HostConfig build the scan command so a non-default port is carried.
+            Text("No host key is configured for \(host.label). The server's identity cannot be confirmed, making this connection susceptible to interception.\n\nTo fix it, run: \(host.hostKeyScanCommand)\n\nThen go back to Hosts, swipe right on \(host.label), tap Edit, and paste the output into Host key. It takes effect on the next connection.")
         }
     }
 

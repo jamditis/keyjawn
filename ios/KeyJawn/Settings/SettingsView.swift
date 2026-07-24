@@ -1,9 +1,16 @@
 import SwiftUI
+import KeyJawnKit
 
 struct SettingsView: View {
-    @AppStorage("theme") private var theme = "dark"
-    @AppStorage("hapticEnabled") private var hapticEnabled = true
-    @AppStorage("autocorrectEnabled") private var autocorrectEnabled = false
+
+    // Backed by KeyboardPrefs, which writes the shared App Group suite. These used to
+    // be @AppStorage properties in the app's own sandbox under keys nothing ever read:
+    // the theme picker changed nothing, the haptics switch changed nothing, and the
+    // autocorrect switch was not wired to any code at all. Every control here now
+    // changes what the keyboard does.
+    @State private var theme = KeyboardPrefs.shared.theme
+    @State private var hapticsEnabled = KeyboardPrefs.shared.hapticsEnabled
+    @State private var terminalArrowKeys = KeyboardPrefs.shared.terminalArrowKeys
 
     var body: some View {
         NavigationStack {
@@ -14,27 +21,64 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("Keyboard") {
-                    Toggle("Haptic feedback", isOn: $hapticEnabled)
-                    Toggle("Autocorrect", isOn: $autocorrectEnabled)
+                Section {
+                    Toggle("Key press feedback", isOn: $hapticsEnabled)
+                        .onChange(of: hapticsEnabled) { _, newValue in
+                            KeyboardPrefs.shared.hapticsEnabled = newValue
+                        }
+                } header: {
+                    Text("Keyboard")
+                } footer: {
+                    Text("The system's own keyboard feedback settings still apply on top of this.")
+                        .font(.caption)
                 }
 
-                Section("Appearance") {
+                Section {
+                    Toggle("Terminal arrow keys", isOn: $terminalArrowKeys)
+                        .onChange(of: terminalArrowKeys) { _, newValue in
+                            KeyboardPrefs.shared.terminalArrowKeys = newValue
+                        }
+                } header: {
+                    Text("Extra row")
+                } footer: {
+                    Text(terminalArrowKeys
+                         ? "Arrows send escape codes, so up and down reach shell history in a terminal app."
+                         : "Left and right move the text cursor. Up and down have no effect with this off.")
+                        .font(.caption)
+                }
+
+                Section {
                     Picker("Theme", selection: $theme) {
-                        Text("Dark").tag("dark")
-                        Text("Light").tag("light")
-                        Text("OLED").tag("oled")
-                        Text("Terminal").tag("terminal")
+                        ForEach(KeyboardTheme.allCases, id: \.self) { option in
+                            Text(option.displayName).tag(option)
+                        }
                     }
+                    .onChange(of: theme) { _, newValue in
+                        KeyboardPrefs.shared.theme = newValue
+                    }
+                } header: {
+                    Text("Appearance")
+                } footer: {
+                    Text("Applies to the KeyJawn keyboard. The keyboard needs Full Access to read this setting: Settings → General → Keyboard → Keyboards → KeyJawn.")
+                        .font(.caption)
                 }
 
                 Section("About") {
-                    LabeledContent("Version", value: "1.0.0")
+                    LabeledContent("Version", value: Self.versionString)
                     Link("Privacy policy", destination: URL(string: "https://keyjawn.amditis.tech/privacy")!)
                     Link("Manual", destination: URL(string: "https://keyjawn.amditis.tech/manual")!)
                 }
             }
             .navigationTitle("Settings")
         }
+    }
+
+    /// Read from the bundle rather than typed in by hand, so it cannot drift from the
+    /// build the user is actually running.
+    private static var versionString: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = info?["CFBundleVersion"] as? String ?? "—"
+        return "\(short) (\(build))"
     }
 }

@@ -15,8 +15,10 @@ public final class NumberRowView: UIView {
 
     public weak var delegate: NumberRowDelegate?
 
-    private static let bg     = UIColor(red: 0.145, green: 0.145, blue: 0.145, alpha: 1)
-    private static let keyBg  = UIColor(white: 0.27, alpha: 1)
+    /// Colours for the row. This used to be two hardcoded dark greys, which left a
+    /// band of the wrong colour across the middle of the keyboard under every theme
+    /// but Dark. Set it through ``applyTheme(_:)`` so the existing keys recolour.
+    public private(set) var theme: KeyboardTheme = .dark
 
     private let labels = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
     private var buttons: [UIButton] = []
@@ -40,13 +42,11 @@ public final class NumberRowView: UIView {
     // MARK: - Setup
 
     private func setup() {
-        backgroundColor = Self.bg
+        backgroundColor = theme.keyboardBg
         for label in labels {
             let btn = UIButton(type: .custom)
             btn.setTitle(label, for: .normal)
-            btn.setTitleColor(.white, for: .normal)
             btn.titleLabel?.font = UIFont.monospacedSystemFont(ofSize: 16, weight: .light)
-            btn.backgroundColor = Self.keyBg
             btn.layer.cornerRadius = cornerRadius
             btn.layer.masksToBounds = true
             btn.addTarget(self, action: #selector(digitTapped(_:)), for: .touchUpInside)
@@ -57,6 +57,23 @@ public final class NumberRowView: UIView {
 
             addSubview(btn)
             buttons.append(btn)
+        }
+        applyThemeColors()
+    }
+
+    // MARK: - Theme
+
+    public func applyTheme(_ theme: KeyboardTheme) {
+        self.theme = theme
+        applyThemeColors()
+    }
+
+    private func applyThemeColors() {
+        backgroundColor = theme.keyboardBg
+        for btn in buttons {
+            btn.backgroundColor = theme.keyBg
+            btn.setTitleColor(theme.keyText, for: .normal)
+            btn.setTitleColor(theme.keyText.withAlphaComponent(0.4), for: .highlighted)
         }
     }
 
@@ -85,6 +102,7 @@ public final class NumberRowView: UIView {
 
     @objc private func digitTapped(_ sender: UIButton) {
         guard let label = sender.title(for: .normal) else { return }
+        KeyboardHaptics.keyPress()
         delegate?.numberRow(self, insertText: label)
     }
 
@@ -94,6 +112,7 @@ public final class NumberRowView: UIView {
               let label = btn.title(for: .normal),
               let shifted = AltKeyMappings.numberShifts[label]
         else { return }
+        KeyboardHaptics.keyPress()
         delegate?.numberRow(self, insertText: shifted)
     }
 }

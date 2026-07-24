@@ -13,8 +13,32 @@ public final class UploadPanel: UIView {
     private let cellID = "HostCell"
     private let statusLabel = UILabel()
 
+    private let theme: KeyboardTheme
+
     public var hosts: [HostConfig] = [] { didSet { tableView.reloadData() } }
     public var statusMessage: String = "" { didSet { statusLabel.text = statusMessage } }
+
+    /// What the empty host list means, which is not always "you have no hosts".
+    ///
+    /// A keyboard extension without Full Access cannot open the App Group at all, so
+    /// the host list the main app mirrored there reads back empty. Telling those users
+    /// to add a host in the main app sends them to re-add hosts they already have;
+    /// this distinguishes the two cases so the panel names the actual blocker.
+    public enum EmptyReason {
+        case noHostsConfigured
+        case fullAccessRequired
+
+        var message: String {
+            switch self {
+            case .noHostsConfigured:
+                return "No hosts configured. Add one in the main app."
+            case .fullAccessRequired:
+                return "Turn on Full Access to reach your hosts: Settings → General → Keyboard → Keyboards → KeyJawn."
+            }
+        }
+    }
+
+    public var emptyReason: EmptyReason = .noHostsConfigured { didSet { tableView.reloadData() } }
 
     /// Gates host taps while the upload image is still being prepared off the
     /// main actor, so a tap before the data exists is a no-op instead of a crash.
@@ -23,18 +47,16 @@ public final class UploadPanel: UIView {
         didSet { tableView.alpha = isUploadEnabled ? 1.0 : 0.5 }
     }
 
-    public override init(frame: CGRect) {
-        super.init(frame: frame)
+    public init(theme: KeyboardTheme = .dark) {
+        self.theme = theme
+        super.init(frame: .zero)
         setup()
     }
 
-    public required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setup()
-    }
+    public required init?(coder: NSCoder) { fatalError("use init(theme:)") }
 
     private func setup() {
-        backgroundColor = UIColor(red: 0.13, green: 0.13, blue: 0.13, alpha: 0.97)
+        backgroundColor = theme.panelBg
         layer.cornerRadius = 12
         layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         clipsToBounds = true
@@ -43,30 +65,32 @@ public final class UploadPanel: UIView {
         toolbar.translatesAutoresizingMaskIntoConstraints = false
         addSubview(toolbar)
 
-        titleLabel.text = "SCP Upload"
+        titleLabel.text = "SCP upload"
         titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = theme.panelText
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         toolbar.addSubview(titleLabel)
 
         cancelButton.setTitle("Cancel", for: .normal)
         cancelButton.titleLabel?.font = .systemFont(ofSize: 15)
-        cancelButton.setTitleColor(.systemBlue, for: .normal)
+        cancelButton.setTitleColor(theme.accent, for: .normal)
         cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
         toolbar.addSubview(cancelButton)
 
         let sep = UIView()
-        sep.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+        sep.backgroundColor = theme.panelSeparator
         sep.translatesAutoresizingMaskIntoConstraints = false
         toolbar.addSubview(sep)
 
         // Status
         statusLabel.text = ""
         statusLabel.font = .systemFont(ofSize: 12)
-        statusLabel.textColor = UIColor.white.withAlphaComponent(0.6)
+        statusLabel.textColor = theme.panelSecondaryText
         statusLabel.textAlignment = .center
-        statusLabel.numberOfLines = 2
+        // The Full Access instruction is a full sentence with a settings path in it,
+        // so give the status line room rather than truncating the fix.
+        statusLabel.numberOfLines = 3
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(statusLabel)
 
@@ -119,30 +143,37 @@ extension UploadPanel: UITableViewDataSource, UITableViewDelegate {
         let cell = tableView.dequeueReusableCell(withIdentifier: cellID, for: indexPath)
         var config = cell.defaultContentConfiguration()
         if hosts.isEmpty {
-            config.text = "No hosts configured. Add one in the main app."
-            config.textProperties.color = UIColor.white.withAlphaComponent(0.4)
+            config.text = emptyReason.message
+            config.textProperties.numberOfLines = 0
+            config.textProperties.color = theme.panelSecondaryText
             cell.selectionStyle = .none
         } else {
             let host = hosts[indexPath.row]
             config.text = host.label.isEmpty ? host.hostname : host.label
             config.secondaryText = "\(host.username)@\(host.hostname):\(host.uploadPath)"
-            config.textProperties.color = .white
-            config.secondaryTextProperties.color = UIColor.white.withAlphaComponent(0.5)
+            config.textProperties.color = theme.panelText
+            config.secondaryTextProperties.color = theme.panelSecondaryText
             cell.selectionStyle = .default
         }
         cell.contentConfiguration = config
         cell.backgroundColor = .clear
         let bg = UIView()
-        bg.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+        bg.backgroundColor = theme.panelSelection
         cell.selectedBackgroundView = bg
         return cell
     }
 
-    public func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat { 52 }
+    public func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        // The Full Access message wraps; let its row grow instead of clipping it.
+        hosts.isEmpty ? UITableView.automaticDimension : 52
+    }
+
+    public func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat { 52 }
 
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         guard isUploadEnabled, !hosts.isEmpty else { return }
+        KeyboardHaptics.keyPress()
         onUpload?(hosts[indexPath.row])
     }
 }

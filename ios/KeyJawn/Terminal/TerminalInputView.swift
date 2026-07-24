@@ -29,15 +29,39 @@ final class TerminalInputView: UITextView {
         autocorrectionType       = .no
         autocapitalizationType   = .none
         spellCheckingType        = .no
+        // Smart substitution turns a typed "--flag" into an en dash and quotes into
+        // curly ones, which reach the shell as characters it does not understand.
+        smartQuotesType          = .no
+        smartDashesType          = .no
+        smartInsertDeleteType    = .no
 
         extraRow.frame     = CGRect(x: 0, y: 0, width: 0, height: 52)
         extraRow.delegate  = self
+        // Same theme the keyboard extension uses, so the row looks like one component
+        // wherever it appears rather than defaulting to dark here and themed there.
+        extraRow.applyTheme(KeyboardPrefs.shared.theme)
+        KeyboardHaptics.refresh()
         inputAccessoryView = extraRow
     }
 
     // MARK: UIKeyInput — intercept before text hits the text view
 
     override func insertText(_ text: String) {
+        // Apply an armed or locked Ctrl modifier to ordinary typed characters.
+        //
+        // The modifier only ever reached the extra row's own keys, so the three-state
+        // Ctrl machine could arm but the combination it exists for — Ctrl and a letter
+        // — never happened: no Ctrl+D to close stdin, no Ctrl+Z to suspend, no Ctrl+L
+        // to clear, no Ctrl+A or Ctrl+E to jump the line. Restricted to single
+        // characters so a multi-character insertion (a paste, a dictation result) is
+        // not silently collapsed into one control byte.
+        if extraRow.ctrl.isActive,
+           text.count == 1,
+           let bytes = ANSISequence.bytes(for: .character(text), ctrlActive: true) {
+            onRawInput?(bytes)
+            extraRow.ctrl.consume()
+            return
+        }
         onRawInput?(Array(text.utf8))
         // Intentionally no super call — keeps UITextView text empty.
     }

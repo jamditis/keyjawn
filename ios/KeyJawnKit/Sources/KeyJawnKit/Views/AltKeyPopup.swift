@@ -17,24 +17,26 @@ public final class AltKeyPopup: UIView {
 
     // MARK: - Init
 
-    public init(alts: [String]) {
+    public init(alts: [String], theme: KeyboardTheme = .dark) {
         super.init(frame: .zero)
-        backgroundColor = UIColor(red: 0.15, green: 0.15, blue: 0.15, alpha: 1)
+        backgroundColor = theme.specKeyBg
         layer.cornerRadius = 8
         layer.masksToBounds = true
+        layer.borderWidth = 1
+        layer.borderColor = theme.panelSeparator.cgColor
 
-        buildButtons(alts: alts)
+        buildButtons(alts: alts, theme: theme)
     }
 
-    required init?(coder: NSCoder) { fatalError("use init(alts:)") }
+    required init?(coder: NSCoder) { fatalError("use init(alts:theme:)") }
 
     // MARK: - Build
 
-    private func buildButtons(alts: [String]) {
+    private func buildButtons(alts: [String], theme: KeyboardTheme) {
         for (index, alt) in alts.enumerated() {
             let btn = UIButton(type: .system)
             btn.setTitle(alt, for: .normal)
-            btn.setTitleColor(.white, for: .normal)
+            btn.setTitleColor(theme.keyText, for: .normal)
             btn.titleLabel?.font = UIFont.monospacedSystemFont(ofSize: 16, weight: .regular)
             btn.tag = index
             btn.addTarget(self, action: #selector(altTapped(_:)), for: .touchUpInside)

@@ -52,7 +52,15 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Configuration/KeyJawn.entitlements
         DEVELOPMENT_TEAM: 5624SD289G
         CODE_SIGN_STYLE: Automatic
-        CURRENT_PROJECT_VERSION: 1
+        # THE ONLY PLACE TO BUMP THE BUILD NUMBER.
+        # The Info.plist values below interpolate these, and the keyboard extension
+        # target mirrors them, so both bundles stay in lockstep — App Store Connect
+        # rejects an upload whose extension version does not match the app's.
+        # Previously the plists carried literal "1.0.0"/"1" and won over these
+        # settings, so bumping CURRENT_PROJECT_VERSION as the release checklist
+        # instructed produced a build that still identified as build 1, which the
+        # store rejects as a duplicate.
+        CURRENT_PROJECT_VERSION: 8
         MARKETING_VERSION: "1.0.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -62,13 +70,17 @@ targets:
           CODE_SIGN_STYLE: Manual
           CODE_SIGN_IDENTITY: "iPhone Distribution"
           PROVISIONING_PROFILE_SPECIFIER: "KeyJawn AppStore"
+    scheme:
+      testTargets:
+        - KeyJawnKitTests
+      gatherCoverageData: true
     info:
       path: KeyJawn/Info.plist
       properties:
         CFBundleName: KeyJawn
         CFBundleDisplayName: KeyJawn
-        CFBundleShortVersionString: "1.0.0"
-        CFBundleVersion: "1"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSRequiresIPhoneOS: true
         UILaunchScreen:
           UIColorName: LaunchScreenBackground
@@ -113,6 +125,11 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Configuration/KeyJawnKeyboard.entitlements
         DEVELOPMENT_TEAM: 5624SD289G
         CODE_SIGN_STYLE: Automatic
+        # Must match the app target above. The extension had no version settings at
+        # all and hardcoded them in its plist, so it could silently ship a version
+        # that disagreed with the app's — an upload rejection at the last step.
+        CURRENT_PROJECT_VERSION: 8
+        MARKETING_VERSION: "1.0.0"
       configs:
         Release:
           CODE_SIGN_STYLE: Manual
@@ -122,8 +139,8 @@ targets:
       path: KeyJawnKeyboard/Info.plist
       properties:
         CFBundleDisplayName: KeyJawn Keyboard
-        CFBundleShortVersionString: "1.0.0"
-        CFBundleVersion: "1"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSExtension:
           NSExtensionAttributes:
             IsASCIICapable: false
@@ -132,3 +149,28 @@ targets:
             RequestsOpenAccess: true
           NSExtensionPointIdentifier: com.apple.keyboard-service
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+
+  # Logic tests for KeyJawnKit. Hosted by the app because the package links UIKit, so
+  # they need a simulator runtime rather than a plain `swift test`.
+  #
+  #   xcodebuild test -project KeyJawn.xcodeproj -scheme KeyJawn \
+  #     -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+  KeyJawnKitTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tests
+    dependencies:
+      - target: KeyJawn
+      - package: KeyJawnKit
+        product: KeyJawnKit
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.keyjawn.tests
+        GENERATE_INFOPLIST_FILE: true
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/KeyJawn.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KeyJawn"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 5624SD289G

@@ -27,8 +27,13 @@ enum CitadelSCPUploader {
 
     /// Uploads `imageData` to `host` via SFTP. Returns the remote file path on success.
     static func upload(imageData: Data, to host: HostConfig, privateKeyData: Data) async throws -> String {
-        // Build the remote path.
-        let filename = "keyjawn-\(Int(Date().timeIntervalSince1970)).jpg"
+        // Build the remote path. The suffix is there because the timestamp alone has
+        // one-second resolution and the write below truncates: two uploads in the same
+        // second silently overwrote each other, and the path handed back for the first
+        // one then pointed at the second one's image.
+        let stamp = Int(Date().timeIntervalSince1970)
+        let suffix = UUID().uuidString.prefix(6).lowercased()
+        let filename = "keyjawn-\(stamp)-\(suffix).jpg"
         let base = host.uploadPath.hasSuffix("/") ? host.uploadPath : host.uploadPath + "/"
         let remotePath = "\(base)\(filename)"
 
