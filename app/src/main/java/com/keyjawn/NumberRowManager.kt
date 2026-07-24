@@ -1,5 +1,6 @@
 package com.keyjawn
 
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.inputmethod.InputConnection
 import android.widget.Button
@@ -10,7 +11,8 @@ class NumberRowManager(
     private val view: View,
     private val keySender: KeySender,
     private val inputConnectionProvider: () -> InputConnection?,
-    private val themeManager: ThemeManager? = null
+    private val themeManager: ThemeManager? = null,
+    private val appPrefs: AppPrefs? = null
 ) {
 
     init {
@@ -30,16 +32,26 @@ class NumberRowManager(
     private fun wireNumber(buttonId: Int, digit: String) {
         val button = view.findViewById<Button>(buttonId)
         button.setOnClickListener {
+            // The number row was the one key group with no tactile response,
+            // which reads as a dead key next to the QWERTY grid below it.
+            performHaptic(HapticFeedbackConstants.KEYBOARD_TAP)
             val ic = inputConnectionProvider() ?: return@setOnClickListener
             keySender.sendChar(ic, digit)
         }
         val alts = AltKeyMappings.getAlts(digit)
         if (alts != null && alts.size == 1) {
             button.setOnLongClickListener {
+                performHaptic(HapticFeedbackConstants.LONG_PRESS)
                 val ic = inputConnectionProvider() ?: return@setOnLongClickListener true
                 keySender.sendText(ic, alts[0])
                 true
             }
+        }
+    }
+
+    private fun performHaptic(type: Int) {
+        if (appPrefs?.isHapticEnabled() != false) {
+            view.performHapticFeedback(type)
         }
     }
 

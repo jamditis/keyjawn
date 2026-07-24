@@ -21,7 +21,8 @@ class MenuPanel(
     private val onShowTooltip: (String) -> Unit,
     private val currentPackageProvider: () -> String,
     private val onBottomPaddingChanged: () -> Unit = {},
-    private val onAutocorrectChanged: () -> Unit = {}
+    private val onAutocorrectChanged: () -> Unit = {},
+    private val onTypingPrefsChanged: () -> Unit = {}
 ) {
 
     private val context: Context get() = panel.context
@@ -137,6 +138,30 @@ class MenuPanel(
         addToggleRow("Tooltips", fullOnly = true,
             isOn = { appPrefs.isTooltipsEnabled() },
             onToggle = { appPrefs.setTooltipsEnabled(!appPrefs.isTooltipsEnabled()); populateMenu() }
+        )
+
+        addSectionHeader("Typing")
+        addToggleRow("Instant key output", fullOnly = false,
+            isOn = { appPrefs.isFastKeyOutput() },
+            onToggle = {
+                appPrefs.setFastKeyOutput(!appPrefs.isFastKeyOutput())
+                onTypingPrefsChanged()
+                populateMenu()
+            }
+        )
+
+        addSectionHeader("Voice")
+        addToggleRow("Continuous dictation", fullOnly = false,
+            isOn = { appPrefs.isVoiceContinuous() },
+            onToggle = { appPrefs.setVoiceContinuous(!appPrefs.isVoiceContinuous()); populateMenu() }
+        )
+        addToggleRow("Live transcription", fullOnly = false,
+            isOn = { appPrefs.isVoiceLivePreview() },
+            onToggle = { appPrefs.setVoiceLivePreview(!appPrefs.isVoiceLivePreview()); populateMenu() }
+        )
+        addToggleRow("Spoken punctuation", fullOnly = false,
+            isOn = { appPrefs.isVoiceCommands() },
+            onToggle = { appPrefs.setVoiceCommands(!appPrefs.isVoiceCommands()); populateMenu() }
         )
     }
 

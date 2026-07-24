@@ -35,6 +35,16 @@
     </HorizontalScrollView>
 
     <ImageButton
+        android:id="@+id/voice_cancel"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="4dp"
+        android:background="@drawable/key_bg"
+        android:src="@drawable/ic_voice_cancel"
+        android:scaleType="center"
+        android:contentDescription="Discard voice input" />
+
+    <ImageButton
         android:id="@+id/voice_stop"
         android:layout_width="36dp"
         android:layout_height="36dp"
@@ -42,5 +52,5 @@
         android:background="@drawable/key_bg"
         android:src="@drawable/ic_stop"
         android:scaleType="center"
-        android:contentDescription="Stop voice input" />
+        android:contentDescription="Stop voice input and keep text" />
 </LinearLayout>

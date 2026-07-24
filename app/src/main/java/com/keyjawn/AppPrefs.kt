@@ -7,6 +7,22 @@ class AppPrefs(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("keyjawn_app_prefs", Context.MODE_PRIVATE)
 
+    // Haptic feedback is read once per keystroke, per cursor step, and per
+    // repeat tick -- the hottest pref in the app. Cache it in a field and keep
+    // the cache honest with a change listener so a write from any AppPrefs
+    // instance (the menu panel, the settings screen) is picked up without every
+    // call site paying a SharedPreferences lookup on the input path.
+    private var hapticCache: Boolean = prefs.getBoolean(KEY_HAPTIC, true)
+
+    private val changeListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
+            if (key == KEY_HAPTIC) hapticCache = sp.getBoolean(KEY_HAPTIC, true)
+        }
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(changeListener)
+    }
+
     fun isAutocorrectEnabled(packageName: String): Boolean {
         return prefs.getBoolean("ac_$packageName", false)
     }
@@ -57,12 +73,54 @@ class AppPrefs(context: Context) {
         prefs.edit().putBoolean("tooltips_enabled", enabled).apply()
     }
 
-    fun isHapticEnabled(): Boolean {
-        return prefs.getBoolean("haptic_enabled", true)
-    }
+    fun isHapticEnabled(): Boolean = hapticCache
 
     fun setHapticEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("haptic_enabled", enabled).apply()
+        hapticCache = enabled
+        prefs.edit().putBoolean(KEY_HAPTIC, enabled).apply()
+    }
+
+    /**
+     * Emit a character on finger-down instead of finger-up. Removes the
+     * press-to-release delay from every keystroke and lets one key fire while
+     * the previous one is still held (rollover), which is what makes fast typing
+     * feel connected. The cost is that sliding off a key no longer aborts it.
+     */
+    fun isFastKeyOutput(): Boolean = prefs.getBoolean("fast_key_output", true)
+
+    fun setFastKeyOutput(enabled: Boolean) {
+        prefs.edit().putBoolean("fast_key_output", enabled).apply()
+    }
+
+    /**
+     * Keep the microphone armed between utterances so a whole prompt can be
+     * dictated in natural sentences instead of one tap per phrase.
+     */
+    fun isVoiceContinuous(): Boolean = prefs.getBoolean("voice_continuous", true)
+
+    fun setVoiceContinuous(enabled: Boolean) {
+        prefs.edit().putBoolean("voice_continuous", enabled).apply()
+    }
+
+    /**
+     * Show the in-flight transcription in the editor as composing text while the
+     * user is still speaking, rather than only after the utterance lands.
+     */
+    fun isVoiceLivePreview(): Boolean = prefs.getBoolean("voice_live_preview", true)
+
+    fun setVoiceLivePreview(enabled: Boolean) {
+        prefs.edit().putBoolean("voice_live_preview", enabled).apply()
+    }
+
+    /**
+     * Turn spoken words like "new line" and "comma" into the characters they
+     * name. Off by default: dictating a prompt *about* adding a new line must
+     * not silently become a line break.
+     */
+    fun isVoiceCommands(): Boolean = prefs.getBoolean("voice_commands", false)
+
+    fun setVoiceCommands(enabled: Boolean) {
+        prefs.edit().putBoolean("voice_commands", enabled).apply()
     }
 
     /** Bottom padding in dp (0-64). Default 0 — no extra padding. */
@@ -75,6 +133,8 @@ class AppPrefs(context: Context) {
     }
 
     companion object {
+        private const val KEY_HAPTIC = "haptic_enabled"
+
         val QUICK_KEY_OPTIONS = listOf(
             "/", ".", ",", "?", "!", "\u2014", "'", "\"", ":", ";",
             "|", "~", "`", "\\", "@", "#", "$", "_", "&", "-", "+", "=", "^", "%"
