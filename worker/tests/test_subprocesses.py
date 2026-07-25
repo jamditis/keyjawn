@@ -95,19 +95,24 @@ def _tree_script(pid_file: Path, ignore_term: bool = False) -> str:
 
 def _stubborn_redirected_child_script(pid_file: Path, parent_sleeps: bool) -> str:
     child_setup = (
-        "import signal,time;"
+        "import json,os,signal,time;"
         "signal.signal(signal.SIGTERM, signal.SIG_IGN);"
+        f"open({str(pid_file)!r},'w').write("
+        "json.dumps({'parent':os.getppid(),'child':os.getpid()}));"
         "time.sleep(60)"
     )
     parent_tail = "time.sleep(60)" if parent_sleeps else ""
     return (
-        "import json,os,subprocess,sys,time;"
+        "import os,subprocess,sys,time\n"
         f"child=subprocess.Popen([sys.executable,'-c',{child_setup!r}],"
         "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,"
-        "stderr=subprocess.DEVNULL);"
-        f"open({str(pid_file)!r},'w').write("
-        "json.dumps({'parent':os.getpid(),'child':child.pid}));"
-        f"{parent_tail}"
+        "stderr=subprocess.DEVNULL)\n"
+        "deadline=time.monotonic()+3\n"
+        f"while not os.path.exists({str(pid_file)!r}):\n"
+        "    if time.monotonic() >= deadline:\n"
+        "        raise RuntimeError('child did not become ready')\n"
+        "    time.sleep(0.005)\n"
+        f"{parent_tail}\n"
     )
 
 
