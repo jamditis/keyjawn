@@ -1,10 +1,16 @@
 import XCTest
 @testable import KeyJawnKit
+@testable import KeyJawn
 
 /// `HostConfig` is the wire format between the app and the keyboard extension: the app
 /// encodes it into the shared container and the extension decodes it there. A field
 /// that stops round-tripping shows up as an empty host list in the SCP panel.
 final class HostConfigTests: XCTestCase {
+
+    private let knownHostKey =
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJfkNV4OS33ImTXvorZr72q4v5XhVEQKfvqsxOEJ/XaR"
+    private let differentHostKey =
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKqG9GzSGc2k1eXNzrkfoE2ag8NtdHfV7fMuWq5GxY8a"
 
     private let sample = HostConfig(
         label: "houseofjawn",
@@ -80,5 +86,119 @@ final class HostConfigTests: XCTestCase {
         // every host an existing install has saved.
         XCTAssertEqual(HostConfig.AuthMethod.key.rawValue, "key")
         XCTAssertEqual(HostConfig.AuthMethod.password.rawValue, "password")
+    }
+
+    // MARK: - Host key trust
+
+    func testMissingOrBlankHostKeyIsNotPinned() {
+        XCTAssertFalse(HostConfig(label: "a", hostname: "h", username: "u").hasPinnedHostKey)
+        XCTAssertFalse(
+            HostConfig(
+                label: "a",
+                hostname: "h",
+                username: "u",
+                hostPublicKey: " \n\t "
+            ).hasPinnedHostKey
+        )
+        XCTAssertTrue(
+            HostConfig(
+                label: "a",
+                hostname: "h",
+                username: "u",
+                hostPublicKey: knownHostKey
+            ).hasPinnedHostKey
+        )
+    }
+
+    func testPresentedHostKeyUsesTheOpenSSHSHA256Fingerprint() throws {
+        let presented = try PresentedHostKey(openSSHKey: knownHostKey)
+
+        XCTAssertEqual(presented.openSSHKey, knownHostKey)
+        XCTAssertEqual(
+            presented.fingerprint,
+            "SHA256:BFlAu0a4IRDePBZATpvzbeWrjzjd9h2/tKqd//EWd1Q"
+        )
+    }
+
+    func testAcceptedPresentedKeyCanBePersistedAndMatchesLater() throws {
+        let presented = try PresentedHostKey(openSSHKey: knownHostKey)
+        var host = HostConfig(label: "a", hostname: "h", username: "u")
+
+        host.hostPublicKey = presented.openSSHKey
+
+        XCTAssertTrue(host.hasPinnedHostKey)
+        XCTAssertTrue(try presented.matches(openSSHKey: XCTUnwrap(host.hostPublicKey)))
+    }
+
+    func testPresentedKeyDoesNotMatchAChangedHostKey() throws {
+        let presented = try PresentedHostKey(openSSHKey: knownHostKey)
+
+        XCTAssertFalse(try presented.matches(openSSHKey: differentHostKey))
+    }
+
+    func testPresentedKeyCanonicalizesCommentsAndWhitespace() throws {
+        let presented = try PresentedHostKey(
+            openSSHKey: "  \(knownHostKey) host@example  \n"
+        )
+
+        XCTAssertEqual(presented.openSSHKey, knownHostKey)
+        XCTAssertTrue(try presented.matches(openSSHKey: "\(knownHostKey) another-comment"))
+    }
+
+    func testPresentedKeyRejectsMalformedOpenSSHData() {
+        XCTAssertThrowsError(try PresentedHostKey(openSSHKey: "ssh-ed25519 not-base64"))
+        XCTAssertThrowsError(try PresentedHostKey(openSSHKey: "not-a-key"))
+    }
+
+    func testFirstUseValidatorCapturesTheKeyAndAbortsTheProbe() {
+        let captured = LockedBox<PresentedHostKey?>(nil)
+        let probeClosed = LockedBox(false)
+        let validator = TOFUHostKeyValidator(
+            captureHostKey: { presentedKey in captured.set(presentedKey) },
+            closeProbe: { probeClosed.set(true) }
+        )
+
+        let result = validator.captureAndReject(openSSHKey: knownHostKey)
+
+        XCTAssertEqual(captured.get()?.openSSHKey, knownHostKey)
+        XCTAssertEqual(result, .trustRequired)
+        XCTAssertTrue(probeClosed.get())
+    }
+
+    func testFirstUseValidatorRejectsMalformedKeysWithoutPrompting() {
+        let captured = LockedBox<PresentedHostKey?>(nil)
+        let probeClosed = LockedBox(false)
+        let validator = TOFUHostKeyValidator(
+            captureHostKey: { presentedKey in captured.set(presentedKey) },
+            closeProbe: { probeClosed.set(true) }
+        )
+
+        XCTAssertEqual(
+            validator.captureAndReject(openSSHKey: "ssh-ed25519 not-base64"),
+            .invalidPresentedKey
+        )
+        XCTAssertNil(captured.get())
+        XCTAssertTrue(probeClosed.get())
+    }
+}
+
+private final class LockedBox<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Value
+
+    init(_ value: Value) {
+        self.value = value
+    }
+
+    func get() -> Value {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
+
+    func set(_ value: Value) {
+        lock.lock()
+        self.value = value
+        lock.unlock()
     }
 }

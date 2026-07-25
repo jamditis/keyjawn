@@ -13,6 +13,7 @@
 		30FBF6554FC7A6F5548299C1 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B581E797ADEF1572390A6096 /* KeyboardViewController.swift */; };
 		32EB71B5DE76A94E371D71A0 /* SSHSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23A4B394C56787E8E05B58A1 /* SSHSession.swift */; };
 		35BA636F86655A1E133B3BB2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 98623C822345E60C48D7464D /* Assets.xcassets */; };
+		4F7A9D6C2B8E1A305C9F0D12 /* NIOPosix in Frameworks */ = {isa = PBXBuildFile; productRef = 7B3C8E1D4A6F2095D0B7C314 /* NIOPosix */; };
 		5629A0DC0147C9A855D09E0F /* CitadelSCPUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8E002CDE30BEFD6840ABB3A /* CitadelSCPUploader.swift */; };
 		5A4CC73980A76F9DB9E5A5E2 /* TerminalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF6FA031277F874D263EF7AD /* TerminalViewController.swift */; };
 		5DF5361C7BE43FB5D0F34CA5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */; };
@@ -96,6 +97,7 @@
 				CA738FCA57272508A304C827 /* SwiftTerm in Frameworks */,
 				6350BC0215D4AF763D7B6A6B /* Citadel in Frameworks */,
 				B958AD522581630C2F77C218 /* NIOCore in Frameworks */,
+				4F7A9D6C2B8E1A305C9F0D12 /* NIOPosix in Frameworks */,
 				C2F8D707F7F9F58DA50E2A7F /* NIOSSH in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -238,6 +240,7 @@
 				DBC5B9DCB9FBC1D3E054CE8F /* SwiftTerm */,
 				CB9AD386707E3751FAD823A1 /* Citadel */,
 				9319CFF9722F6941701039BF /* NIOCore */,
+				7B3C8E1D4A6F2095D0B7C314 /* NIOPosix */,
 				974D61CF6F7ADA4824D53DC7 /* NIOSSH */,
 			);
 			productName = KeyJawn;
@@ -665,6 +668,11 @@
 		1BD7D5FD852EEF611DFEF3BA /* KeyJawnKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = KeyJawnKit;
+		};
+		7B3C8E1D4A6F2095D0B7C314 /* NIOPosix */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E40D541DF4CADBAB4CD9CCCB /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOPosix;
 		};
 		9319CFF9722F6941701039BF /* NIOCore */ = {
 			isa = XCSwiftPackageProductDependency;

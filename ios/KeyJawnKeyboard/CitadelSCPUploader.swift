@@ -11,6 +11,8 @@ enum CitadelSCPUploader {
 
     enum UploadError: Error, LocalizedError {
         case noHosts
+        case hostKeyNotTrusted
+        case invalidHostKey
         case invalidPrivateKey
         case connectionFailed(Error)
         case uploadFailed(Error)
@@ -18,6 +20,8 @@ enum CitadelSCPUploader {
         var errorDescription: String? {
             switch self {
             case .noHosts:             return "No hosts configured"
+            case .hostKeyNotTrusted:   return "Open this host in KeyJawn once to verify its SSH host key"
+            case .invalidHostKey:      return "The saved SSH host key is invalid"
             case .invalidPrivateKey:   return "SSH key is invalid"
             case .connectionFailed(let e): return "Connection failed: \(e.localizedDescription)"
             case .uploadFailed(let e):     return "Upload failed: \(e.localizedDescription)"
@@ -27,6 +31,17 @@ enum CitadelSCPUploader {
 
     /// Uploads `imageData` to `host` via SFTP. Returns the remote file path on success.
     static func upload(imageData: Data, to host: HostConfig, privateKeyData: Data) async throws -> String {
+        // The extension cannot present a trust prompt. Refuse before parsing the
+        // private key or opening a socket, and direct the user to the main app.
+        guard host.hasPinnedHostKey else {
+            throw UploadError.hostKeyNotTrusted
+        }
+        guard let hostKeyString = host.hostPublicKey,
+              let hostKey = try? NIOSSHPublicKey(openSSHPublicKey: hostKeyString) else {
+            throw UploadError.invalidHostKey
+        }
+        let validator = SSHHostKeyValidator.trustedKeys(Set([hostKey]))
+
         // Build the remote path. The suffix is there because the timestamp alone has
         // one-second resolution and the write below truncates: two uploads in the same
         // second silently overwrote each other, and the path handed back for the first
@@ -46,16 +61,6 @@ enum CitadelSCPUploader {
         }
 
         let authMethod = SSHAuthenticationMethod.ed25519(username: host.username, privateKey: privateKey)
-
-        // Resolve host key validator.
-        let validator: SSHHostKeyValidator
-        if let hkString = host.hostPublicKey,
-           !hkString.isEmpty,
-           let hk = try? NIOSSHPublicKey(openSSHPublicKey: hkString) {
-            validator = .trustedKeys(Set([hk]))
-        } else {
-            validator = .acceptAnything()
-        }
 
         // Connect.
         let client: SSHClient

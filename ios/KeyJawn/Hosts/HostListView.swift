@@ -104,7 +104,7 @@ struct HostRow: View {
                     .fontWeight(.medium)
                 // Surface the unverified state before the user connects, rather than
                 // only in a toolbar button once the session is already live.
-                if host.hostPublicKey == nil {
+                if !host.hasPinnedHostKey {
                     Image(systemName: "shield.slash")
                         .font(.caption2)
                         .foregroundStyle(.orange)

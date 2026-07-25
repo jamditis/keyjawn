@@ -1,6 +1,7 @@
 import Foundation
 import Citadel
 import NIOCore
+import NIOPosix
 @preconcurrency import NIOSSH
 import KeyJawnKit
 
@@ -23,14 +24,14 @@ final class SSHSession: ObservableObject {
     enum ConnectionState: Equatable {
         case disconnected
         case connecting
+        case awaitingHostKey
         case connected
         case failed(String)
     }
 
     @Published private(set) var connectionState: ConnectionState = .disconnected
-    /// True when the current (or most recent) connection used a pinned host key.
-    /// False when `.acceptAnything()` was used — the server's identity is unverified.
-    @Published private(set) var isHostKeyVerified: Bool = false
+    /// The key awaiting an explicit first-use decision in the main app.
+    @Published private(set) var pendingHostKey: PresentedHostKey?
 
     /// Called on the main actor each time SSH output arrives.
     var onData: (([UInt8]) -> Void)?
@@ -38,6 +39,8 @@ final class SSHSession: ObservableObject {
     private var sessionTask: Task<Void, Never>?
     private var inputContinuation: AsyncStream<[UInt8]>.Continuation?
     private var resizeContinuation: AsyncStream<(Int, Int)>.Continuation?
+    private var pendingAuthenticationMethod: SSHAuthenticationMethod?
+    private var connectionGeneration = UUID()
 
     // MARK: - Connect
 
@@ -62,32 +65,76 @@ final class SSHSession: ObservableObject {
         // `.failed`, so retrying after an error silently did nothing unless the caller
         // happened to call `disconnect()` first.
         switch connectionState {
-        case .connecting, .connected: return
+        case .connecting, .awaitingHostKey, .connected: return
         case .disconnected, .failed: break
         }
+        let generation = UUID()
+        connectionGeneration = generation
+        pendingAuthenticationMethod = authenticationMethod
+        pendingHostKey = nil
         connectionState = .connecting
-        isHostKeyVerified = host.hostPublicKey != nil
 
         // Coalesce SSH output off-main and hand it to the terminal one batch per
         // main-actor hop, instead of one Task and one array copy per network
         // chunk (see SSHOutputCoalescer).
         let coalescer = SSHOutputCoalescer { [weak self] bytes in self?.onData?(bytes) }
         let onStateChange: @Sendable (ConnectionState) -> Void = { [weak self] state in
-            Task { @MainActor in self?.connectionState = state }
+            Task { @MainActor in
+                guard let self, self.connectionGeneration == generation else { return }
+                self.connectionState = state
+                switch state {
+                case .connected, .disconnected, .failed:
+                    self.pendingAuthenticationMethod = nil
+                case .connecting, .awaitingHostKey:
+                    break
+                }
+            }
+        }
+        let captureHostKey: TOFUHostKeyValidator.CaptureHostKey = {
+            [weak self] presentedKey in
+            Task { @MainActor in
+                guard let self, self.connectionGeneration == generation else { return }
+                self.pendingHostKey = presentedKey
+            }
         }
 
+        let pinnedHostKey: NIOSSHPublicKey?
+        do {
+            pinnedHostKey = try hostPublicKey(from: host)
+        } catch {
+            pendingAuthenticationMethod = nil
+            connectionState = .failed("Saved host key is invalid. Edit the host and re-enter the key from ssh-keyscan.")
+            return
+        }
+
+        guard let pinnedHostKey else {
+            sessionTask = Task.detached {
+                [host, authenticationMethod, captureHostKey, onStateChange] in
+                do {
+                    try await probeFirstUseHostKey(
+                        host: host,
+                        authenticationMethod: authenticationMethod,
+                        captureHostKey: captureHostKey
+                    )
+                    onStateChange(.awaitingHostKey)
+                } catch is CancellationError {
+                    onStateChange(.disconnected)
+                } catch {
+                    if Task.isCancelled {
+                        onStateChange(.disconnected)
+                    } else {
+                        onStateChange(.failed(error.localizedDescription))
+                    }
+                }
+            }
+            return
+        }
+
+        let validator = SSHHostKeyValidator.trustedKeys(Set([pinnedHostKey]))
         let (inputStream, inputCont) = AsyncStream<[UInt8]>.makeStream()
         let (resizeStream, resizeCont) = AsyncStream<(Int, Int)>.makeStream()
         inputContinuation = inputCont
         resizeContinuation = resizeCont
-
-        let validator: SSHHostKeyValidator
-        do {
-            validator = try hostPublicKey(from: host).map { .trustedKeys(Set([$0])) } ?? .acceptAnything()
-        } catch {
-            connectionState = .failed("Saved host key is invalid. Edit the host and re-enter the key from ssh-keyscan.")
-            return
-        }
 
         sessionTask = Task.detached { [host, authenticationMethod, inputStream, resizeStream, coalescer, onStateChange, validator] in
             do {
@@ -151,7 +198,16 @@ final class SSHSession: ObservableObject {
             } catch is CancellationError {
                 onStateChange(.disconnected)
             } catch {
-                onStateChange(.failed(error.localizedDescription))
+                if Task.isCancelled {
+                    onStateChange(.disconnected)
+                } else if error is InvalidHostKey {
+                    onStateChange(.failed(
+                        "REMOTE HOST IDENTIFICATION HAS CHANGED for \(host.hostname). "
+                        + "Verify the server before replacing the saved host key."
+                    ))
+                } else {
+                    onStateChange(.failed(error.localizedDescription))
+                }
             }
         }
     }
@@ -167,15 +223,45 @@ final class SSHSession: ObservableObject {
         resizeContinuation?.yield((cols, rows))
     }
 
+    /// Starts a fresh, pinned connection after the caller has durably stored the key.
+    func connectAfterTrust(to host: HostConfig) {
+        guard let presentedKey = pendingHostKey,
+              let storedKey = host.hostPublicKey,
+              (try? presentedKey.matches(openSSHKey: storedKey)) == true,
+              let authenticationMethod = pendingAuthenticationMethod else {
+            rejectPendingHostKey(.invalidPresentedKey)
+            return
+        }
+
+        invalidateCurrentConnection()
+        pendingHostKey = nil
+        connectionState = .disconnected
+        connect(to: host, authenticationMethod: authenticationMethod)
+    }
+
+    func rejectPendingHostKey(_ error: HostKeyTrustError = .rejected) {
+        guard pendingHostKey != nil || connectionState == .awaitingHostKey else { return }
+        invalidateCurrentConnection()
+        pendingHostKey = nil
+        pendingAuthenticationMethod = nil
+        connectionState = .failed(error.localizedDescription)
+    }
+
     func disconnect() {
+        invalidateCurrentConnection()
+        pendingHostKey = nil
+        pendingAuthenticationMethod = nil
+        connectionState = .disconnected
+    }
+
+    private func invalidateCurrentConnection() {
+        connectionGeneration = UUID()
         inputContinuation?.finish()
         resizeContinuation?.finish()
         inputContinuation = nil
         resizeContinuation = nil
         sessionTask?.cancel()
         sessionTask = nil
-        isHostKeyVerified = false
-        connectionState = .disconnected
     }
 }
 
@@ -192,6 +278,186 @@ private func hostPublicKey(from host: HostConfig) throws -> NIOSSHPublicKey? {
 }
 
 private struct HostKeyParseError: Error {}
+
+enum HostKeyTrustError: Error, LocalizedError, Sendable, Equatable {
+    case trustRequired
+    case rejected
+    case storageFailed
+    case invalidPresentedKey
+
+    var errorDescription: String? {
+        switch self {
+        case .trustRequired:
+            return "Host key confirmation is required."
+        case .rejected:
+            return "Host key was not trusted."
+        case .storageFailed:
+            return "The host key could not be saved, so the connection was stopped."
+        case .invalidPresentedKey:
+            return "The server presented an invalid host key."
+        }
+    }
+}
+
+/// Captures a first-use key and rejects the probe before SSH authentication starts.
+///
+/// Holding validation open while a user verifies a fingerprint leaves an SSH
+/// transport pending indefinitely. This delegate always closes and fails the owned
+/// probe after capture. Acceptance is handled by saving the key and opening a fresh
+/// Citadel connection with `.trustedKeys`.
+final class TOFUHostKeyValidator: NIOSSHClientServerAuthenticationDelegate, @unchecked Sendable {
+    typealias CaptureHostKey = @Sendable (PresentedHostKey) -> Void
+
+    private let captureHostKey: CaptureHostKey
+    private let closeProbe: @Sendable () -> Void
+
+    init(
+        captureHostKey: @escaping CaptureHostKey,
+        closeProbe: @escaping @Sendable () -> Void
+    ) {
+        self.captureHostKey = captureHostKey
+        self.closeProbe = closeProbe
+    }
+
+    func captureAndReject(openSSHKey: String) -> HostKeyTrustError {
+        defer { closeProbe() }
+        do {
+            captureHostKey(try PresentedHostKey(openSSHKey: openSSHKey))
+            return .trustRequired
+        } catch {
+            return .invalidPresentedKey
+        }
+    }
+
+    func validateHostKey(
+        hostKey: NIOSSHPublicKey,
+        validationCompletePromise: EventLoopPromise<Void>
+    ) {
+        validationCompletePromise.fail(
+            captureAndReject(openSSHKey: String(openSSHPublicKey: hostKey))
+        )
+    }
+}
+
+/// Opens an SSH transport only long enough to capture its first host key.
+///
+/// The probe owns the NIO channel directly because Citadel does not expose a channel
+/// when host-key validation fails during `SSHClient.connect`. Owning it here lets the
+/// validator close the socket before returning its mandatory rejection, so no
+/// unauthenticated connection remains open while the user reviews the fingerprint.
+private func probeFirstUseHostKey(
+    host: HostConfig,
+    authenticationMethod: SSHAuthenticationMethod,
+    captureHostKey: @escaping TOFUHostKeyValidator.CaptureHostKey
+) async throws {
+    let channelBox = HostKeyProbeChannelBox()
+    let (presentedKeys, presentedKeyContinuation) =
+        AsyncThrowingStream<PresentedHostKey, Error>.makeStream()
+    let validator = TOFUHostKeyValidator(
+        captureHostKey: { presentedKey in
+            captureHostKey(presentedKey)
+            presentedKeyContinuation.yield(presentedKey)
+            presentedKeyContinuation.finish()
+        },
+        closeProbe: {
+            channelBox.close()
+        }
+    )
+    let errorHandler = HostKeyProbeErrorHandler { error in
+        presentedKeyContinuation.finish(throwing: error)
+    }
+
+    try await withTaskCancellationHandler {
+        defer {
+            presentedKeyContinuation.finish()
+            channelBox.close()
+        }
+
+        let bootstrap = ClientBootstrap(group: MultiThreadedEventLoopGroup.singleton)
+            .channelInitializer { channel in
+                channelBox.store(channel)
+                let configuration = SSHClientConfiguration(
+                    // Host-key validation runs before user authentication. The probe
+                    // rejects and closes at that boundary, so this delegate is retained
+                    // for the later pinned connection but never offers a credential here.
+                    userAuthDelegate: authenticationMethod,
+                    serverAuthDelegate: validator
+                )
+                return channel.pipeline.addHandlers(
+                    NIOSSHHandler(
+                        role: .client(configuration),
+                        allocator: channel.allocator,
+                        inboundChildChannelInitializer: nil
+                    ),
+                    errorHandler
+                )
+            }
+            .connectTimeout(.seconds(30))
+
+        _ = try await bootstrap.connect(
+            host: host.hostname,
+            port: Int(host.port)
+        ).get()
+
+        var iterator = presentedKeys.makeAsyncIterator()
+        guard try await iterator.next() != nil else {
+            throw HostKeyTrustError.invalidPresentedKey
+        }
+    } onCancel: {
+        presentedKeyContinuation.finish(throwing: CancellationError())
+        channelBox.close()
+    }
+}
+
+/// Retains the probe channel across task cancellation and closes it at most once.
+private final class HostKeyProbeChannelBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var channel: Channel?
+    private var closeRequested = false
+
+    func store(_ channel: Channel) {
+        lock.lock()
+        if closeRequested {
+            lock.unlock()
+            channel.close(promise: nil)
+        } else {
+            self.channel = channel
+            lock.unlock()
+        }
+    }
+
+    func close() {
+        lock.lock()
+        closeRequested = true
+        let channel = channel
+        self.channel = nil
+        lock.unlock()
+        channel?.close(promise: nil)
+    }
+}
+
+/// Converts every probe pipeline failure or early disconnect into stream completion
+/// and closes the owned socket. This is a backup for failures that occur before a
+/// well-formed host key reaches the validator.
+private final class HostKeyProbeErrorHandler: ChannelInboundHandler, @unchecked Sendable {
+    typealias InboundIn = Any
+
+    private let finish: @Sendable (Error) -> Void
+
+    init(finish: @escaping @Sendable (Error) -> Void) {
+        self.finish = finish
+    }
+
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        finish(error)
+        context.close(promise: nil)
+    }
+
+    func channelInactive(context: ChannelHandlerContext) {
+        finish(ChannelError.eof)
+        context.fireChannelInactive()
+    }
+}
 
 /// Coalesces SSH output chunks that arrive off the main actor into one batched
 /// hand-off per main-actor hop, instead of one unstructured `Task` and one array
