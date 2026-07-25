@@ -35,7 +35,11 @@ class ExtraRowManager(
     private val onThemeChanged: (() -> Unit)? = null,
     private val currentPackageProvider: (() -> String)? = null,
     private val onAutocorrectChanged: (() -> Unit)? = null,
-    private val onTypingPrefsChanged: (() -> Unit)? = null
+    private val onTypingPrefsChanged: (() -> Unit)? = null,
+    private val haptics: KeyboardHaptics = KeyboardHaptics(
+        view,
+        enabled = { appPrefs?.isHapticEnabled() != false }
+    )
 ) {
 
     val ctrlState = CtrlState()
@@ -165,7 +169,7 @@ class ExtraRowManager(
                 }
                 button.text = AppPrefs.getExtraSlotLabel(config)
                 button.setOnClickListener {
-                    performHaptic(HapticFeedbackConstants.KEYBOARD_TAP)
+                    haptics.key(KeyOutput.KeyCode(keyCode))
                     val ic = inputConnectionProvider() ?: return@setOnClickListener
                     keySender.sendKey(ic, keyCode)
                 }
@@ -177,7 +181,7 @@ class ExtraRowManager(
                 val text = config.removePrefix("text:")
                 button.text = text
                 button.setOnClickListener {
-                    performHaptic(HapticFeedbackConstants.KEYBOARD_TAP)
+                    haptics.key(KeyOutput.Character(text))
                     val ic = inputConnectionProvider() ?: return@setOnClickListener
                     keySender.sendText(ic, text)
                 }
@@ -224,6 +228,7 @@ class ExtraRowManager(
                 onItemSelected = { text ->
                     val ic = inputConnectionProvider() ?: return@ClipboardPanel
                     clipboardHistoryManager.pasteItem(ic, text)
+                    haptics.confirm()
                 },
                 onShowTooltip = { msg -> showTooltip(msg) }
             )
@@ -270,7 +275,7 @@ class ExtraRowManager(
     private fun wireArrow(buttonId: Int, keyCode: Int) {
         val button = view.findViewById<Button>(buttonId)
         val listener = RepeatTouchListener(
-            onPress = { performHaptic(HapticFeedbackConstants.KEYBOARD_TAP) }
+            onPress = { haptics.repeatPress() }
         ) {
             val ic = inputConnectionProvider() ?: return@RepeatTouchListener
             val ctrl = ctrlState.isActive()
@@ -485,16 +490,10 @@ class ExtraRowManager(
         }
     }
 
-    private fun performHaptic(type: Int) {
-        if (appPrefs?.isHapticEnabled() != false) {
-            view.performHapticFeedback(type)
-        }
-    }
-
     private fun updateCtrlAppearance(mode: CtrlMode) {
         // Gated like every other haptic: the toggle claims to govern feedback
         // for the whole keyboard, and Ctrl was the one key still ignoring it.
-        performHaptic(HapticFeedbackConstants.CONTEXT_CLICK)
+        haptics.perform(HapticFeedbackConstants.CONTEXT_CLICK)
         applyCtrlLabel(mode)
         val tm = themeManager
         if (tm != null) {
