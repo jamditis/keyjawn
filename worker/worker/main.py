@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-import sys
+import signal
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -17,6 +17,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ET = ZoneInfo("America/New_York")
+
+
+def _install_shutdown_handlers(
+    loop: asyncio.AbstractEventLoop,
+    shutdown_requested: asyncio.Event,
+) -> tuple[signal.Signals, ...]:
+    """Route service and terminal signals through the async shutdown path."""
+    installed = []
+    for signum in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(signum, shutdown_requested.set)
+        except (NotImplementedError, RuntimeError):
+            continue
+        installed.append(signum)
+    return tuple(installed)
 
 
 async def main():
@@ -76,20 +91,25 @@ async def main():
     scheduler.start()
 
     # Start Redis listener for approval decisions
-    listener_task = asyncio.create_task(
-        runner.listen_for_decisions()
-    )
+    listener_task = asyncio.create_task(runner.listen_for_decisions())
 
     logger.info("keyjawn-worker running (Ctrl+C to stop)")
 
+    shutdown_requested = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    installed_handlers = _install_shutdown_handlers(loop, shutdown_requested)
+
     try:
-        await asyncio.Event().wait()
-    except (KeyboardInterrupt, SystemExit):
+        await shutdown_requested.wait()
+    except (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
         pass
     finally:
         listener_task.cancel()
         scheduler.shutdown()
+        await asyncio.gather(listener_task, return_exceptions=True)
         await runner.stop()
+        for signum in installed_handlers:
+            loop.remove_signal_handler(signum)
 
 
 if __name__ == "__main__":
