@@ -73,7 +73,8 @@ class KeyJawnService : InputMethodService() {
         view.setBackgroundColor(tm.keyboardBg())
         view.findViewById<View>(R.id.extra_row)?.setBackgroundColor(tm.extraRowBg())
         view.findViewById<View>(R.id.number_row)?.setBackgroundColor(tm.extraRowBg())
-        view.findViewById<LinearLayout>(R.id.qwerty_container)?.setBackgroundColor(tm.qwertyBg())
+        view.findViewById<QwertyKeyboardView>(R.id.qwerty_container)
+            ?.setBackgroundColor(tm.qwertyBg())
 
         val voice = VoiceInputHandler(this, appPrefs)
         voiceInputHandler = voice
@@ -126,9 +127,6 @@ class KeyJawnService : InputMethodService() {
             onAutocorrectChanged = {
                 // Refresh the cached flag and re-render so the spacebar keycap
                 // ("space" vs "SPACE") reflects the new setting immediately.
-                // The layer is unchanged, so use the force path: a plain
-                // setLayer(currentLayer) is swallowed by render()'s same-layer
-                // guard and would leave the keycap stale.
                 qwertyKeyboard?.refreshTypingPrefs()
                 qwertyKeyboard?.refreshRender()
             },
@@ -146,7 +144,7 @@ class KeyJawnService : InputMethodService() {
         val keyboardFrame = view.findViewById<android.widget.FrameLayout>(R.id.keyboard_frame)
         val keyPreview = KeyPreview(keyboardFrame, tm)
 
-        val container = view.findViewById<LinearLayout>(R.id.qwerty_container)
+        val container = view.findViewById<QwertyKeyboardView>(R.id.qwerty_container)
         val registry = slashCommandRegistry
         val slashPopup = if (registry != null) {
             SlashCommandPopup(
@@ -168,8 +166,8 @@ class KeyJawnService : InputMethodService() {
         qwertyKeyboard = qwerty
 
         erm.onQuickKeyChanged = { _ ->
-            // The quick-key label changes without a layer change, so force the
-            // rebuild past render()'s same-layer guard.
+            // The quick-key label changes without a layer change. The surface
+            // retains its bounds and dirties only that key.
             qwerty.refreshRender()
         }
 

@@ -2,6 +2,7 @@ package com.keyjawn
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.graphics.RectF
 import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.view.Gravity
@@ -57,18 +58,24 @@ class KeyPreview(
     }
 
     fun show(anchor: View, label: String) {
+        show(anchor, RectF(0f, 0f, anchor.width.toFloat(), anchor.height.toFloat()), label)
+    }
+
+    fun show(anchor: View, anchorBounds: RectF, label: String) {
         bounceAnimator.cancel()
 
         previewView.text = label
 
-        // Position above the anchor key, centered horizontally
+        // Position above the real or virtual anchor key, centered horizontally.
         val anchorLoc = IntArray(2)
         val containerLoc = IntArray(2)
         anchor.getLocationInWindow(anchorLoc)
         container.getLocationInWindow(containerLoc)
 
-        val anchorCenterX = anchorLoc[0] - containerLoc[0] + anchor.width / 2
-        val anchorTop = anchorLoc[1] - containerLoc[1]
+        val anchorCenterX =
+            anchorLoc[0] - containerLoc[0] + anchorBounds.centerX().toInt()
+        val anchorTop =
+            anchorLoc[1] - containerLoc[1] + anchorBounds.top.toInt()
 
         val params = previewView.layoutParams as FrameLayout.LayoutParams
         params.leftMargin = anchorCenterX - previewSize / 2

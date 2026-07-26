@@ -32,11 +32,10 @@
 
             <include layout="@layout/number_row" />
 
-            <LinearLayout
+            <com.keyjawn.QwertyKeyboardView
                 android:id="@+id/qwerty_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
                 android:background="@color/qwerty_bg" />
         </LinearLayout>
 

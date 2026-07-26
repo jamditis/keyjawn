@@ -1,6 +1,7 @@
 package com.keyjawn
 
 import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.Gravity
@@ -29,6 +30,22 @@ class AltKeyPopup(
      * the popup window being measured or laid out.
      */
     fun openForSlide(anchor: android.view.View, alts: List<String>): SlideSession {
+        return openForSlide(
+            anchor,
+            RectF(0f, 0f, anchor.width.toFloat(), anchor.height.toFloat()),
+            alts
+        )
+    }
+
+    /**
+     * Opens a candidate row above a virtual key inside [anchor]. This keeps the
+     * QWERTY area to one View while preserving the popup's screen-space hit test.
+     */
+    fun openForSlide(
+        anchor: android.view.View,
+        anchorBounds: RectF,
+        alts: List<String>
+    ): SlideSession {
         dismiss()
         val context = anchor.context
         val density = context.resources.displayMetrics.density
@@ -96,7 +113,6 @@ class AltKeyPopup(
         // desyncing the hit-test the same way an unclamped left did before #38. So the
         // top is clamped to the visible frame below, and both the rects and the offset
         // derive from that clamped top (see clampPopupTop, mirroring clampPopupLeft).
-        val requestedYOffset = -(anchor.height + popupHeight)
         val popupWidth = alts.size * (btnSize + 2 * margin) + (8 * density + 0.5f).toInt()
 
         // The popup top-left in screen space. showAsDropDown places the window at
@@ -107,6 +123,9 @@ class AltKeyPopup(
         anchor.getLocationOnScreen(anchorLoc)
         val anchorScreenX = anchorLoc[0]
         val anchorScreenY = anchorLoc[1]
+        val virtualAnchorX = anchorScreenX + anchorBounds.left.toInt()
+        val virtualAnchorY = anchorScreenY + anchorBounds.top.toInt()
+        val virtualAnchorWidth = anchorBounds.width().toInt()
 
         // Centering a wide candidate row over a narrow edge key pushes the
         // requested left off screen. showAsDropDown (clipping enabled by default)
@@ -121,7 +140,7 @@ class AltKeyPopup(
         // framework re-slide the window past our clamp.
         val displayFrame = Rect()
         anchor.getWindowVisibleDisplayFrame(displayFrame)
-        val requestedLeft = anchorScreenX + (anchor.width - popupWidth) / 2
+        val requestedLeft = virtualAnchorX + (virtualAnchorWidth - popupWidth) / 2
         val clampedLeft = clampPopupLeft(requestedLeft, popupWidth, displayFrame.left, displayFrame.right)
         val clampedXOffset = clampedLeft - anchorScreenX
 
@@ -129,7 +148,7 @@ class AltKeyPopup(
         // frame so showAsDropDown finds the row already fits above the key and does not
         // flip it below, then derive both the rects and the offset from the clamped top
         // (dropDownYOffset inverts popupScreenTop to recover the anchor-bottom offset).
-        val requestedTop = popupScreenTop(anchorScreenY, anchor.height, requestedYOffset)
+        val requestedTop = virtualAnchorY - popupHeight
         val clampedTop = clampPopupTop(requestedTop, popupHeight, displayFrame.top, displayFrame.bottom)
         val clampedYOffset = dropDownYOffset(clampedTop, anchorScreenY, anchor.height)
 
