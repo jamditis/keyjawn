@@ -595,6 +595,7 @@ class QwertyKeyboard(
                                 if (currentAlts.size == 1) {
                                     val ic = inputConnectionProvider() ?: return@Runnable
                                     keySender.sendText(ic, currentAlts[0])
+                                    haptics.confirm()
                                 } else {
                                     // Open the slide popup and capture the anchor's
                                     // screen position so MOVE can convert key-local

@@ -322,6 +322,7 @@ class AltKeySlideTest {
 
         assertNull("single-alt key opens no slide popup", keyboard.currentSlideSession)
         verify(keySender).sendText(any(), eq(alts[0]))
+        verify(haptics).confirm()
     }
 
     @Test
