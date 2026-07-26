@@ -25,6 +25,18 @@ public enum SSHIdentityKeyStore {
         return keychainData(accessGroup: sharedAccessGroup)
     }
 
+    /// Gives the extension a seamless upgrade path when iOS launches it before
+    /// the containing app has had a chance to migrate the legacy mirror.
+    ///
+    /// The shared item always wins. The old protected App Group copy is read-only
+    /// fallback data and disappears after the app verifies the shared write.
+    public static func extensionIdentityKeyData() -> Data? {
+        SSHIdentityKeyMigration.extensionReadableKey(
+            shared: identityKeyData(),
+            legacyMirror: legacyIdentityKeyData()
+        )
+    }
+
     /// Moves an existing install to the shared Keychain item without rotating its key.
     ///
     /// The app-specific Keychain item wins over the former App Group file if both are
@@ -163,6 +175,10 @@ public enum SSHIdentityKeyStore {
 /// Pure migration ordering and durability policy, separated from Security.framework
 /// so key precedence and cleanup behavior can be regression-tested.
 enum SSHIdentityKeyMigration {
+    static func extensionReadableKey(shared: Data?, legacyMirror: Data?) -> Data? {
+        nonempty(shared) ?? nonempty(legacyMirror)
+    }
+
     static func resolve(
         loadShared: () -> Data?,
         loadLegacyKeychain: () -> Data?,

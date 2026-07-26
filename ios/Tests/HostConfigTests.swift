@@ -85,6 +85,31 @@ final class HostConfigTests: XCTestCase {
 
 final class SSHIdentityKeyMigrationTests: XCTestCase {
 
+    func testExtensionPrefersTheSharedKeyOverTheLegacyMirror() {
+        let sharedKey = Data([1, 2, 3])
+        let legacyKey = Data([4, 5, 6])
+
+        XCTAssertEqual(
+            SSHIdentityKeyMigration.extensionReadableKey(
+                shared: sharedKey,
+                legacyMirror: legacyKey
+            ),
+            sharedKey
+        )
+    }
+
+    func testExtensionCanReadTheLegacyMirrorBeforeAppMigration() {
+        let legacyKey = Data([7, 8, 9])
+
+        XCTAssertEqual(
+            SSHIdentityKeyMigration.extensionReadableKey(
+                shared: nil,
+                legacyMirror: legacyKey
+            ),
+            legacyKey
+        )
+    }
+
     func testExistingSharedKeyWinsAndRemovesLegacyCopies() {
         let sharedKey = Data([1, 2, 3])
         var legacyKeychain: Data? = Data([4, 5, 6])
