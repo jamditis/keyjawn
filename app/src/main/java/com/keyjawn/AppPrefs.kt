@@ -3,6 +3,17 @@ package com.keyjawn
 import android.content.Context
 import android.content.SharedPreferences
 
+enum class SubmitMode(val preferenceValue: String) {
+    ENTER("enter"),
+    CTRL_ENTER("ctrl_enter"),
+    ALT_ENTER("alt_enter");
+
+    companion object {
+        fun fromPreference(value: String?): SubmitMode =
+            entries.firstOrNull { it.preferenceValue == value } ?: ENTER
+    }
+}
+
 class AppPrefs(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("keyjawn_app_prefs", Context.MODE_PRIVATE)
@@ -35,6 +46,13 @@ class AppPrefs(context: Context) {
 
     fun setAutocorrect(packageName: String, enabled: Boolean) {
         prefs.edit().putBoolean("ac_$packageName", enabled).apply()
+    }
+
+    fun getSubmitMode(packageName: String): SubmitMode =
+        SubmitMode.fromPreference(prefs.getString("submit_$packageName", null))
+
+    fun setSubmitMode(packageName: String, mode: SubmitMode) {
+        prefs.edit().putString("submit_$packageName", mode.preferenceValue).apply()
     }
 
     fun getQuickKey(): String {
@@ -141,7 +159,7 @@ class AppPrefs(context: Context) {
         )
 
         val EXTRA_SLOT_OPTIONS = listOf(
-            "keycode:KEYCODE_ESCAPE", "keycode:KEYCODE_TAB", "ctrl",
+            "keycode:KEYCODE_ESCAPE", "keycode:KEYCODE_TAB", "ctrl", "submit:",
             "keycode:KEYCODE_MOVE_HOME", "keycode:KEYCODE_MOVE_END",
             "keycode:KEYCODE_PAGE_UP", "keycode:KEYCODE_PAGE_DOWN",
             "keycode:KEYCODE_INSERT", "keycode:KEYCODE_FORWARD_DEL",
@@ -158,6 +176,7 @@ class AppPrefs(context: Context) {
             "keycode:KEYCODE_ESCAPE" to "ESC",
             "keycode:KEYCODE_TAB" to "Tab",
             "ctrl" to "Ctrl",
+            "submit:" to "Send",
             "keycode:KEYCODE_MOVE_HOME" to "Home",
             "keycode:KEYCODE_MOVE_END" to "End",
             "keycode:KEYCODE_PAGE_UP" to "PgUp",

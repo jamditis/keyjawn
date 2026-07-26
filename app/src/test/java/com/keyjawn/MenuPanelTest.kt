@@ -24,12 +24,13 @@ class MenuPanelTest {
     private lateinit var menuPanel: MenuPanel
     private var tooltipMessages = mutableListOf<String>()
     private var bottomPaddingCallCount = 0
+    private var slotsChangedCallCount = 0
 
     @Before
     fun setUp() {
         val context = RuntimeEnvironment.getApplication()
         context.getSharedPreferences("keyjawn_theme", 0).edit().clear().commit()
-        context.getSharedPreferences("keyjawn_prefs", 0).edit().clear().commit()
+        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
 
         panel = ScrollView(context)
         panel.visibility = View.GONE
@@ -39,6 +40,7 @@ class MenuPanelTest {
         appPrefs = AppPrefs(context)
         tooltipMessages.clear()
         bottomPaddingCallCount = 0
+        slotsChangedCallCount = 0
 
         menuPanel = MenuPanel(
             panel = panel,
@@ -51,7 +53,8 @@ class MenuPanelTest {
             onThemeChanged = {},
             onShowTooltip = { tooltipMessages.add(it) },
             currentPackageProvider = { "com.test.app" },
-            onBottomPaddingChanged = { bottomPaddingCallCount++ }
+            onBottomPaddingChanged = { bottomPaddingCallCount++ },
+            onSlotsChanged = { slotsChangedCallCount++ }
         )
     }
 
@@ -183,6 +186,103 @@ class MenuPanelTest {
         }
         assertNotNull("Should have selected a value", selectedValue)
         assertFalse("Panel should be hidden after selection", menuPanel.isShowing())
+    }
+
+    @Test
+    fun `send slot choice opens per-app submit mode picker`() {
+        var selectedValue: String? = null
+        menuPanel.showSlotPicker(0) { selectedValue = it }
+
+        val sendRow = (0 until list.childCount)
+            .map { list.getChildAt(it) }
+            .filterIsInstance<LinearLayout>()
+            .first { row ->
+                (0 until row.childCount)
+                    .map { row.getChildAt(it) }
+                    .filterIsInstance<TextView>()
+                    .any { it.text.toString() == "Send" }
+            }
+        sendRow.performClick()
+
+        assertEquals("submit:", selectedValue)
+        assertTrue(menuPanel.isShowing())
+        assertEquals("Choose submit key", (list.getChildAt(0) as TextView).text.toString())
+        assertTrue(
+            (0 until list.childCount)
+                .map { list.getChildAt(it) }
+                .filterIsInstance<TextView>()
+                .any { it.text.toString() == "Long-press inserts a newline." }
+        )
+
+        val altEnterRow = (0 until list.childCount)
+            .map { list.getChildAt(it) }
+            .filterIsInstance<LinearLayout>()
+            .first { row ->
+                (0 until row.childCount)
+                    .map { row.getChildAt(it) }
+                    .filterIsInstance<TextView>()
+                    .any { it.text.toString() == "Alt+Enter" }
+            }
+        altEnterRow.performClick()
+
+        assertEquals(SubmitMode.ALT_ENTER, appPrefs.getSubmitMode("com.test.app"))
+        assertFalse(menuPanel.isShowing())
+    }
+
+    @Test
+    fun `installed send slot keeps current app submit mode editor reachable`() {
+        appPrefs.setExtraSlot(0, "submit:")
+        appPrefs.setSubmitMode("com.test.app", SubmitMode.CTRL_ENTER)
+
+        menuPanel.show()
+
+        val submitModeRow = (0 until list.childCount)
+            .map { list.getChildAt(it) }
+            .filterIsInstance<LinearLayout>()
+            .first { row ->
+                (0 until row.childCount)
+                    .map { row.getChildAt(it) }
+                    .filterIsInstance<TextView>()
+                    .any { it.text.toString() == "Submit key: Ctrl+Enter" }
+            }
+        submitModeRow.performClick()
+
+        assertTrue(menuPanel.isShowing())
+        assertEquals("Choose submit key", (list.getChildAt(0) as TextView).text.toString())
+    }
+
+    @Test
+    fun `installed send slot can be reassigned from the keyboard menu`() {
+        appPrefs.setExtraSlot(0, "submit:")
+
+        menuPanel.show()
+
+        val changeRow = (0 until list.childCount)
+            .map { list.getChildAt(it) }
+            .filterIsInstance<LinearLayout>()
+            .first { row ->
+                (0 until row.childCount)
+                    .map { row.getChildAt(it) }
+                    .filterIsInstance<TextView>()
+                    .any { it.text.toString() == "Change send slot 1" }
+            }
+        changeRow.performClick()
+        assertEquals("Choose key for slot 1 (left)", (list.getChildAt(0) as TextView).text.toString())
+
+        val escapeRow = (0 until list.childCount)
+            .map { list.getChildAt(it) }
+            .filterIsInstance<LinearLayout>()
+            .first { row ->
+                (0 until row.childCount)
+                    .map { row.getChildAt(it) }
+                    .filterIsInstance<TextView>()
+                    .any { it.text.toString() == "ESC" }
+            }
+        escapeRow.performClick()
+
+        assertEquals("keycode:KEYCODE_ESCAPE", appPrefs.getExtraSlot(0))
+        assertEquals(1, slotsChangedCallCount)
+        assertFalse(menuPanel.isShowing())
     }
 
     @Test

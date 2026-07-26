@@ -139,6 +139,84 @@ class ExtraRowManagerTest {
         assertTrue(captor.allValues.any { it.keyCode == KeyEvent.KEYCODE_TAB })
     }
 
+    @Test
+    fun `send slot finalizes composing text and fires per-app ctrl enter`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = AppPrefs(context)
+        val packageName = "com.submit.ctrl"
+        prefs.setExtraSlot(0, "submit:")
+        prefs.setSubmitMode(packageName, SubmitMode.CTRL_ENTER)
+        val view = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null)
+        val sender: KeySender = mock()
+        val ic: InputConnection = mock()
+
+        ExtraRowManager(
+            view = view,
+            keySender = sender,
+            inputConnectionProvider = { ic },
+            appPrefs = prefs,
+            isFullFlavor = true,
+            currentPackageProvider = { packageName }
+        )
+
+        val button = view.findViewById<android.widget.Button>(R.id.key_esc)
+        assertEquals("Send", button.text.toString())
+        button.performClick()
+
+        inOrder(ic, sender) {
+            verify(ic).finishComposingText()
+            verify(sender).sendKey(ic, KeyEvent.KEYCODE_ENTER, ctrl = true, alt = false)
+        }
+    }
+
+    @Test
+    fun `send slot can fire per-app alt enter`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = AppPrefs(context)
+        val packageName = "com.submit.alt"
+        prefs.setExtraSlot(1, "submit:")
+        prefs.setSubmitMode(packageName, SubmitMode.ALT_ENTER)
+        val view = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null)
+        val sender: KeySender = mock()
+        val ic: InputConnection = mock()
+
+        ExtraRowManager(
+            view = view,
+            keySender = sender,
+            inputConnectionProvider = { ic },
+            appPrefs = prefs,
+            currentPackageProvider = { packageName }
+        )
+
+        view.findViewById<android.widget.Button>(R.id.key_tab).performClick()
+
+        verify(sender).sendKey(ic, KeyEvent.KEYCODE_ENTER, ctrl = false, alt = true)
+    }
+
+    @Test
+    fun `send slot long press inserts newline without submitting`() {
+        val context = RuntimeEnvironment.getApplication()
+        val prefs = AppPrefs(context)
+        prefs.setExtraSlot(0, "submit:")
+        val view = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null)
+        val sender: KeySender = mock()
+        val ic: InputConnection = mock()
+
+        ExtraRowManager(
+            view = view,
+            keySender = sender,
+            inputConnectionProvider = { ic },
+            appPrefs = prefs,
+            isFullFlavor = true,
+            currentPackageProvider = { "com.submit.newline" }
+        )
+
+        assertTrue(view.findViewById<android.widget.Button>(R.id.key_esc).performLongClick())
+
+        verify(sender).sendText(ic, "\n")
+        verify(sender, never()).sendKey(any(), any(), any(), any())
+    }
+
     // --- Critical tooltips bypass the tooltips-disabled preference (Codex 5.4 finding) ---
     // The tooltips toggle is meant to silence transient hints, not operation
     // results and errors. These gate that distinction.

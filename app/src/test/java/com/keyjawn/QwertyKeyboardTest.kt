@@ -213,7 +213,7 @@ class QwertyKeyboardTest {
         val enterButton = findButton(row4.getChildAt(4))
         enterButton.performClick()
 
-        verify(keySender).sendKey(any(), eq(KeyEvent.KEYCODE_ENTER), any())
+        verify(keySender).sendKey(any(), eq(KeyEvent.KEYCODE_ENTER), any(), eq(false))
     }
 
     @Test
@@ -360,7 +360,7 @@ class QwertyKeyboardTest {
         val qButton = findButton(row1.getChildAt(0))
         simulateTap(qButton)
 
-        verify(keySender).sendKey(any(), any(), eq(true))
+        verify(keySender).sendKey(any(), any(), eq(true), eq(false))
         verify(keySender, never()).sendText(any(), eq("q"))
     }
 
@@ -961,7 +961,7 @@ class QwertyKeyboardTest {
         val c = charButtonLabelled("c")
 
         press(c)
-        verify(keySender).sendKey(any(), eq(KeyEvent.KEYCODE_C), eq(true))
+        verify(keySender).sendKey(any(), eq(KeyEvent.KEYCODE_C), eq(true), eq(false))
 
         shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(600))
         release(c)
@@ -1003,7 +1003,7 @@ class QwertyKeyboardTest {
     fun `tapping backspace deletes one character`() {
         val backspace = charButtonLabelled(BACKSPACE_LABEL)
         simulateTap(backspace)
-        verify(keySender).sendKey(any(), eq(KeyEvent.KEYCODE_DEL), any())
+        verify(keySender).sendKey(any(), eq(KeyEvent.KEYCODE_DEL), any(), eq(false))
     }
 
     @Test

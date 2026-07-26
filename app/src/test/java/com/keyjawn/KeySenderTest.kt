@@ -40,6 +40,21 @@ class KeySenderTest {
     }
 
     @Test
+    fun `sendKey with alt sets meta state`() {
+        val ic = mock<android.view.inputmethod.InputConnection>()
+        whenever(ic.sendKeyEvent(any())).thenReturn(true)
+
+        val sender = KeySender()
+        sender.sendKey(ic, KeyEvent.KEYCODE_ENTER, alt = true)
+
+        verify(ic).sendKeyEvent(argThat {
+            action == KeyEvent.ACTION_DOWN &&
+                metaState and KeyEvent.META_ALT_ON != 0 &&
+                metaState and KeyEvent.META_ALT_LEFT_ON != 0
+        })
+    }
+
+    @Test
     fun `sendText commits text`() {
         val ic = mock<android.view.inputmethod.InputConnection>()
         whenever(ic.commitText(any(), any())).thenReturn(true)
@@ -47,6 +62,7 @@ class KeySenderTest {
         val sender = KeySender()
         sender.sendText(ic, "hello")
 
+        verify(ic).finishComposingText()
         verify(ic).commitText("hello", 1)
     }
 }
