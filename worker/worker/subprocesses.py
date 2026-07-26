@@ -6,9 +6,11 @@ import asyncio
 import ctypes
 import logging
 import os
+import select
 import signal
 import subprocess
 import sys
+import threading
 from collections.abc import Awaitable, Callable
 from ctypes import wintypes
 from dataclasses import dataclass
@@ -305,7 +307,8 @@ class ShutdownReport:
 class _ProcessEntry:
     process: asyncio.subprocess.Process
     communication: asyncio.Task[tuple[bytes, bytes]]
-    root_status: asyncio.Task[int] | None = None
+    root_status: asyncio.Task[int | None] | None = None
+    root_status_stop: threading.Event | None = None
     windows_job: Any | None = None
     termination: asyncio.Task[tuple[bytes, bytes, bool]] | None = None
 
@@ -427,14 +430,25 @@ class SubprocessOwner:
         try:
             entry = await asyncio.shield(registration)
         except asyncio.CancelledError as cancellation:
-            try:
-                entry = await asyncio.shield(registration)
-            except BaseException:
-                raise cancellation
+            while True:
+                try:
+                    entry = await asyncio.shield(registration)
+                    break
+                except asyncio.CancelledError:
+                    if registration.cancelled():
+                        raise cancellation
+                except BaseException:
+                    raise cancellation
             cleanup = asyncio.create_task(
                 self._terminate(entry, reason="task cancellation during spawn")
             )
-            await asyncio.shield(cleanup)
+            while True:
+                try:
+                    await asyncio.shield(cleanup)
+                    break
+                except asyncio.CancelledError:
+                    if cleanup.cancelled():
+                        raise cancellation
             raise cancellation
 
         process = entry.process
@@ -461,11 +475,29 @@ class SubprocessOwner:
                     timed_out=True,
                     forced=forced,
                 )
-            except asyncio.CancelledError:
+            except asyncio.CancelledError as cancellation:
                 cleanup = asyncio.create_task(
                     self._terminate(entry, reason="task cancellation")
                 )
-                await asyncio.shield(cleanup)
+                while True:
+                    try:
+                        await asyncio.shield(cleanup)
+                        break
+                    except asyncio.CancelledError:
+                        if cleanup.cancelled():
+                            raise cancellation
+                raise cancellation
+            except Exception:
+                cleanup = asyncio.create_task(
+                    self._terminate(entry, reason="supervisor status failure")
+                )
+                while True:
+                    try:
+                        await asyncio.shield(cleanup)
+                        break
+                    except asyncio.CancelledError:
+                        if cleanup.cancelled():
+                            raise
                 raise
 
             if entry.root_status is None:
@@ -473,6 +505,8 @@ class SubprocessOwner:
                 root_returncode = process.returncode
             else:
                 root_returncode = command_result
+                if root_returncode is None:
+                    root_returncode = process.returncode
                 stdout = stderr = b""
             forced = False
             if self._tree_is_alive(entry) or not communication.done():
@@ -480,6 +514,8 @@ class SubprocessOwner:
                     entry,
                     reason="root process exit",
                 )
+            elif entry.root_status is not None:
+                stdout, stderr = await self._read_output(entry)
             return ProcessResult(
                 root_returncode,
                 stdout,
@@ -515,9 +551,15 @@ class SubprocessOwner:
 
             communication = asyncio.create_task(process.communicate(input))
             root_status = None
+            root_status_stop = None
             if status_read_fd is not None:
+                root_status_stop = threading.Event()
                 root_status = asyncio.create_task(
-                    asyncio.to_thread(self._read_root_status, status_read_fd)
+                    asyncio.to_thread(
+                        self._read_root_status,
+                        status_read_fd,
+                        root_status_stop,
+                    )
                 )
             windows_job = None
             if self.platform == "win32":
@@ -536,16 +578,33 @@ class SubprocessOwner:
                 process=process,
                 communication=communication,
                 root_status=root_status,
+                root_status_stop=root_status_stop,
                 windows_job=windows_job,
             )
             self._entries[process.pid] = entry
             return entry
 
     @staticmethod
-    def _read_root_status(status_fd: int) -> int:
+    def _read_root_status(
+        status_fd: int,
+        stop: threading.Event | None = None,
+    ) -> int | None:
         try:
             chunks = []
+            poller = select.poll()
+            poller.register(
+                status_fd,
+                select.POLLIN | select.POLLHUP | select.POLLERR,
+            )
             while True:
+                if stop is not None and stop.is_set():
+                    return None
+                try:
+                    events = poller.poll(50)
+                except InterruptedError:
+                    continue
+                if not events:
+                    continue
                 chunk = os.read(status_fd, 32)
                 if not chunk:
                     break
@@ -775,7 +834,16 @@ class SubprocessOwner:
             windows_job, entry.windows_job = entry.windows_job, None
         if windows_job is not None:
             windows_job.close()
-        if entry.root_status is not None and entry.communication.done():
+        if entry.root_status is not None:
+            if not entry.root_status.done() and entry.root_status_stop is not None:
+                entry.root_status_stop.set()
+            try:
+                await asyncio.wait_for(
+                    asyncio.shield(entry.root_status),
+                    timeout=self.force_wait,
+                )
+            except asyncio.TimeoutError:
+                entry.root_status.cancel()
             await asyncio.gather(entry.root_status, return_exceptions=True)
 
     async def _signal_windows_tree(
@@ -784,14 +852,17 @@ class SubprocessOwner:
         *,
         force: bool,
     ) -> None:
+        helper = None
+        communication = None
         try:
             helper = await asyncio.create_subprocess_exec(
                 *_windows_taskkill_command(process.pid, force=force),
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
             )
+            communication = asyncio.create_task(helper.communicate())
             _, stderr = await asyncio.wait_for(
-                helper.communicate(),
+                asyncio.shield(communication),
                 timeout=self.grace_period,
             )
             if helper.returncode not in (0, 128):
@@ -800,7 +871,28 @@ class SubprocessOwner:
                     process.pid,
                     stderr.decode(errors="replace").strip(),
                 )
-        except (FileNotFoundError, asyncio.TimeoutError):
+        except asyncio.TimeoutError:
+            if helper is not None:
+                try:
+                    helper.kill()
+                except ProcessLookupError:
+                    pass
+            if communication is not None:
+                try:
+                    await asyncio.wait_for(
+                        asyncio.shield(communication),
+                        timeout=self.force_wait,
+                    )
+                except asyncio.TimeoutError:
+                    communication.cancel()
+                await asyncio.gather(communication, return_exceptions=True)
+            self.logger.exception(
+                "taskkill timed out for subprocess tree %d",
+                process.pid,
+            )
+            if process.returncode is None:
+                process.kill() if force else process.terminate()
+        except FileNotFoundError:
             self.logger.exception(
                 "could not run taskkill for subprocess tree %d",
                 process.pid,

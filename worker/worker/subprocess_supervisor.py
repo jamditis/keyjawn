@@ -80,7 +80,13 @@ def _exit_code(status: int) -> int:
 
 
 def _exec_child(mode: str, command: Sequence[str], status_fd: int) -> None:
-    for signum in (signal.SIGTERM, signal.SIGINT, _FORCE_SIGNAL):
+    for signum in (
+        signal.SIGTERM,
+        signal.SIGINT,
+        _FORCE_SIGNAL,
+        signal.SIGPIPE,
+        signal.SIGXFSZ,
+    ):
         signal.signal(signum, signal.SIG_DFL)
     os.close(status_fd)
 

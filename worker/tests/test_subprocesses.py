@@ -9,6 +9,7 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -38,6 +39,170 @@ async def test_input_bytes_reach_the_child_process() -> None:
 
     assert result.returncode == 0
     assert result.stdout == b"curation prompt"
+
+
+async def test_completed_linux_supervisor_output_is_preserved(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def completed(value):
+        return value
+
+    communication = asyncio.create_task(completed((b"stdout", b"stderr")))
+    root_status = asyncio.create_task(completed(0))
+    await asyncio.gather(communication, root_status)
+    entry = _ProcessEntry(
+        process=SimpleNamespace(pid=4321, returncode=0),
+        communication=communication,
+        root_status=root_status,
+    )
+    owner = SubprocessOwner(platform="linux")
+    monkeypatch.setattr(
+        owner,
+        "_spawn_and_register",
+        AsyncMock(return_value=entry),
+    )
+    monkeypatch.setattr(owner, "_tree_is_alive", lambda _entry: False)
+
+    result = await owner._run(
+        AsyncMock(),
+        "fake-command",
+        timeout=1,
+        input=None,
+    )
+
+    assert result.returncode == 0
+    assert result.stdout == b"stdout"
+    assert result.stderr == b"stderr"
+
+
+async def test_forced_cleanup_bounds_unresponsive_root_status() -> None:
+    blocker = asyncio.Event()
+    communication = asyncio.create_task(
+        asyncio.sleep(0, result=(b"", b""))
+    )
+    await communication
+    root_status = asyncio.create_task(blocker.wait())
+    entry = _ProcessEntry(
+        process=SimpleNamespace(pid=4321, returncode=0),
+        communication=communication,
+        root_status=root_status,
+    )
+    owner = SubprocessOwner(grace_period=0.01, force_wait=0.02)
+    owner._entries[4321] = entry
+
+    await asyncio.wait_for(owner._release_entry(entry), timeout=0.2)
+
+    assert root_status.done()
+    assert owner.active_count == 0
+
+
+async def test_release_stops_status_reader_without_failing_waiters() -> None:
+    status_read_fd, status_write_fd = os.pipe()
+    stop = threading.Event()
+    owner = SubprocessOwner(grace_period=0.01, force_wait=0.2)
+    communication = asyncio.create_task(asyncio.sleep(0, result=(b"", b"")))
+    await communication
+    root_status = asyncio.create_task(
+        asyncio.to_thread(
+            owner._read_root_status,
+            status_read_fd,
+            stop,
+        )
+    )
+    entry = _ProcessEntry(
+        process=SimpleNamespace(pid=4321, returncode=-signal.SIGTERM),
+        communication=communication,
+        root_status=root_status,
+        root_status_stop=stop,
+    )
+    owner._entries[4321] = entry
+
+    try:
+        await asyncio.wait_for(owner._release_entry(entry), timeout=0.5)
+        assert await root_status is None
+        assert owner.active_count == 0
+    finally:
+        os.close(status_write_fd)
+
+
+@pytest.mark.skipif(
+    not sys.platform.startswith("linux"),
+    reason="Linux descriptors above FD_SETSIZE",
+)
+async def test_status_reader_accepts_high_numbered_file_descriptor() -> None:
+    import resource
+
+    soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    status_read_fd, status_write_fd = os.pipe()
+    high_fd = 2048
+    resource.setrlimit(
+        resource.RLIMIT_NOFILE,
+        (max(soft_limit, high_fd + 1), hard_limit),
+    )
+    try:
+        os.dup2(status_read_fd, high_fd)
+        os.close(status_read_fd)
+        os.write(status_write_fd, b"0\n")
+        os.close(status_write_fd)
+
+        assert SubprocessOwner._read_root_status(high_fd) == 0
+    finally:
+        resource.setrlimit(
+            resource.RLIMIT_NOFILE,
+            (soft_limit, hard_limit),
+        )
+
+
+async def test_supervisor_status_failure_cleans_up_the_tree(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fail_status() -> int:
+        raise RuntimeError("subprocess supervisor exited without root status")
+
+    communication_blocker = asyncio.Event()
+
+    async def communicate() -> tuple[bytes, bytes]:
+        await communication_blocker.wait()
+        return b"", b""
+
+    communication = asyncio.create_task(communicate())
+    root_status = asyncio.create_task(fail_status())
+    entry = _ProcessEntry(
+        process=SimpleNamespace(pid=4321, returncode=None),
+        communication=communication,
+        root_status=root_status,
+    )
+    owner = SubprocessOwner(
+        platform="linux",
+        grace_period=0.01,
+        force_wait=0.02,
+    )
+
+    async def register(*_args, **_kwargs):
+        owner._entries[4321] = entry
+        return entry
+
+    monkeypatch.setattr(owner, "_spawn_and_register", register)
+    monkeypatch.setattr(owner, "_tree_is_alive", lambda _entry: True)
+    owner._signal_tree = AsyncMock()
+
+    try:
+        with pytest.raises(
+            RuntimeError,
+            match="subprocess supervisor exited without root status",
+        ):
+            await owner._run(
+                AsyncMock(),
+                "fake-command",
+                timeout=1,
+                input=None,
+            )
+        assert owner._signal_tree.await_count == 2
+        assert communication.done()
+        assert owner.active_count == 0
+    finally:
+        communication.cancel()
+        await asyncio.gather(communication, return_exceptions=True)
 
 
 def _is_running(pid: int) -> bool:
@@ -295,7 +460,7 @@ async def test_cancellation_stops_child_and_grandchild(tmp_path: Path) -> None:
     not sys.platform.startswith("linux"),
     reason="Linux subreaper integration test",
 )
-async def test_cancellation_waits_for_spawn_registration(
+async def test_repeated_cancellation_waits_for_spawn_registration(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -323,6 +488,8 @@ async def test_cancellation_waits_for_spawn_registration(
     await spawned.wait()
     pids = await _wait_for_file(pid_file)
 
+    run_task.cancel()
+    await asyncio.sleep(0)
     run_task.cancel()
     release_spawn.set()
 
@@ -568,3 +735,84 @@ async def test_windows_job_setup_failure_has_bounded_cleanup() -> None:
             ),
             timeout=0.5,
         )
+
+
+async def test_timed_out_taskkill_helper_is_killed_and_reaped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stopped = asyncio.Event()
+
+    class FakeHelper:
+        returncode = None
+        killed = False
+
+        async def communicate(self):
+            await stopped.wait()
+            self.returncode = -9
+            return b"", b""
+
+        def kill(self) -> None:
+            self.killed = True
+            stopped.set()
+
+    class FakeTarget:
+        pid = 4321
+        returncode = None
+        terminated = False
+
+        def terminate(self) -> None:
+            self.terminated = True
+
+        def kill(self) -> None:
+            self.terminated = True
+
+    helper = FakeHelper()
+
+    async def spawn_helper(*_args, **_kwargs):
+        return helper
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn_helper)
+    owner = SubprocessOwner(
+        platform="win32",
+        grace_period=0.01,
+        force_wait=0.05,
+    )
+    target = FakeTarget()
+
+    await owner._signal_windows_tree(target, force=False)
+
+    assert helper.killed is True
+    assert stopped.is_set()
+
+
+@pytest.mark.skipif(
+    not sys.platform.startswith("linux"),
+    reason="Linux subprocess supervisor",
+)
+async def test_supervisor_restores_python_ignored_signals_before_exec(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from worker import subprocess_supervisor
+
+    restored: list[tuple[int, object]] = []
+
+    class ExecCalled(BaseException):
+        pass
+
+    monkeypatch.setattr(
+        subprocess_supervisor.signal,
+        "signal",
+        lambda signum, handler: restored.append((signum, handler)),
+    )
+    monkeypatch.setattr(subprocess_supervisor.os, "close", lambda _fd: None)
+    monkeypatch.setattr(
+        subprocess_supervisor.os,
+        "execvp",
+        lambda *_args: (_ for _ in ()).throw(ExecCalled()),
+    )
+
+    with pytest.raises(ExecCalled):
+        subprocess_supervisor._exec_child("exec", ("fake-command",), 9)
+
+    assert (signal.SIGPIPE, signal.SIG_DFL) in restored
+    assert (signal.SIGXFSZ, signal.SIG_DFL) in restored
