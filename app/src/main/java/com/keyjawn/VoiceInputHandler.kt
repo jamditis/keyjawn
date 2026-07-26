@@ -5,17 +5,22 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.speech.RecognitionListener
+import android.speech.RecognitionSupport
+import android.speech.RecognitionSupportCallback
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.View
 import android.view.inputmethod.InputConnection
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import java.util.Locale
+import java.util.concurrent.Executor
 
 interface VoiceInputListener {
     fun onVoiceStart()
@@ -27,6 +32,9 @@ interface VoiceInputListener {
 
     /** The recognizer is warmed up and audio is being captured. */
     fun onVoiceReady() {}
+
+    /** An actionable recognizer setup status that should remain visible. */
+    fun onVoiceStatus(message: String) {}
 
     /** Speech ended; the recognizer is turning the last utterance into text. */
     fun onVoiceProcessing() {}
@@ -47,6 +55,213 @@ fun voiceErrorMessage(error: Int): String = when (error) {
     SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Busy, try again"
     SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Mic permission required"
     else -> "Voice input failed"
+}
+
+internal data class VoiceRecognitionSupport(
+    val installed: List<String> = emptyList(),
+    val pending: List<String> = emptyList(),
+    val supported: List<String> = emptyList()
+)
+
+internal sealed class VoiceSupportDecision {
+    object Start : VoiceSupportDecision()
+    object Download : VoiceSupportDecision()
+    object Unavailable : VoiceSupportDecision()
+}
+
+internal fun shouldUseOnDeviceRecognizer(
+    sdkInt: Int,
+    onDeviceAvailable: Boolean
+): Boolean = sdkInt >= Build.VERSION_CODES.S && onDeviceAvailable
+
+private fun languageMatches(candidate: String, requested: String): Boolean {
+    val candidateLocale = Locale.forLanguageTag(candidate.replace('_', '-'))
+    val requestedLocale = Locale.forLanguageTag(requested.replace('_', '-'))
+    if (candidateLocale.language.isEmpty() || requestedLocale.language.isEmpty()) return false
+    if (!candidateLocale.language.equals(requestedLocale.language, ignoreCase = true)) return false
+    if (candidateLocale.script.isNotEmpty() &&
+        !candidateLocale.script.equals(requestedLocale.script, ignoreCase = true)
+    ) {
+        return false
+    }
+    if (candidateLocale.country.isNotEmpty() &&
+        !candidateLocale.country.equals(requestedLocale.country, ignoreCase = true)
+    ) {
+        return false
+    }
+    // Omitted script or region subtags are wildcards; explicit ones must agree.
+    return true
+}
+
+internal fun voiceSupportDecision(
+    support: VoiceRecognitionSupport,
+    requestedLanguage: String,
+    onDeviceRecognizer: Boolean
+): VoiceSupportDecision = when {
+    support.installed.any { languageMatches(it, requestedLanguage) } ->
+        VoiceSupportDecision.Start
+    support.pending.any { languageMatches(it, requestedLanguage) } ||
+        support.supported.any { languageMatches(it, requestedLanguage) } ->
+        VoiceSupportDecision.Download
+    onDeviceRecognizer -> VoiceSupportDecision.Unavailable
+    else -> VoiceSupportDecision.Start
+}
+
+internal object VoiceRecognitionRequest {
+    /** Do not end a fresh request before the user has had time to form a prompt. */
+    const val MINIMUM_INPUT_MS = 5_000L
+
+    /** Best-effort endpointer window for a multi-second thinking pause. */
+    const val SILENCE_MS = 3_000L
+
+    fun build(locale: Locale = Locale.getDefault()): Intent =
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            // Without an explicit language the recognizer falls back to the
+            // service's own default, which can differ from the keyboard's locale.
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, locale.toLanguageTag())
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, locale.language)
+            // These endpointer hints are recognizer-dependent, but services that
+            // honor them no longer cut off a prompt at the first thinking pause.
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, MINIMUM_INPUT_MS)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, SILENCE_MS)
+            putExtra(
+                RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
+                SILENCE_MS
+            )
+        }
+}
+
+internal interface VoiceRecognizer {
+    val isOnDevice: Boolean
+
+    fun setRecognitionListener(listener: RecognitionListener)
+    fun startListening(intent: Intent)
+    fun stopListening()
+    fun cancel()
+    fun destroy()
+
+    fun checkRecognitionSupport(
+        intent: Intent,
+        onSupport: (VoiceRecognitionSupport) -> Unit,
+        onError: (Int) -> Unit
+    )
+
+    fun triggerModelDownload(intent: Intent)
+}
+
+internal interface VoiceRecognizerFactory {
+    fun isAvailable(): Boolean
+    fun create(): VoiceRecognizer?
+}
+
+private class PlatformVoiceRecognizerFactory(
+    private val context: Context
+) : VoiceRecognizerFactory {
+    override fun isAvailable(): Boolean {
+        val onDeviceAvailable = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
+        } else {
+            false
+        }
+        return shouldUseOnDeviceRecognizer(Build.VERSION.SDK_INT, onDeviceAvailable) ||
+            SpeechRecognizer.isRecognitionAvailable(context)
+    }
+
+    override fun create(): VoiceRecognizer {
+        val onDeviceAvailable = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
+        } else {
+            false
+        }
+        var onDevice = shouldUseOnDeviceRecognizer(Build.VERSION.SDK_INT, onDeviceAvailable)
+        val recognizer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && onDevice) {
+            try {
+                createOnDeviceRecognizer31()
+            } catch (_: UnsupportedOperationException) {
+                // Availability can change between the probe and factory call.
+                onDevice = false
+                SpeechRecognizer.createSpeechRecognizer(context)
+            }
+        } else {
+            SpeechRecognizer.createSpeechRecognizer(context)
+        }
+        return PlatformVoiceRecognizer(
+            recognizer,
+            onDevice,
+            ContextCompat.getMainExecutor(context)
+        )
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun createOnDeviceRecognizer31(): SpeechRecognizer =
+        SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+}
+
+private class PlatformVoiceRecognizer(
+    private val recognizer: SpeechRecognizer,
+    override val isOnDevice: Boolean,
+    private val callbackExecutor: Executor
+) : VoiceRecognizer {
+    override fun setRecognitionListener(listener: RecognitionListener) {
+        recognizer.setRecognitionListener(listener)
+    }
+
+    override fun startListening(intent: Intent) = recognizer.startListening(intent)
+    override fun stopListening() = recognizer.stopListening()
+    override fun cancel() = recognizer.cancel()
+    override fun destroy() = recognizer.destroy()
+
+    override fun checkRecognitionSupport(
+        intent: Intent,
+        onSupport: (VoiceRecognitionSupport) -> Unit,
+        onError: (Int) -> Unit
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            checkRecognitionSupport33(intent, onSupport, onError)
+        } else {
+            onError(SpeechRecognizer.ERROR_CLIENT)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun checkRecognitionSupport33(
+        intent: Intent,
+        onSupport: (VoiceRecognitionSupport) -> Unit,
+        onError: (Int) -> Unit
+    ) {
+        recognizer.checkRecognitionSupport(
+            intent,
+            callbackExecutor,
+            object : RecognitionSupportCallback {
+                override fun onSupportResult(recognitionSupport: RecognitionSupport) {
+                    onSupport(
+                        VoiceRecognitionSupport(
+                            installed = recognitionSupport.installedOnDeviceLanguages,
+                            pending = recognitionSupport.pendingOnDeviceLanguages,
+                            supported = recognitionSupport.supportedOnDeviceLanguages
+                        )
+                    )
+                }
+
+                override fun onError(error: Int) = onError.invoke(error)
+            }
+        )
+    }
+
+    override fun triggerModelDownload(intent: Intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            triggerModelDownload33(intent)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun triggerModelDownload33(intent: Intent) {
+        recognizer.triggerModelDownload(intent)
+    }
 }
 
 /**
@@ -70,12 +285,17 @@ fun voiceErrorMessage(error: Int): String = when (error) {
  * [MAX_EMPTY_ROUNDS] consecutive silent rounds, so an idle keyboard never holds
  * the microphone open indefinitely.
  */
-class VoiceInputHandler(
+class VoiceInputHandler internal constructor(
     private val context: Context,
-    private val appPrefs: AppPrefs? = null
+    private val appPrefs: AppPrefs?,
+    private val recognizerFactory: VoiceRecognizerFactory
 ) {
+    constructor(
+        context: Context,
+        appPrefs: AppPrefs? = null
+    ) : this(context, appPrefs, PlatformVoiceRecognizerFactory(context))
 
-    private var speechRecognizer: SpeechRecognizer? = null
+    private var speechRecognizer: VoiceRecognizer? = null
     private var micButton: View? = null
     private var inputConnectionProvider: (() -> InputConnection?)? = null
 
@@ -129,23 +349,33 @@ class VoiceInputHandler(
     /** A partial result has arrived for the current utterance. */
     private var sawPartial = false
 
+    /** Last support result prepared before the user pressed the mic key. */
+    private var cachedSupport: VoiceRecognitionSupport? = null
+    private var cachedSupportRecognizer: VoiceRecognizer? = null
+    private var cachedSupportLanguage: String? = null
+
+    /** Support probes are advisory and must never hold up live audio capture. */
+    private var supportProbeInFlight = false
+    private var supportProbeGeneration = 0
+
     var listener: VoiceInputListener? = null
     var onPermissionNeeded: ((String) -> Unit)? = null
 
     fun isAvailable(): Boolean {
-        return SpeechRecognizer.isRecognitionAvailable(context)
+        return recognizerFactory.isAvailable()
     }
 
     fun setup(micButton: View, icProvider: () -> InputConnection?) {
         this.micButton = micButton
         this.inputConnectionProvider = icProvider
-        ensureRecognizer()
+        val recognizer = ensureRecognizer() ?: return
+        preflightRecognitionSupport(recognizer, VoiceRecognitionRequest.build())
     }
 
-    private fun ensureRecognizer(): SpeechRecognizer? {
+    private fun ensureRecognizer(): VoiceRecognizer? {
         var recognizer = speechRecognizer
         if (recognizer == null) {
-            recognizer = SpeechRecognizer.createSpeechRecognizer(context)
+            recognizer = recognizerFactory.create()
             recognizer?.setRecognitionListener(createListener())
             speechRecognizer = recognizer
         }
@@ -180,30 +410,115 @@ class VoiceInputHandler(
 
     /** Arms the recognizer for one utterance within the active session. */
     private fun beginUtterance() {
-        val recognizer = ensureRecognizer() ?: return
+        val recognizer = ensureRecognizer()
+        if (recognizer == null) {
+            finishSession()
+            return
+        }
+        val intent = VoiceRecognitionRequest.build()
+        val requestedLanguage = requestedLanguage(intent)
+        val support = if (
+            cachedSupportRecognizer === recognizer &&
+            cachedSupportLanguage == requestedLanguage
+        ) {
+            cachedSupport
+        } else {
+            null
+        }
+        if (support != null) {
+            handleRecognitionSupport(recognizer, intent, support)
+            return
+        }
+
+        // Setup normally finishes this probe before a mic interaction. If it is
+        // still pending (or failed), capture starts now so leading words and
+        // short push-to-talk holds are never lost to an advisory API call.
+        startUtterance(recognizer, intent)
+        preflightRecognitionSupport(recognizer, intent)
+    }
+
+    private fun requestedLanguage(intent: Intent): String =
+        intent.getStringExtra(RecognizerIntent.EXTRA_LANGUAGE)
+            ?: Locale.getDefault().toLanguageTag()
+
+    private fun preflightRecognitionSupport(
+        recognizer: VoiceRecognizer,
+        intent: Intent
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || supportProbeInFlight) return
+        supportProbeInFlight = true
+        val generation = ++supportProbeGeneration
+        val requestedLanguage = requestedLanguage(intent)
+        try {
+            recognizer.checkRecognitionSupport(
+                intent,
+                onSupport = { support ->
+                    if (generation != supportProbeGeneration) return@checkRecognitionSupport
+                    supportProbeInFlight = false
+                    if (speechRecognizer === recognizer) {
+                        cachedSupport = support
+                        cachedSupportRecognizer = recognizer
+                        cachedSupportLanguage = requestedLanguage
+                    }
+                },
+                onError = {
+                    if (generation == supportProbeGeneration) {
+                        supportProbeInFlight = false
+                    }
+                }
+            )
+        } catch (_: RuntimeException) {
+            if (generation == supportProbeGeneration) {
+                supportProbeInFlight = false
+            }
+        }
+    }
+
+    private fun clearRecognitionSupport() {
+        supportProbeGeneration++
+        supportProbeInFlight = false
+        cachedSupport = null
+        cachedSupportRecognizer = null
+        cachedSupportLanguage = null
+    }
+
+    private fun handleRecognitionSupport(
+        recognizer: VoiceRecognizer,
+        intent: Intent,
+        support: VoiceRecognitionSupport
+    ) {
+        val requestedLanguage = requestedLanguage(intent)
+        when (voiceSupportDecision(support, requestedLanguage, recognizer.isOnDevice)) {
+            VoiceSupportDecision.Start -> startUtterance(recognizer, intent)
+            VoiceSupportDecision.Download -> {
+                val message = try {
+                    recognizer.triggerModelDownload(intent)
+                    "Downloading offline voice for $requestedLanguage. Try dictation again when it finishes."
+                } catch (_: RuntimeException) {
+                    "Offline voice download could not start. Check Speech Services settings."
+                }
+                // Recheck after each request so a completed download is noticed
+                // without recreating the keyboard service.
+                clearRecognitionSupport()
+                preflightRecognitionSupport(recognizer, intent)
+                listener?.onVoiceStatus(message)
+                finishSession()
+            }
+            VoiceSupportDecision.Unavailable -> {
+                listener?.onVoiceStatus(
+                    "Offline voice is not available for $requestedLanguage. " +
+                        "Install the language in Speech Services settings."
+                )
+                finishSession()
+            }
+        }
+    }
+
+    private fun startUtterance(recognizer: VoiceRecognizer, intent: Intent) {
         listening = true
         sawPartial = false
         utteranceContext = inputConnectionProvider?.invoke()?.getTextBeforeCursor(CONTEXT_CHARS, 0)
-        recognizer.startListening(buildIntent())
-    }
-
-    private fun buildIntent(): Intent {
-        return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-            // Without an explicit language the recognizer falls back to the
-            // service's own default, which can differ from the keyboard's locale.
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, Locale.getDefault().language)
-            // Keep the mic open through natural pauses instead of cutting the
-            // user off mid-thought; the session's own idle bound still applies.
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, SILENCE_MS)
-            putExtra(
-                RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
-                SILENCE_MS
-            )
-        }
+        recognizer.startListening(intent)
     }
 
     private fun hasRecordAudioPermission(): Boolean {
@@ -262,6 +577,7 @@ class VoiceInputHandler(
         clearComposing()
         speechRecognizer?.destroy()
         speechRecognizer = null
+        clearRecognitionSupport()
     }
 
     fun isListening(): Boolean = listening
@@ -415,6 +731,7 @@ class VoiceInputHandler(
                         recreatedForBusy = true
                         speechRecognizer?.destroy()
                         speechRecognizer = null
+                        clearRecognitionSupport()
                         scheduleRestart()
                     }
                     is VoiceNextStep.Report -> {
@@ -454,9 +771,6 @@ class VoiceInputHandler(
 
         /** How long an explicit stop waits for the recognizer's final answer. */
         const val STOP_TIMEOUT_MS = 3000L
-
-        /** Pause tolerated inside one utterance before the recognizer cuts it. */
-        private const val SILENCE_MS = 1500L
 
         /** How much preceding text to read for the spacing decision. */
         private const val CONTEXT_CHARS = 2

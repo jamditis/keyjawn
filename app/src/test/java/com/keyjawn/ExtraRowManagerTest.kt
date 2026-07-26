@@ -227,4 +227,23 @@ class ExtraRowManagerTest {
         val bar = view.findViewById<TextView>(R.id.tooltip_bar)
         assertEquals(View.VISIBLE, bar.visibility)
     }
+
+    @Test
+    fun `offline language setup status remains visible when tooltips disabled`() {
+        val prefs = AppPrefs(RuntimeEnvironment.getApplication())
+        prefs.setTooltipsEnabled(false)
+        val voice: VoiceInputHandler = mock()
+        val (view, _) = managerWith(prefs, voice = voice)
+
+        val captor = argumentCaptor<VoiceInputListener>()
+        verify(voice).listener = captor.capture()
+        captor.lastValue.onVoiceStatus("Downloading offline voice. Try again when it finishes.")
+
+        val bar = view.findViewById<TextView>(R.id.tooltip_bar)
+        assertEquals(View.VISIBLE, bar.visibility)
+        assertEquals(
+            "Downloading offline voice. Try again when it finishes.",
+            bar.text.toString()
+        )
+    }
 }

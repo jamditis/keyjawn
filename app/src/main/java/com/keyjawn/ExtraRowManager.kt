@@ -427,6 +427,11 @@ class ExtraRowManager(
                 voiceText?.text = "Transcribing"
             }
 
+            override fun onVoiceStatus(message: String) {
+                voiceText?.text = ""
+                showTooltip(message, 4000L, critical = true)
+            }
+
             override fun onVoiceContinue() {
                 // The utterance was committed and the mic is re-arming. Clear the
                 // bar so the next sentence starts from an empty line instead of
