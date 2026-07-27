@@ -34,6 +34,7 @@ class QwertyKeyboardTest {
     private lateinit var extraRowManager: ExtraRowManager
     private lateinit var ic: InputConnection
     private lateinit var keyboard: QwertyKeyboard
+    private lateinit var haptics: KeyboardHaptics
     private lateinit var activityController: ActivityController<Activity>
 
     @Before
@@ -56,6 +57,7 @@ class QwertyKeyboardTest {
             addView(extraRowView)
         }
         extraRowManager = ExtraRowManager(parentView, keySender, { ic })
+        haptics = mock()
 
         // Host the keyboard container in an attached Activity window so the
         // one-shot shift reset and auto-capitalize relabel -- which the keyboard
@@ -71,7 +73,13 @@ class QwertyKeyboardTest {
         activityController = Robolectric.buildActivity(Activity::class.java).setup()
         activityController.get().setContentView(root)
 
-        keyboard = QwertyKeyboard(container, keySender, extraRowManager, { ic })
+        keyboard = QwertyKeyboard(
+            container,
+            keySender,
+            extraRowManager,
+            { ic },
+            haptics = haptics
+        )
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
     }
 
@@ -125,6 +133,32 @@ class QwertyKeyboardTest {
     private fun charButtonAt(rowIndex: Int, colIndex: Int): Button {
         val row = container.getChildAt(rowIndex) as LinearLayout
         return findButton(row.getChildAt(colIndex))
+    }
+
+    @Test
+    fun `enter dispatches the semantic enter haptic`() {
+        val row = container.getChildAt(3) as LinearLayout
+        val enter = findButton(row.getChildAt(4))
+
+        enter.performClick()
+
+        verify(haptics).key(KeyOutput.Enter)
+    }
+
+    @Test
+    fun `backspace press uses repeat context haptic flags`() {
+        val row = container.getChildAt(2) as LinearLayout
+        val backspace = findButton(row.getChildAt(row.childCount - 1))
+        val now = SystemClock.uptimeMillis()
+        val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, 0f, 0f, 0)
+        val up = MotionEvent.obtain(now, now, MotionEvent.ACTION_UP, 0f, 0f, 0)
+
+        backspace.dispatchTouchEvent(down)
+        backspace.dispatchTouchEvent(up)
+
+        verify(haptics).repeatPress()
+        down.recycle()
+        up.recycle()
     }
 
     @Test

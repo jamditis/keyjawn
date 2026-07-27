@@ -56,10 +56,6 @@ class BackspaceTouchListener(
             val interval: Long
             if (repeatCount >= wordDeleteAfter) {
                 onDeleteWord()
-                // Word deletes are rare and consequential, so each one gets a
-                // tick; per-character repeats do not, or a long hold turns into
-                // one continuous buzz.
-                onHaptic()
                 interval = wordIntervalMs
             } else {
                 onDeleteChar()
