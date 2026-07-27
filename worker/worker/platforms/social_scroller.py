@@ -10,18 +10,23 @@ Two capabilities:
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 
 from worker.config import SocialScrollerConfig
+from worker.subprocesses import SubprocessOwner
 
 log = logging.getLogger(__name__)
 
 
 class SocialScrollerClient:
-    def __init__(self, config: SocialScrollerConfig):
+    def __init__(
+        self,
+        config: SocialScrollerConfig,
+        subprocesses: SubprocessOwner | None = None,
+    ):
         self.config = config
+        self.subprocesses = subprocesses or SubprocessOwner(logger=log)
 
     async def _run_cmd(self, cmd: str, timeout: int = 120) -> str | None:
         """Run a social-scroller command, locally or via SSH.
@@ -37,26 +42,21 @@ class SocialScrollerClient:
         else:
             full_cmd = cmd
         try:
-            proc = await asyncio.create_subprocess_shell(
+            result = await self.subprocesses.run_shell(
                 full_cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                timeout=timeout,
             )
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(), timeout=timeout,
-            )
-            if proc.returncode != 0:
+            if result.timed_out:
+                log.warning("social-scroller timed out after %ds", timeout)
+                return None
+            if result.returncode != 0:
                 log.warning(
                     "social-scroller exited %d: %s",
-                    proc.returncode,
-                    stderr.decode().strip()[:200],
+                    result.returncode,
+                    result.stderr.decode().strip()[:200],
                 )
                 return None
-            return stdout.decode()
-        except asyncio.TimeoutError:
-            log.warning("social-scroller timed out after %ds", timeout)
-            proc.kill()
-            return None
+            return result.stdout.decode()
         except Exception:
             log.exception("social-scroller run failed")
             return None

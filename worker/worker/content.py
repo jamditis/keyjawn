@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import re
 from dataclasses import dataclass
 from typing import Optional
+
+from worker.subprocesses import SubprocessOwner
 
 log = logging.getLogger(__name__)
 
@@ -169,26 +170,23 @@ def validate_generated_content(text: str, platform: str) -> list[str]:
     return violations
 
 
-async def generate_content(req: ContentRequest) -> Optional[str]:
+async def generate_content(
+    req: ContentRequest,
+    subprocesses: SubprocessOwner | None = None,
+) -> Optional[str]:
     """Generate content using Gemini CLI. Returns None on failure."""
     prompt = build_generation_prompt(req)
+    owner = subprocesses or SubprocessOwner(logger=log)
 
     try:
-        process = await asyncio.create_subprocess_exec(
+        result = await owner.run_exec(
             "gemini",
             "-p",
             prompt,
             "--output-format",
             "text",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            timeout=60,
         )
-        stdout, stderr = await asyncio.wait_for(
-            process.communicate(), timeout=60
-        )
-    except asyncio.TimeoutError:
-        log.warning("Gemini CLI timed out after 60s")
-        return None
     except FileNotFoundError:
         log.error("Gemini CLI not found")
         return None
@@ -196,15 +194,18 @@ async def generate_content(req: ContentRequest) -> Optional[str]:
         log.exception("Failed to run Gemini CLI")
         return None
 
-    if process.returncode != 0:
+    if result.timed_out:
+        log.warning("Gemini CLI timed out after 60s")
+        return None
+    if result.returncode != 0:
         log.warning(
             "Gemini CLI returned %d: %s",
-            process.returncode,
-            stderr.decode().strip(),
+            result.returncode,
+            result.stderr.decode().strip(),
         )
         return None
 
-    text = stdout.decode().strip()
+    text = result.stdout.decode().strip()
 
     # Strip surrounding quotes if present
     if len(text) >= 2 and text[0] == '"' and text[-1] == '"':
