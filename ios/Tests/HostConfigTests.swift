@@ -82,3 +82,120 @@ final class HostConfigTests: XCTestCase {
         XCTAssertEqual(HostConfig.AuthMethod.password.rawValue, "password")
     }
 }
+
+final class SSHIdentityKeyMigrationTests: XCTestCase {
+
+    func testExtensionPrefersTheSharedKeyOverTheLegacyMirror() {
+        let sharedKey = Data([1, 2, 3])
+        let legacyKey = Data([4, 5, 6])
+
+        XCTAssertEqual(
+            SSHIdentityKeyMigration.extensionReadableKey(
+                shared: sharedKey,
+                legacyMirror: legacyKey
+            ),
+            sharedKey
+        )
+    }
+
+    func testExtensionCanReadTheLegacyMirrorBeforeAppMigration() {
+        let legacyKey = Data([7, 8, 9])
+
+        XCTAssertEqual(
+            SSHIdentityKeyMigration.extensionReadableKey(
+                shared: nil,
+                legacyMirror: legacyKey
+            ),
+            legacyKey
+        )
+    }
+
+    func testExistingSharedKeyWinsAndRemovesLegacyCopies() {
+        let sharedKey = Data([1, 2, 3])
+        var legacyKeychain: Data? = Data([4, 5, 6])
+        var legacyFile: Data? = Data([7, 8, 9])
+        var storeCalls = 0
+
+        let result = SSHIdentityKeyMigration.resolve(
+            loadShared: { sharedKey },
+            loadLegacyKeychain: { legacyKeychain },
+            loadLegacyFile: { legacyFile },
+            storeShared: { _ in
+                storeCalls += 1
+                return true
+            },
+            deleteLegacyKeychain: { legacyKeychain = nil },
+            deleteLegacyFile: { legacyFile = nil }
+        )
+
+        XCTAssertEqual(result, sharedKey)
+        XCTAssertEqual(storeCalls, 0)
+        XCTAssertNil(legacyKeychain)
+        XCTAssertNil(legacyFile)
+    }
+
+    func testLegacyKeychainKeyIsCopiedAndVerifiedBeforeCleanup() {
+        let legacyKey = Data([10, 11, 12])
+        var sharedKey: Data?
+        var legacyKeychain: Data? = legacyKey
+        var legacyFile: Data? = Data([13, 14, 15])
+
+        let result = SSHIdentityKeyMigration.resolve(
+            loadShared: { sharedKey },
+            loadLegacyKeychain: { legacyKeychain },
+            loadLegacyFile: { legacyFile },
+            storeShared: { data in
+                sharedKey = data
+                return true
+            },
+            deleteLegacyKeychain: { legacyKeychain = nil },
+            deleteLegacyFile: { legacyFile = nil }
+        )
+
+        XCTAssertEqual(result, legacyKey)
+        XCTAssertEqual(sharedKey, legacyKey)
+        XCTAssertNil(legacyKeychain)
+        XCTAssertNil(legacyFile)
+    }
+
+    func testLegacyFileIsUsedWhenTheProcessCannotReadTheOldKeychainItem() {
+        let legacyFileKey = Data([16, 17, 18])
+        var sharedKey: Data?
+        var legacyFile: Data? = legacyFileKey
+
+        let result = SSHIdentityKeyMigration.resolve(
+            loadShared: { sharedKey },
+            loadLegacyKeychain: { nil },
+            loadLegacyFile: { legacyFile },
+            storeShared: { data in
+                sharedKey = data
+                return true
+            },
+            deleteLegacyKeychain: {},
+            deleteLegacyFile: { legacyFile = nil }
+        )
+
+        XCTAssertEqual(result, legacyFileKey)
+        XCTAssertEqual(sharedKey, legacyFileKey)
+        XCTAssertNil(legacyFile)
+    }
+
+    func testFailedOrUnverifiedSharedWritePreservesLegacyCopies() {
+        let legacyKey = Data([19, 20, 21])
+        var legacyKeychain: Data? = legacyKey
+        var legacyFile: Data? = legacyKey
+
+        let result = SSHIdentityKeyMigration.resolve(
+            loadShared: { nil },
+            loadLegacyKeychain: { legacyKeychain },
+            loadLegacyFile: { legacyFile },
+            storeShared: { _ in true },
+            deleteLegacyKeychain: { legacyKeychain = nil },
+            deleteLegacyFile: { legacyFile = nil }
+        )
+
+        XCTAssertNil(result)
+        XCTAssertEqual(legacyKeychain, legacyKey)
+        XCTAssertEqual(legacyFile, legacyKey)
+    }
+}
