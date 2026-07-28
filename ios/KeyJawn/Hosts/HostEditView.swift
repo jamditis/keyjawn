@@ -105,11 +105,14 @@ struct HostEditView: View {
                 } footer: {
                     let trimmed = hostPublicKey.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !trimmed.isEmpty && !isHostKeyValid {
-                        Text("Invalid key format. Paste the full line from: \(scanCommand)")
+                        Text("Invalid key format. Paste the key type and key data from the output of: \(scanCommand)")
                             .font(.caption)
                             .foregroundStyle(.red)
                     } else {
-                        Text("Paste output of: \(scanCommand)\nIf omitted, the server's key is not verified and the connection can be intercepted.")
+                        Text(
+                            "Leave blank to review and save the server fingerprint on first connection. "
+                            + "Or paste the key type and key data from the output of: \(scanCommand)"
+                        )
                             .font(.caption)
                     }
                 }

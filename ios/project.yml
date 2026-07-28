@@ -39,6 +39,8 @@ targets:
       - package: Citadel
       - package: SwiftNIO
         product: NIOCore
+      - package: SwiftNIO
+        product: NIOPosix
       - package: SwiftNIOSSH
         product: NIOSSH
       - target: KeyJawnKeyboard
