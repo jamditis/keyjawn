@@ -60,6 +60,34 @@ class QwertyKeyboardView @JvmOverloads constructor(
         val eventTime: Long
     )
 
+    internal data class TracePoint(
+        val pointerId: Int,
+        val action: Int,
+        val x: Float,
+        val y: Float,
+        val downTime: Long,
+        val eventTime: Long,
+        val rowIndex: Int?,
+        val colIndex: Int?
+    )
+
+    internal data class TouchTrace(
+        val pointerId: Int,
+        val points: List<TracePoint>,
+        val crossedKeyBounds: Boolean
+    )
+
+    /**
+     * Passive observation only: callbacks cannot consume or reclassify a touch.
+     * Later glide phases can inspect this stream without entering the tap,
+     * long-press, alt-slide, cursor-drag, or flick dispatch path.
+     */
+    internal interface TraceObserver {
+        fun onTracePoint(point: TracePoint, crossedKeyBounds: Boolean)
+
+        fun onTraceFinished(trace: TouchTrace, cancelled: Boolean)
+    }
+
     internal interface Listener {
         fun onKeyPointer(cell: KeyCell, sample: PointerSample): Boolean
 
@@ -95,10 +123,12 @@ class QwertyKeyboardView @JvmOverloads constructor(
     private var cells: List<List<KeyCell>> = emptyList()
     private val pressedPointers = HashMap<Int, KeyCell>()
     private val visuallyPressedPointers = HashSet<Int>()
+    private val activeTraces = HashMap<Int, ActiveTrace>()
     private var gapPointerId = MotionEvent.INVALID_POINTER_ID
     private val accessibilityHelper = KeyAccessibilityHelper(this)
 
     internal var listener: Listener? = null
+    internal var traceObserver: TraceObserver? = null
 
     internal var geometryGeneration: Int = 0
         private set
@@ -297,6 +327,7 @@ class QwertyKeyboardView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        observeTrace(event)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 val index = event.actionIndex
@@ -373,6 +404,221 @@ class QwertyKeyboardView @JvmOverloads constructor(
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun observeTrace(event: MotionEvent) {
+        val observer = traceObserver
+        if (observer == null) {
+            activeTraces.clear()
+            return
+        }
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                val index = event.actionIndex
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
+                    appendCoPointerMoves(observer, event, index)
+                }
+                val pointerId = event.getPointerId(index)
+                val trace = ActiveTrace(pointerId)
+                activeTraces[pointerId] = trace
+                emitTracePoint(
+                    observer,
+                    trace,
+                    tracePoint(
+                        event,
+                        index,
+                        MotionEvent.ACTION_DOWN,
+                        event.getX(index),
+                        event.getY(index),
+                        event.eventTime
+                    )
+                )
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                for (index in 0 until event.pointerCount) {
+                    val pointerId = event.getPointerId(index)
+                    val trace = activeTraces[pointerId] ?: continue
+                    appendHistorical(observer, trace, event, index)
+                    emitTracePoint(
+                        observer,
+                        trace,
+                        tracePoint(
+                            event,
+                            index,
+                            MotionEvent.ACTION_MOVE,
+                            event.getX(index),
+                            event.getY(index),
+                            event.eventTime
+                        )
+                    )
+                }
+            }
+
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                val index = event.actionIndex
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_UP) {
+                    appendCoPointerMoves(observer, event, index)
+                }
+                val pointerId = event.getPointerId(index)
+                val trace = activeTraces.remove(pointerId) ?: return
+                appendHistorical(observer, trace, event, index)
+                emitTracePoint(
+                    observer,
+                    trace,
+                    tracePoint(
+                        event,
+                        index,
+                        MotionEvent.ACTION_UP,
+                        event.getX(index),
+                        event.getY(index),
+                        event.eventTime
+                    )
+                )
+                val snapshot = trace.snapshot()
+                observer.onTraceFinished(snapshot, cancelled = false)
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                for ((pointerId, trace) in activeTraces.toMap()) {
+                    val index = event.findPointerIndex(pointerId)
+                    if (index >= 0) {
+                        appendHistorical(observer, trace, event, index)
+                        emitTracePoint(
+                            observer,
+                            trace,
+                            tracePoint(
+                                event,
+                                index,
+                                MotionEvent.ACTION_CANCEL,
+                                event.getX(index),
+                                event.getY(index),
+                                event.eventTime
+                            )
+                        )
+                    }
+                    val snapshot = trace.snapshot()
+                    observer.onTraceFinished(snapshot, cancelled = true)
+                }
+                activeTraces.clear()
+            }
+        }
+    }
+
+    private fun appendCoPointerMoves(
+        observer: TraceObserver,
+        event: MotionEvent,
+        actionIndex: Int
+    ) {
+        for (index in 0 until event.pointerCount) {
+            if (index == actionIndex) continue
+            val pointerId = event.getPointerId(index)
+            val trace = activeTraces[pointerId] ?: continue
+            appendHistorical(observer, trace, event, index)
+            emitTracePoint(
+                observer,
+                trace,
+                tracePoint(
+                    event,
+                    index,
+                    MotionEvent.ACTION_MOVE,
+                    event.getX(index),
+                    event.getY(index),
+                    event.eventTime
+                )
+            )
+        }
+    }
+
+    private fun appendHistorical(
+        observer: TraceObserver,
+        trace: ActiveTrace,
+        event: MotionEvent,
+        pointerIndex: Int
+    ) {
+        for (historyIndex in 0 until event.historySize) {
+            emitTracePoint(
+                observer,
+                trace,
+                tracePoint(
+                    event,
+                    pointerIndex,
+                    MotionEvent.ACTION_MOVE,
+                    event.getHistoricalX(pointerIndex, historyIndex),
+                    event.getHistoricalY(pointerIndex, historyIndex),
+                    event.getHistoricalEventTime(historyIndex)
+                )
+            )
+        }
+    }
+
+    private fun emitTracePoint(
+        observer: TraceObserver,
+        trace: ActiveTrace,
+        point: TracePoint
+    ) {
+        trace.add(point)
+        observer.onTracePoint(point, trace.crossedKeyBounds)
+    }
+
+    private fun tracePoint(
+        event: MotionEvent,
+        pointerIndex: Int,
+        action: Int,
+        x: Float,
+        y: Float,
+        eventTime: Long
+    ): TracePoint {
+        val cell = keyAt(x, y)
+        return TracePoint(
+            pointerId = event.getPointerId(pointerIndex),
+            action = action,
+            x = x,
+            y = y,
+            downTime = event.downTime,
+            eventTime = eventTime,
+            rowIndex = cell?.rowIndex,
+            colIndex = cell?.colIndex
+        )
+    }
+
+    private class ActiveTrace(
+        private val pointerId: Int
+    ) {
+        private val points = ArrayList<TracePoint>()
+        private var firstRow: Int? = null
+        private var firstCol: Int? = null
+        private var firstPointSeen = false
+        var crossedKeyBounds = false
+            private set
+
+        fun add(point: TracePoint) {
+            points += point
+            if (!firstPointSeen) {
+                firstPointSeen = true
+                firstRow = point.rowIndex
+                firstCol = point.colIndex
+                return
+            }
+            if (firstRow == null || firstCol == null) {
+                // A trace may begin in a row margin. Use the first key it enters
+                // as the origin for later cross-key detection.
+                if (point.rowIndex != null && point.colIndex != null) {
+                    firstRow = point.rowIndex
+                    firstCol = point.colIndex
+                }
+            } else if (point.rowIndex != firstRow || point.colIndex != firstCol) {
+                crossedKeyBounds = true
+            }
+        }
+
+        fun snapshot(): TouchTrace =
+            TouchTrace(
+                pointerId = pointerId,
+                points = points.toList(),
+                crossedKeyBounds = crossedKeyBounds
+            )
     }
 
     override fun dispatchHoverEvent(event: MotionEvent): Boolean =
