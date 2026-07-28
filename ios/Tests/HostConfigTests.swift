@@ -180,6 +180,30 @@ final class HostConfigTests: XCTestCase {
         XCTAssertNil(captured.get())
         XCTAssertTrue(probeClosed.get())
     }
+
+    func testFirstUseProbeTimesOutAndClosesTheOwnedChannel() async {
+        let probeClosed = LockedBox(false)
+        let (presentedKeys, presentedKeyContinuation) =
+            AsyncThrowingStream<PresentedHostKey, Error>.makeStream()
+
+        do {
+            _ = try await nextPresentedHostKey(
+                from: presentedKeys,
+                timeout: .milliseconds(10),
+                onTimeout: {
+                    probeClosed.set(true)
+                    presentedKeyContinuation.finish(
+                        throwing: HostKeyTrustError.probeTimedOut
+                    )
+                }
+            )
+            XCTFail("A stalled host-key probe should time out")
+        } catch {
+            XCTAssertEqual(error as? HostKeyTrustError, .probeTimedOut)
+        }
+
+        XCTAssertTrue(probeClosed.get())
+    }
 }
 
 private final class LockedBox<Value>: @unchecked Sendable {

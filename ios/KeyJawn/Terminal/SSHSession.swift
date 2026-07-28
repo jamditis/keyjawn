@@ -284,6 +284,7 @@ enum HostKeyTrustError: Error, LocalizedError, Sendable, Equatable {
     case rejected
     case storageFailed
     case invalidPresentedKey
+    case probeTimedOut
 
     var errorDescription: String? {
         switch self {
@@ -295,6 +296,8 @@ enum HostKeyTrustError: Error, LocalizedError, Sendable, Equatable {
             return "The host key could not be saved, so the connection was stopped."
         case .invalidPresentedKey:
             return "The server presented an invalid host key."
+        case .probeTimedOut:
+            return "Timed out waiting for the server's SSH host key."
         }
     }
 }
@@ -399,13 +402,44 @@ private func probeFirstUseHostKey(
             port: Int(host.port)
         ).get()
 
-        var iterator = presentedKeys.makeAsyncIterator()
-        guard try await iterator.next() != nil else {
-            throw HostKeyTrustError.invalidPresentedKey
-        }
+        _ = try await nextPresentedHostKey(
+            from: presentedKeys,
+            timeout: .seconds(30),
+            onTimeout: {
+                presentedKeyContinuation.finish(
+                    throwing: HostKeyTrustError.probeTimedOut
+                )
+                channelBox.close()
+            }
+        )
     } onCancel: {
         presentedKeyContinuation.finish(throwing: CancellationError())
         channelBox.close()
+    }
+}
+
+func nextPresentedHostKey(
+    from presentedKeys: AsyncThrowingStream<PresentedHostKey, Error>,
+    timeout: Duration,
+    onTimeout: @escaping @Sendable () -> Void
+) async throws -> PresentedHostKey {
+    try await withThrowingTaskGroup(of: PresentedHostKey?.self) { group in
+        group.addTask {
+            var iterator = presentedKeys.makeAsyncIterator()
+            return try await iterator.next()
+        }
+        group.addTask {
+            try await Task.sleep(for: timeout)
+            try Task.checkCancellation()
+            onTimeout()
+            throw HostKeyTrustError.probeTimedOut
+        }
+
+        defer { group.cancelAll() }
+        guard let result = try await group.next(), let presentedKey = result else {
+            throw HostKeyTrustError.invalidPresentedKey
+        }
+        return presentedKey
     }
 }
 
