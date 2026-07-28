@@ -416,6 +416,9 @@ class QwertyKeyboardView @JvmOverloads constructor(
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 val index = event.actionIndex
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
+                    appendCoPointerMoves(observer, event, index)
+                }
                 val pointerId = event.getPointerId(index)
                 val trace = ActiveTrace(pointerId)
                 activeTraces[pointerId] = trace
@@ -455,6 +458,9 @@ class QwertyKeyboardView @JvmOverloads constructor(
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
                 val index = event.actionIndex
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_UP) {
+                    appendCoPointerMoves(observer, event, index)
+                }
                 val pointerId = event.getPointerId(index)
                 val trace = activeTraces.remove(pointerId) ?: return
                 appendHistorical(observer, trace, event, index)
@@ -497,6 +503,31 @@ class QwertyKeyboardView @JvmOverloads constructor(
                 }
                 activeTraces.clear()
             }
+        }
+    }
+
+    private fun appendCoPointerMoves(
+        observer: TraceObserver,
+        event: MotionEvent,
+        actionIndex: Int
+    ) {
+        for (index in 0 until event.pointerCount) {
+            if (index == actionIndex) continue
+            val pointerId = event.getPointerId(index)
+            val trace = activeTraces[pointerId] ?: continue
+            appendHistorical(observer, trace, event, index)
+            emitTracePoint(
+                observer,
+                trace,
+                tracePoint(
+                    event,
+                    index,
+                    MotionEvent.ACTION_MOVE,
+                    event.getX(index),
+                    event.getY(index),
+                    event.eventTime
+                )
+            )
         }
     }
 

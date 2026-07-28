@@ -152,6 +152,127 @@ class QwertyKeyboardViewTest {
     }
 
     @Test
+    fun `pointer transitions preserve co-pointer trace movement`() {
+        val context = RuntimeEnvironment.getApplication()
+        val surface = QwertyKeyboardView(context)
+        surface.layout(0, 0, 1080, surface.suggestedKeyboardHeight)
+        surface.submit(
+            KeyboardLayouts.lowercase.map { row ->
+                row.map { QwertyKeyboardView.RenderedKey(it, it.label) }
+            }
+        )
+        surface.listener = acceptingListener()
+        val finished = mutableMapOf<Int, QwertyKeyboardView.TouchTrace>()
+        surface.traceObserver = object : QwertyKeyboardView.TraceObserver {
+            override fun onTracePoint(
+                point: QwertyKeyboardView.TracePoint,
+                crossedKeyBounds: Boolean
+            ) {}
+
+            override fun onTraceFinished(
+                trace: QwertyKeyboardView.TouchTrace,
+                cancelled: Boolean
+            ) {
+                finished[trace.pointerId] = trace
+            }
+        }
+
+        val q = requireNotNull(surface.keyBounds(0, 0))
+        val w = requireNotNull(surface.keyBounds(0, 1))
+        val e = requireNotNull(surface.keyBounds(0, 2))
+        val now = SystemClock.uptimeMillis()
+        val firstDown = MotionEvent.obtain(
+            now, now, MotionEvent.ACTION_DOWN, q.centerX(), q.centerY(), 0
+        )
+        val properties = arrayOf(
+            MotionEvent.PointerProperties().apply { id = 0 },
+            MotionEvent.PointerProperties().apply { id = 1 }
+        )
+        val secondDown = MotionEvent.obtain(
+            now,
+            now + 10,
+            MotionEvent.ACTION_POINTER_DOWN or
+                (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
+            2,
+            properties,
+            arrayOf(
+                MotionEvent.PointerCoords().apply {
+                    x = w.centerX()
+                    y = w.centerY()
+                },
+                MotionEvent.PointerCoords().apply {
+                    x = e.centerX()
+                    y = e.centerY()
+                }
+            ),
+            0,
+            0,
+            1f,
+            1f,
+            0,
+            0,
+            0,
+            0
+        )
+        val secondUp = MotionEvent.obtain(
+            now,
+            now + 20,
+            MotionEvent.ACTION_POINTER_UP or
+                (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
+            2,
+            properties,
+            arrayOf(
+                MotionEvent.PointerCoords().apply {
+                    x = e.centerX()
+                    y = e.centerY()
+                },
+                MotionEvent.PointerCoords().apply {
+                    x = e.centerX()
+                    y = e.centerY()
+                }
+            ),
+            0,
+            0,
+            1f,
+            1f,
+            0,
+            0,
+            0,
+            0
+        )
+        val firstUp = MotionEvent.obtain(
+            now, now + 30, MotionEvent.ACTION_UP, q.centerX(), q.centerY(), 0
+        )
+        try {
+            surface.dispatchTouchEvent(firstDown)
+            surface.dispatchTouchEvent(secondDown)
+            surface.dispatchTouchEvent(secondUp)
+            surface.dispatchTouchEvent(firstUp)
+        } finally {
+            firstDown.recycle()
+            secondDown.recycle()
+            secondUp.recycle()
+            firstUp.recycle()
+        }
+
+        val firstTrace = requireNotNull(finished[0])
+        assertEquals(
+            listOf(
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_MOVE,
+                MotionEvent.ACTION_MOVE,
+                MotionEvent.ACTION_UP
+            ),
+            firstTrace.points.map { it.action }
+        )
+        assertEquals(
+            listOf(0 to 0, 0 to 1, 0 to 2, 0 to 0),
+            firstTrace.points.map { it.rowIndex to it.colIndex }
+        )
+        assertTrue(firstTrace.crossedKeyBounds)
+    }
+
+    @Test
     fun `a gap listener receives the full stream even when down is unclassified`() {
         val context = RuntimeEnvironment.getApplication()
         val surface = QwertyKeyboardView(context)
@@ -466,7 +587,11 @@ class QwertyKeyboardViewTest {
         assertEquals(listOf(0, 1), finished.map { it.first.pointerId }.sorted())
         assertTrue(finished.all { it.second })
         assertEquals(
-            listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_CANCEL),
+            listOf(
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_MOVE,
+                MotionEvent.ACTION_CANCEL
+            ),
             finished.single { it.first.pointerId == 0 }.first.points.map { it.action }
         )
         assertEquals(
