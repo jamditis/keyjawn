@@ -92,11 +92,13 @@ private fun languageMatches(candidate: String, requested: String): Boolean {
     if (candidateLocale.language.isEmpty() || requestedLocale.language.isEmpty()) return false
     if (!candidateLocale.language.equals(requestedLocale.language, ignoreCase = true)) return false
     if (candidateLocale.script.isNotEmpty() &&
+        requestedLocale.script.isNotEmpty() &&
         !candidateLocale.script.equals(requestedLocale.script, ignoreCase = true)
     ) {
         return false
     }
     if (candidateLocale.country.isNotEmpty() &&
+        requestedLocale.country.isNotEmpty() &&
         !candidateLocale.country.equals(requestedLocale.country, ignoreCase = true)
     ) {
         return false
@@ -844,18 +846,22 @@ class VoiceInputHandler internal constructor(
                     return
                 }
 
-                if (sessionActive &&
-                    shouldFallbackFromOnDeviceRecognizer(
-                        Build.VERSION.SDK_INT,
-                        error,
-                        owner.isOnDevice
-                    )
-                ) {
+                if (shouldFallbackFromOnDeviceRecognizer(
+                    Build.VERSION.SDK_INT,
+                    error,
+                    owner.isOnDevice
+                )) {
                     useFallbackRecognizer = true
                     owner.destroy()
                     speechRecognizer = null
                     clearRecognitionSupport()
-                    scheduleRestart()
+                    if (sessionActive) {
+                        scheduleRestart()
+                    } else {
+                        // A push-to-talk release can precede this late language
+                        // error. Keep the fallback choice for the next press.
+                        finishSession()
+                    }
                     return
                 }
 

@@ -155,6 +155,24 @@ class VoiceInputHandlerTest {
 
     @Test
     @Config(sdk = [31])
+    fun `Android 12 remembers a language fallback reported after push-to-talk release`() {
+        val onDevice = FakeVoiceRecognizer(isOnDevice = true)
+        val fallback = FakeVoiceRecognizer(isOnDevice = false)
+        val handler = handlerWith(FakeVoiceRecognizerFactory(onDevice, fallback))
+
+        handler.startListening(holdToTalk = true)
+        handler.stopListening()
+        onDevice.sendError(SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE)
+
+        handler.startListening(holdToTalk = true)
+
+        assertNotNull(fallback.startedIntent)
+        assertTrue(handler.isListening())
+        assertTrue(handler.isSessionActive())
+    }
+
+    @Test
+    @Config(sdk = [31])
     fun `late on-device error does not stop the fallback session`() {
         val onDevice = FakeVoiceRecognizer(isOnDevice = true)
         val fallback = FakeVoiceRecognizer(isOnDevice = false)
@@ -282,6 +300,18 @@ class VoiceInputHandlerTest {
                     supported = listOf("zh-Hant-TW")
                 ),
                 requestedLanguage = "zh-Hant-TW",
+                onDeviceRecognizer = true
+            )
+        )
+    }
+
+    @Test
+    fun `language-only request accepts an installed regional model`() {
+        assertEquals(
+            VoiceSupportDecision.Start,
+            voiceSupportDecision(
+                support = VoiceRecognitionSupport(installed = listOf("en-US")),
+                requestedLanguage = "en",
                 onDeviceRecognizer = true
             )
         )
