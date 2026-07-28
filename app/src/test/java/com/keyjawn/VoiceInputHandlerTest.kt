@@ -318,6 +318,18 @@ class VoiceInputHandlerTest {
     }
 
     @Test
+    fun `Chinese request accepts an installed Mandarin macrolanguage model`() {
+        assertEquals(
+            VoiceSupportDecision.Start,
+            voiceSupportDecision(
+                support = VoiceRecognitionSupport(installed = listOf("cmn-Hans-CN")),
+                requestedLanguage = "zh-CN",
+                onDeviceRecognizer = true
+            )
+        )
+    }
+
+    @Test
     fun `support query failure degrades safely to dictation`() {
         val recognizer = FakeVoiceRecognizer(
             isOnDevice = true,

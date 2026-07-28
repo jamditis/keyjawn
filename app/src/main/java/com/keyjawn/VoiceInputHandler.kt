@@ -90,7 +90,11 @@ private fun languageMatches(candidate: String, requested: String): Boolean {
     val candidateLocale = Locale.forLanguageTag(candidate.replace('_', '-'))
     val requestedLocale = Locale.forLanguageTag(requested.replace('_', '-'))
     if (candidateLocale.language.isEmpty() || requestedLocale.language.isEmpty()) return false
-    if (!candidateLocale.language.equals(requestedLocale.language, ignoreCase = true)) return false
+    if (normalizedLanguage(candidateLocale.language) !=
+        normalizedLanguage(requestedLocale.language)
+    ) {
+        return false
+    }
     if (candidateLocale.script.isNotEmpty() &&
         requestedLocale.script.isNotEmpty() &&
         !candidateLocale.script.equals(requestedLocale.script, ignoreCase = true)
@@ -106,6 +110,12 @@ private fun languageMatches(candidate: String, requested: String): Boolean {
     // Omitted script or region subtags are wildcards; explicit ones must agree.
     return true
 }
+
+private fun normalizedLanguage(language: String): String =
+    when (val normalized = language.lowercase(Locale.ROOT)) {
+        "cmn" -> "zh"
+        else -> normalized
+    }
 
 internal fun voiceSupportDecision(
     support: VoiceRecognitionSupport,
