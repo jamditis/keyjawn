@@ -22,7 +22,8 @@ class MenuPanel(
     private val currentPackageProvider: () -> String,
     private val onBottomPaddingChanged: () -> Unit = {},
     private val onAutocorrectChanged: () -> Unit = {},
-    private val onTypingPrefsChanged: () -> Unit = {}
+    private val onTypingPrefsChanged: () -> Unit = {},
+    private val onSlotsChanged: () -> Unit = {}
 ) {
 
     private val context: Context get() = panel.context
@@ -56,6 +57,28 @@ class MenuPanel(
             val label = AppPrefs.getExtraSlotLabel(option)
             addPickerOption(label) {
                 onSelect(option)
+                if (option == "submit:") {
+                    showSubmitModePicker()
+                } else {
+                    hide()
+                }
+            }
+        }
+        panel.visibility = View.VISIBLE
+        panel.scrollTo(0, 0)
+    }
+
+    private fun showSubmitModePicker() {
+        list.removeAllViews()
+        addSectionHeader("Choose submit key")
+        addBodyText("Long-press inserts a newline.")
+        for ((label, mode) in listOf(
+            "Enter" to SubmitMode.ENTER,
+            "Ctrl+Enter" to SubmitMode.CTRL_ENTER,
+            "Alt+Enter" to SubmitMode.ALT_ENTER
+        )) {
+            addPickerOption(label) {
+                appPrefs.setSubmitMode(currentPackageProvider(), mode)
                 hide()
             }
         }
@@ -111,6 +134,21 @@ class MenuPanel(
         addActionRow("Open settings", fullOnly = false) {
             onOpenSettings()
             hide()
+        }
+        val sendSlots = (0..2).filter { appPrefs.getExtraSlot(it) == "submit:" }
+        if (sendSlots.isNotEmpty()) {
+            val mode = appPrefs.getSubmitMode(currentPackageProvider())
+            addActionRow("Submit key: ${submitModeLabel(mode)}", fullOnly = false) {
+                showSubmitModePicker()
+            }
+            for (slot in sendSlots) {
+                addActionRow("Change send slot ${slot + 1}", fullOnly = false) {
+                    showSlotPicker(slot) { value ->
+                        appPrefs.setExtraSlot(slot, value)
+                        onSlotsChanged()
+                    }
+                }
+            }
         }
 
         addSectionHeader("Appearance")
@@ -174,6 +212,23 @@ class MenuPanel(
         }
         list.addView(header)
     }
+
+    private fun addBodyText(value: String) {
+        val text = TextView(context).apply {
+            this.text = value
+            setTextColor(themeManager.keyHint())
+            textSize = 13f
+            setPadding(dp(14), 0, dp(14), dp(8))
+        }
+        list.addView(text)
+    }
+
+    private fun submitModeLabel(mode: SubmitMode): String =
+        when (mode) {
+            SubmitMode.ENTER -> "Enter"
+            SubmitMode.CTRL_ENTER -> "Ctrl+Enter"
+            SubmitMode.ALT_ENTER -> "Alt+Enter"
+        }
 
     private fun addActionRow(label: String, fullOnly: Boolean, action: () -> Unit) {
         val disabled = fullOnly && !isFullFlavor

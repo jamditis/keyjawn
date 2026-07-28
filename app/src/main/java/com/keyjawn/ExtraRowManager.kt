@@ -163,6 +163,30 @@ class ExtraRowManager(
                     button.setOnLongClickListener { ctrlState.longPress(); true }
                 }
             }
+            config == "submit:" -> {
+                button.setText(R.string.send_key_label)
+                button.setOnClickListener {
+                    haptics.key(KeyOutput.Enter)
+                    val ic = inputConnectionProvider() ?: return@setOnClickListener
+                    ic.finishComposingText()
+                    when (
+                        appPrefs?.getSubmitMode(currentPackageProvider?.invoke() ?: "unknown")
+                            ?: SubmitMode.ENTER
+                    ) {
+                        SubmitMode.ENTER ->
+                            keySender.sendKey(ic, KeyEvent.KEYCODE_ENTER)
+                        SubmitMode.CTRL_ENTER ->
+                            keySender.sendKey(ic, KeyEvent.KEYCODE_ENTER, ctrl = true)
+                        SubmitMode.ALT_ENTER ->
+                            keySender.sendKey(ic, KeyEvent.KEYCODE_ENTER, alt = true)
+                    }
+                }
+                button.setOnLongClickListener {
+                    haptics.perform(HapticFeedbackConstants.LONG_PRESS)
+                    inputConnectionProvider()?.let { keySender.sendText(it, "\n") }
+                    true
+                }
+            }
             config.startsWith("keycode:") -> {
                 val keyCodeName = config.removePrefix("keycode:")
                 val keyCode = try {
@@ -310,7 +334,8 @@ class ExtraRowManager(
                 currentPackageProvider = currentPackageProvider ?: { "unknown" },
                 onBottomPaddingChanged = { onBottomPaddingChanged?.invoke() },
                 onAutocorrectChanged = { onAutocorrectChanged?.invoke() },
-                onTypingPrefsChanged = { onTypingPrefsChanged?.invoke() }
+                onTypingPrefsChanged = { onTypingPrefsChanged?.invoke() },
+                onSlotsChanged = { rewireSlots() }
             )
             menuPanel = mp
             uploadButton.setOnClickListener {

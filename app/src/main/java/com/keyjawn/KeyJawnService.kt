@@ -18,6 +18,8 @@ class KeyJawnService : InputMethodService() {
     private var voiceInputHandler: VoiceInputHandler? = null
     private var slashCommandRegistry: SlashCommandRegistry? = null
     private var uploadHandler: UploadHandler? = null
+    internal var activePackageName: String = "unknown"
+        private set
     // internal (module-scoped) so unit tests in the same module can assert the
     // manager instance is reused across input-view rebuilds. Not public.
     internal var clipboardHistoryManager: ClipboardHistoryManager? = null
@@ -127,7 +129,7 @@ class KeyJawnService : InputMethodService() {
                 startActivity(intent)
             },
             onThemeChanged = { setInputView(onCreateInputView()) },
-            currentPackageProvider = { qwertyKeyboard?.currentPackage ?: "unknown" },
+            currentPackageProvider = { activePackageName },
             onAutocorrectChanged = {
                 // Refresh the cached flag and re-render so the spacebar keycap
                 // ("space" vs "SPACE") reflects the new setting immediately.
@@ -216,6 +218,7 @@ class KeyJawnService : InputMethodService() {
         qwertyKeyboard?.resetTransientState()
 
         val packageName = info?.packageName ?: "unknown"
+        activePackageName = packageName
         qwertyKeyboard?.updatePackage(packageName)
         // After the grid reflects the new editor, arm one-shot shift if the
         // cursor landed where a sentence starts. Runs last so it sees the layer

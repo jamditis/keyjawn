@@ -49,6 +49,18 @@ class AppPrefsTest {
     }
 
     @Test
+    fun `submit mode defaults to enter and persists per app`() {
+        val packageA = "com.submit.a"
+        val packageB = "com.submit.b"
+
+        assertEquals(SubmitMode.ENTER, appPrefs.getSubmitMode(packageA))
+        appPrefs.setSubmitMode(packageA, SubmitMode.CTRL_ENTER)
+
+        assertEquals(SubmitMode.CTRL_ENTER, AppPrefs(RuntimeEnvironment.getApplication()).getSubmitMode(packageA))
+        assertEquals(SubmitMode.ENTER, appPrefs.getSubmitMode(packageB))
+    }
+
+    @Test
     fun `setAutocorrect explicitly sets value`() {
         appPrefs.setAutocorrect("com.example.app", true)
         assertTrue(appPrefs.isAutocorrectEnabled("com.example.app"))
@@ -170,9 +182,15 @@ class AppPrefsTest {
         assertEquals("ESC", AppPrefs.getExtraSlotLabel("keycode:KEYCODE_ESCAPE"))
         assertEquals("Tab", AppPrefs.getExtraSlotLabel("keycode:KEYCODE_TAB"))
         assertEquals("Ctrl", AppPrefs.getExtraSlotLabel("ctrl"))
+        assertEquals("Send", AppPrefs.getExtraSlotLabel("submit:"))
         assertEquals("Home", AppPrefs.getExtraSlotLabel("keycode:KEYCODE_MOVE_HOME"))
         assertEquals("End", AppPrefs.getExtraSlotLabel("keycode:KEYCODE_MOVE_END"))
         assertEquals("|", AppPrefs.getExtraSlotLabel("text:|"))
         assertEquals("hello", AppPrefs.getExtraSlotLabel("text:hello"))
+    }
+
+    @Test
+    fun `extra slot options include send`() {
+        assertTrue(AppPrefs.EXTRA_SLOT_OPTIONS.contains("submit:"))
     }
 }
