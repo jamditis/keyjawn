@@ -1,6 +1,7 @@
 package com.keyjawn
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -72,7 +73,18 @@ internal sealed class VoiceSupportDecision {
 internal fun shouldUseOnDeviceRecognizer(
     sdkInt: Int,
     onDeviceAvailable: Boolean
-): Boolean = sdkInt >= Build.VERSION_CODES.TIRAMISU && onDeviceAvailable
+): Boolean = sdkInt >= Build.VERSION_CODES.S && onDeviceAvailable
+
+@SuppressLint("InlinedApi")
+internal fun shouldFallbackFromOnDeviceRecognizer(
+    sdkInt: Int,
+    error: Int,
+    onDeviceRecognizer: Boolean
+): Boolean =
+    sdkInt in Build.VERSION_CODES.S until Build.VERSION_CODES.TIRAMISU &&
+        onDeviceRecognizer &&
+        (error == SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED ||
+            error == SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE)
 
 private fun languageMatches(candidate: String, requested: String): Boolean {
     val candidateLocale = Locale.forLanguageTag(candidate.replace('_', '-'))
@@ -114,7 +126,10 @@ internal object VoiceRecognitionRequest {
     /** Best-effort endpointer window for a multi-second thinking pause. */
     const val SILENCE_MS = 3_000L
 
-    fun build(locale: Locale = Locale.getDefault()): Intent =
+    fun build(
+        locale: Locale = Locale.getDefault(),
+        minimumInputMs: Long? = MINIMUM_INPUT_MS
+    ): Intent =
         Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
@@ -126,7 +141,9 @@ internal object VoiceRecognitionRequest {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, locale.language)
             // These endpointer hints are recognizer-dependent, but services that
             // honor them no longer cut off a prompt at the first thinking pause.
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, MINIMUM_INPUT_MS)
+            minimumInputMs?.let {
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, it)
+            }
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, SILENCE_MS)
             putExtra(
                 RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
@@ -156,6 +173,9 @@ internal interface VoiceRecognizer {
 internal interface VoiceRecognizerFactory {
     fun isAvailable(): Boolean
     fun create(): VoiceRecognizer?
+
+    /** Creates the generic recognizer after an on-device language failure. */
+    fun createFallback(): VoiceRecognizer? = create()
 }
 
 private class PlatformVoiceRecognizerFactory(
@@ -195,6 +215,13 @@ private class PlatformVoiceRecognizerFactory(
             ContextCompat.getMainExecutor(context)
         )
     }
+
+    override fun createFallback(): VoiceRecognizer =
+        PlatformVoiceRecognizer(
+            SpeechRecognizer.createSpeechRecognizer(context),
+            isOnDevice = false,
+            callbackExecutor = ContextCompat.getMainExecutor(context)
+        )
 
     @RequiresApi(Build.VERSION_CODES.S)
     private fun createOnDeviceRecognizer31(): SpeechRecognizer =
@@ -354,9 +381,16 @@ class VoiceInputHandler internal constructor(
     private var cachedSupportRecognizer: VoiceRecognizer? = null
     private var cachedSupportLanguage: String? = null
 
-    /** Support probes are advisory and must never hold up live audio capture. */
+    /** A prior blocking result requires a fresh check before audio capture. */
+    private var supportCheckRequired = false
+
+    /** Background probes are advisory; retries after a blocking result are gated. */
     private var supportProbeInFlight = false
     private var supportProbeGeneration = 0
+    private var supportCheckWatchdog: Runnable? = null
+
+    /** Keep using the generic recognizer after an Android 12 language failure. */
+    private var useFallbackRecognizer = false
 
     var listener: VoiceInputListener? = null
     var onPermissionNeeded: ((String) -> Unit)? = null
@@ -375,8 +409,12 @@ class VoiceInputHandler internal constructor(
     private fun ensureRecognizer(): VoiceRecognizer? {
         var recognizer = speechRecognizer
         if (recognizer == null) {
-            recognizer = recognizerFactory.create()
-            recognizer?.setRecognitionListener(createListener())
+            recognizer = if (useFallbackRecognizer) {
+                recognizerFactory.createFallback()
+            } else {
+                recognizerFactory.create()
+            }
+            recognizer?.let { it.setRecognitionListener(createListener(it)) }
             speechRecognizer = recognizer
         }
         return recognizer
@@ -415,7 +453,9 @@ class VoiceInputHandler internal constructor(
             finishSession()
             return
         }
-        val intent = VoiceRecognitionRequest.build()
+        val intent = VoiceRecognitionRequest.build(
+            minimumInputMs = if (holdToTalk) null else VoiceRecognitionRequest.MINIMUM_INPUT_MS
+        )
         val requestedLanguage = requestedLanguage(intent)
         val support = if (
             cachedSupportRecognizer === recognizer &&
@@ -427,6 +467,10 @@ class VoiceInputHandler internal constructor(
         }
         if (support != null) {
             handleRecognitionSupport(recognizer, intent, support)
+            return
+        }
+        if (supportCheckRequired && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            checkRequiredRecognitionSupport(recognizer, intent)
             return
         }
 
@@ -474,12 +518,90 @@ class VoiceInputHandler internal constructor(
         }
     }
 
+    private fun checkRequiredRecognitionSupport(
+        recognizer: VoiceRecognizer,
+        intent: Intent
+    ) {
+        supportProbeInFlight = true
+        val generation = ++supportProbeGeneration
+        val requestedLanguage = requestedLanguage(intent)
+        armSupportCheckWatchdog(recognizer, intent, generation)
+        try {
+            recognizer.checkRecognitionSupport(
+                intent,
+                onSupport = { support ->
+                    if (generation != supportProbeGeneration) return@checkRecognitionSupport
+                    cancelSupportCheckWatchdog()
+                    supportProbeInFlight = false
+                    if (speechRecognizer !== recognizer || !sessionActive) {
+                        return@checkRecognitionSupport
+                    }
+                    supportCheckRequired = false
+                    cachedSupport = support
+                    cachedSupportRecognizer = recognizer
+                    cachedSupportLanguage = requestedLanguage
+                    handleRecognitionSupport(recognizer, intent, support)
+                },
+                onError = {
+                    if (generation != supportProbeGeneration) return@checkRecognitionSupport
+                    cancelSupportCheckWatchdog()
+                    supportProbeInFlight = false
+                    if (speechRecognizer === recognizer && sessionActive) {
+                        supportCheckRequired = false
+                        startUtterance(recognizer, intent)
+                    }
+                }
+            )
+        } catch (_: RuntimeException) {
+            if (generation == supportProbeGeneration) {
+                cancelSupportCheckWatchdog()
+                supportProbeInFlight = false
+                if (speechRecognizer === recognizer && sessionActive) {
+                    supportCheckRequired = false
+                    startUtterance(recognizer, intent)
+                }
+            }
+        }
+    }
+
+    private fun armSupportCheckWatchdog(
+        recognizer: VoiceRecognizer,
+        intent: Intent,
+        generation: Int
+    ) {
+        cancelSupportCheckWatchdog()
+        val runnable = Runnable {
+            if (generation != supportProbeGeneration) return@Runnable
+            supportCheckWatchdog = null
+            supportProbeGeneration++
+            supportProbeInFlight = false
+            if (speechRecognizer === recognizer && sessionActive) {
+                supportCheckRequired = false
+                startUtterance(recognizer, intent)
+            }
+        }
+        supportCheckWatchdog = runnable
+        handler.postDelayed(runnable, SUPPORT_CHECK_TIMEOUT_MS)
+    }
+
+    private fun cancelSupportCheckWatchdog() {
+        supportCheckWatchdog?.let { handler.removeCallbacks(it) }
+        supportCheckWatchdog = null
+    }
+
     private fun clearRecognitionSupport() {
+        cancelSupportCheckWatchdog()
         supportProbeGeneration++
         supportProbeInFlight = false
+        supportCheckRequired = false
         cachedSupport = null
         cachedSupportRecognizer = null
         cachedSupportLanguage = null
+    }
+
+    private fun requireFreshRecognitionSupport() {
+        clearRecognitionSupport()
+        supportCheckRequired = true
     }
 
     private fun handleRecognitionSupport(
@@ -497,17 +619,17 @@ class VoiceInputHandler internal constructor(
                 } catch (_: RuntimeException) {
                     "Offline voice download could not start. Check Speech Services settings."
                 }
-                // Recheck after each request so a completed download is noticed
-                // without recreating the keyboard service.
-                clearRecognitionSupport()
-                preflightRecognitionSupport(recognizer, intent)
+                // The next mic press checks again. Probing immediately would only
+                // cache the still-pending download state.
+                requireFreshRecognitionSupport()
                 listener?.onVoiceStatus(message)
                 finishSession()
             }
             VoiceSupportDecision.Unavailable -> {
                 // The user can install this model without rebuilding the IME.
-                // Do not let today's blocking result reject every later attempt.
-                clearRecognitionSupport()
+                // Recheck before the next attempt instead of opening the mic
+                // against the same unsupported language.
+                requireFreshRecognitionSupport()
                 listener?.onVoiceStatus(
                     "Offline voice is not available for $requestedLanguage. " +
                         "Install the language in Speech Services settings."
@@ -672,9 +794,10 @@ class VoiceInputHandler internal constructor(
         return true
     }
 
-    private fun createListener(): RecognitionListener {
+    private fun createListener(owner: VoiceRecognizer): RecognitionListener {
         return object : RecognitionListener {
             override fun onResults(results: Bundle?) {
+                if (speechRecognizer !== owner) return
                 listening = false
                 cancelStopWatchdog()
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
@@ -697,6 +820,7 @@ class VoiceInputHandler internal constructor(
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
+                if (speechRecognizer !== owner) return
                 val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val text = matches?.firstOrNull()?.takeIf { it.isNotEmpty() } ?: return
                 sawPartial = true
@@ -708,6 +832,7 @@ class VoiceInputHandler internal constructor(
             }
 
             override fun onError(error: Int) {
+                if (speechRecognizer !== owner) return
                 listening = false
                 cancelStopWatchdog()
                 clearComposing()
@@ -716,6 +841,21 @@ class VoiceInputHandler internal constructor(
                 // its complaint about being aborted is not news to the user.
                 if (suppressErrors) {
                     if (sessionActive) finishSession()
+                    return
+                }
+
+                if (sessionActive &&
+                    shouldFallbackFromOnDeviceRecognizer(
+                        Build.VERSION.SDK_INT,
+                        error,
+                        owner.isOnDevice
+                    )
+                ) {
+                    useFallbackRecognizer = true
+                    owner.destroy()
+                    speechRecognizer = null
+                    clearRecognitionSupport()
+                    scheduleRestart()
                     return
                 }
 
@@ -746,18 +886,21 @@ class VoiceInputHandler internal constructor(
             }
 
             override fun onReadyForSpeech(params: Bundle?) {
+                if (speechRecognizer !== owner) return
                 listener?.onVoiceReady()
             }
 
             override fun onBeginningOfSpeech() {}
 
             override fun onRmsChanged(rmsdB: Float) {
+                if (speechRecognizer !== owner) return
                 listener?.onRmsChanged(rmsdB)
             }
 
             override fun onBufferReceived(buffer: ByteArray?) {}
 
             override fun onEndOfSpeech() {
+                if (speechRecognizer !== owner) return
                 // Only worth announcing when nothing was heard yet: with a
                 // partial already on screen, replacing it with a status word
                 // would take information away.
@@ -774,6 +917,9 @@ class VoiceInputHandler internal constructor(
 
         /** How long an explicit stop waits for the recognizer's final answer. */
         const val STOP_TIMEOUT_MS = 3000L
+
+        /** Bound a required support recheck so a broken service cannot strand the UI. */
+        const val SUPPORT_CHECK_TIMEOUT_MS = 750L
 
         /** How much preceding text to read for the spacing decision. */
         private const val CONTEXT_CHARS = 2

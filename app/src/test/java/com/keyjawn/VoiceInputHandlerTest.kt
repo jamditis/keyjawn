@@ -2,6 +2,7 @@ package com.keyjawn
 
 import android.Manifest
 import android.content.Intent
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -13,6 +14,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
+import java.time.Duration
 import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
@@ -125,12 +127,66 @@ class VoiceInputHandlerTest {
     }
 
     @Test
-    fun `on-device recognizer is selected only when language probing is available`() {
-        assertFalse(shouldUseOnDeviceRecognizer(sdkInt = 31, onDeviceAvailable = true))
-        assertFalse(shouldUseOnDeviceRecognizer(sdkInt = 32, onDeviceAvailable = true))
+    fun `on-device recognizer is selected whenever the platform exposes it`() {
+        assertTrue(shouldUseOnDeviceRecognizer(sdkInt = 31, onDeviceAvailable = true))
+        assertTrue(shouldUseOnDeviceRecognizer(sdkInt = 32, onDeviceAvailable = true))
         assertTrue(shouldUseOnDeviceRecognizer(sdkInt = 33, onDeviceAvailable = true))
         assertFalse(shouldUseOnDeviceRecognizer(sdkInt = 30, onDeviceAvailable = true))
         assertFalse(shouldUseOnDeviceRecognizer(sdkInt = 33, onDeviceAvailable = false))
+    }
+
+    @Test
+    @Config(sdk = [31])
+    fun `Android 12 falls back when the on-device recognizer lacks the language`() {
+        val onDevice = FakeVoiceRecognizer(isOnDevice = true)
+        val fallback = FakeVoiceRecognizer(isOnDevice = false)
+        val handler = handlerWith(FakeVoiceRecognizerFactory(onDevice, fallback))
+
+        handler.startListening()
+        onDevice.sendError(SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE)
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(
+            Duration.ofMillis(VoiceInputHandler.RESTART_DELAY_MS)
+        )
+
+        assertNotNull(fallback.startedIntent)
+        assertTrue(handler.isListening())
+        assertTrue(handler.isSessionActive())
+    }
+
+    @Test
+    @Config(sdk = [31])
+    fun `late on-device error does not stop the fallback session`() {
+        val onDevice = FakeVoiceRecognizer(isOnDevice = true)
+        val fallback = FakeVoiceRecognizer(isOnDevice = false)
+        val handler = handlerWith(FakeVoiceRecognizerFactory(onDevice, fallback))
+
+        handler.startListening()
+        onDevice.sendError(SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED)
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(
+            Duration.ofMillis(VoiceInputHandler.RESTART_DELAY_MS)
+        )
+        onDevice.sendError(SpeechRecognizer.ERROR_NETWORK)
+
+        assertNotNull(fallback.startedIntent)
+        assertTrue(handler.isListening())
+        assertTrue(handler.isSessionActive())
+    }
+
+    @Test
+    fun `API 33 language error does not bypass support probing with fallback`() {
+        val onDevice = FakeVoiceRecognizer(isOnDevice = true)
+        val fallback = FakeVoiceRecognizer(isOnDevice = false)
+        val handler = handlerWith(FakeVoiceRecognizerFactory(onDevice, fallback))
+
+        handler.startListening()
+        onDevice.sendError(SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE)
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(
+            Duration.ofMillis(VoiceInputHandler.RESTART_DELAY_MS)
+        )
+
+        assertNull(fallback.startedIntent)
+        assertFalse(handler.isListening())
+        assertFalse(handler.isSessionActive())
     }
 
     @Test
@@ -179,6 +235,26 @@ class VoiceInputHandlerTest {
         assertNotNull(recognizer.downloadIntent)
         assertNull(recognizer.startedIntent)
         assertFalse(handler.isSessionActive())
+    }
+
+    @Test
+    fun `completed model download starts on the first retry`() {
+        val recognizer = FakeVoiceRecognizer(
+            isOnDevice = true,
+            support = VoiceRecognitionSupport(supported = listOf("en-US"))
+        )
+        val handler = handlerWith(recognizer)
+
+        handler.startListening()
+        assertEquals(1, recognizer.downloadCount)
+
+        recognizer.support = VoiceRecognitionSupport(installed = listOf("en-US"))
+        handler.startListening()
+
+        assertEquals(1, recognizer.downloadCount)
+        assertEquals(2, recognizer.supportChecks)
+        assertNotNull(recognizer.startedIntent)
+        assertTrue(handler.isListening())
     }
 
     @Test
@@ -244,6 +320,45 @@ class VoiceInputHandlerTest {
     }
 
     @Test
+    fun `unsupported language is rechecked before another mic session opens`() {
+        val recognizer = FakeVoiceRecognizer(
+            isOnDevice = true,
+            support = VoiceRecognitionSupport(installed = listOf("fr-FR"))
+        )
+        val handler = handlerWith(recognizer)
+        val statuses = mutableListOf<String>()
+        handler.listener = recordingListener(onStatus = statuses::add)
+
+        handler.startListening()
+        handler.startListening()
+
+        assertEquals(2, recognizer.supportChecks)
+        assertEquals(2, statuses.size)
+        assertNull(recognizer.startedIntent)
+        assertFalse(handler.isListening())
+    }
+
+    @Test
+    fun `required support check timeout degrades to dictation`() {
+        val recognizer = FakeVoiceRecognizer(
+            isOnDevice = true,
+            support = VoiceRecognitionSupport(installed = listOf("fr-FR"))
+        )
+        val handler = handlerWith(recognizer)
+
+        handler.startListening()
+        recognizer.deferSupport = true
+        handler.startListening()
+
+        assertNull(recognizer.startedIntent)
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(
+            Duration.ofSeconds(2)
+        )
+        assertNotNull(recognizer.startedIntent)
+        assertTrue(handler.isListening())
+    }
+
+    @Test
     fun `cached unavailable language is rechecked after its model is installed`() {
         val recognizer = FakeVoiceRecognizer(
             isOnDevice = true,
@@ -266,6 +381,23 @@ class VoiceInputHandlerTest {
     }
 
     @Test
+    fun `push-to-talk does not impose the hands-free minimum duration`() {
+        val recognizer = FakeVoiceRecognizer(
+            isOnDevice = true,
+            support = VoiceRecognitionSupport(installed = listOf("en-US"))
+        )
+        val handler = handlerWith(recognizer)
+
+        handler.startListening(holdToTalk = true)
+
+        assertFalse(
+            recognizer.startedIntent!!.hasExtra(
+                RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS
+            )
+        )
+    }
+
+    @Test
     fun `fallback recognizer starts when offline support is unavailable`() {
         val recognizer = FakeVoiceRecognizer(
             isOnDevice = false,
@@ -280,12 +412,16 @@ class VoiceInputHandlerTest {
     }
 
     private fun handlerWith(recognizer: FakeVoiceRecognizer): VoiceInputHandler {
+        return handlerWith(FakeVoiceRecognizerFactory(recognizer))
+    }
+
+    private fun handlerWith(factory: FakeVoiceRecognizerFactory): VoiceInputHandler {
         val context = RuntimeEnvironment.getApplication()
         Shadows.shadowOf(context).grantPermissions(Manifest.permission.RECORD_AUDIO)
         val handler = VoiceInputHandler(
             context,
             appPrefs = null,
-            recognizerFactory = FakeVoiceRecognizerFactory(recognizer)
+            recognizerFactory = factory
         )
         handler.setup(Button(context)) { null }
         return handler
@@ -304,23 +440,33 @@ class VoiceInputHandlerTest {
     }
 
     private class FakeVoiceRecognizerFactory(
-        private val recognizer: FakeVoiceRecognizer
+        private vararg val recognizers: FakeVoiceRecognizer
     ) : VoiceRecognizerFactory {
         override fun isAvailable(): Boolean = true
-        override fun create(): VoiceRecognizer = recognizer
+
+        private var nextRecognizer = 0
+
+        override fun create(): VoiceRecognizer =
+            recognizers[nextRecognizer.coerceAtMost(recognizers.lastIndex)].also {
+                nextRecognizer++
+            }
     }
 
     private class FakeVoiceRecognizer(
         override val isOnDevice: Boolean,
         var support: VoiceRecognitionSupport? = null,
         private val supportError: Int? = null,
-        private val deferSupport: Boolean = false
+        var deferSupport: Boolean = false
     ) : VoiceRecognizer {
         var startedIntent: Intent? = null
         var downloadIntent: Intent? = null
         var supportChecks = 0
+        var downloadCount = 0
+        private var listener: RecognitionListener? = null
 
-        override fun setRecognitionListener(listener: RecognitionListener) {}
+        override fun setRecognitionListener(listener: RecognitionListener) {
+            this.listener = listener
+        }
 
         override fun startListening(intent: Intent) {
             startedIntent = intent
@@ -344,6 +490,11 @@ class VoiceInputHandlerTest {
 
         override fun triggerModelDownload(intent: Intent) {
             downloadIntent = intent
+            downloadCount++
+        }
+
+        fun sendError(error: Int) {
+            listener?.onError(error)
         }
     }
 }
