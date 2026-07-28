@@ -64,6 +64,10 @@ class KeyJawnService : InputMethodService() {
 
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
         val tm = themeManager
+        val haptics = KeyboardHaptics(
+            view,
+            enabled = { appPrefs.isHapticEnabled() }
+        )
         // The theme can be changed from SettingsActivity (a separate
         // ThemeManager instance writing the shared pref). The palette is cached,
         // so re-resolve it from prefs before applying colors to pick up a change
@@ -75,7 +79,8 @@ class KeyJawnService : InputMethodService() {
         view.setBackgroundColor(tm.keyboardBg())
         view.findViewById<View>(R.id.extra_row)?.setBackgroundColor(tm.extraRowBg())
         view.findViewById<View>(R.id.number_row)?.setBackgroundColor(tm.extraRowBg())
-        view.findViewById<LinearLayout>(R.id.qwerty_container)?.setBackgroundColor(tm.qwertyBg())
+        view.findViewById<QwertyKeyboardView>(R.id.qwerty_container)
+            ?.setBackgroundColor(tm.qwertyBg())
 
         val voice = VoiceInputHandler(this, appPrefs)
         voiceInputHandler = voice
@@ -128,9 +133,6 @@ class KeyJawnService : InputMethodService() {
             onAutocorrectChanged = {
                 // Refresh the cached flag and re-render so the spacebar keycap
                 // ("space" vs "SPACE") reflects the new setting immediately.
-                // The layer is unchanged, so use the force path: a plain
-                // setLayer(currentLayer) is swallowed by render()'s same-layer
-                // guard and would leave the keycap stale.
                 qwertyKeyboard?.refreshTypingPrefs()
                 qwertyKeyboard?.refreshRender()
             },
@@ -139,7 +141,8 @@ class KeyJawnService : InputMethodService() {
                 // toggle has to invalidate that cache to take effect without a
                 // keyboard restart. No keycap changes, so no re-render.
                 qwertyKeyboard?.refreshTypingPrefs()
-            }
+            },
+            haptics = haptics
         )
         extraRowManager = erm
 
@@ -148,7 +151,7 @@ class KeyJawnService : InputMethodService() {
         val keyboardFrame = view.findViewById<android.widget.FrameLayout>(R.id.keyboard_frame)
         val keyPreview = KeyPreview(keyboardFrame, tm)
 
-        val container = view.findViewById<LinearLayout>(R.id.qwerty_container)
+        val container = view.findViewById<QwertyKeyboardView>(R.id.qwerty_container)
         val registry = slashCommandRegistry
         val slashPopup = if (registry != null) {
             SlashCommandPopup(
@@ -161,17 +164,28 @@ class KeyJawnService : InputMethodService() {
                     val ic = currentInputConnection ?: return@SlashCommandPopup
                     keySender.sendText(ic, "/")
                 },
-                themeManager = tm
+                themeManager = tm,
+                haptics = haptics
             )
         } else null
 
-        val qwerty = QwertyKeyboard(container, keySender, erm, { currentInputConnection }, appPrefs, slashPopup, tm, keyPreview)
+        val qwerty = QwertyKeyboard(
+            container,
+            keySender,
+            erm,
+            { currentInputConnection },
+            appPrefs,
+            slashPopup,
+            tm,
+            keyPreview,
+            haptics
+        )
         qwerty.setLayer(KeyboardLayouts.LAYER_LOWER)
         qwertyKeyboard = qwerty
 
         erm.onQuickKeyChanged = { _ ->
-            // The quick-key label changes without a layer change, so force the
-            // rebuild past render()'s same-layer guard.
+            // The quick-key label changes without a layer change. The surface
+            // retains its bounds and dirties only that key.
             qwerty.refreshRender()
         }
 

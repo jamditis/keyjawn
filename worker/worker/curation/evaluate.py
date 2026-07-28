@@ -8,51 +8,47 @@ parallel subagents via asyncio.gather() for concurrent evaluation.
 from __future__ import annotations
 
 import asyncio
-import base64
 import logging
 import os
 import re
 
 from worker.curation.models import CurationCandidate
+from worker.subprocesses import SubprocessOwner
 
 log = logging.getLogger(__name__)
 
 CLI_TIMEOUT = 120  # seconds per CLI call
 
 
-async def _run_claude(prompt: str, model: str = "sonnet") -> str:
+async def _run_claude(
+    prompt: str,
+    model: str = "sonnet",
+    subprocesses: SubprocessOwner | None = None,
+) -> str:
     """Run a Claude Code CLI prompt and return the response text.
 
-    Follows claude-scheduler.py pattern: base64-encode the prompt for
-    safe shell transmission, pipe it into claude -p, and use shell-level
-    timeout (timeout --foreground) instead of asyncio.wait_for which
-    can prevent the CLI from initializing properly.
+    The prompt is sent on stdin so it never crosses a shell boundary.
+    SubprocessOwner supplies the bounded timeout and full-tree cleanup.
     """
-    encoded = base64.b64encode(prompt.encode()).decode()
-
-    # Base64 pipe -> timeout wrapper -> claude -p
-    # Same pattern as claude-scheduler.py bash wrapper scripts
-    cmd = (
-        f"echo '{encoded}' | base64 -d | "
-        f"timeout --foreground --kill-after=30 {CLI_TIMEOUT} "
-        f"claude --dangerously-skip-permissions -p --model {model}"
-    )
-
     # Strip nesting-detection env vars so claude -p doesn't refuse to run
     # when invoked from within a Claude Code session.
     clean_env = {
         k: v for k, v in os.environ.items()
         if k not in ("CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT")
     }
+    owner = subprocesses or SubprocessOwner(logger=log)
 
     try:
-        process = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+        result = await owner.run_exec(
+            "claude",
+            "--dangerously-skip-permissions",
+            "-p",
+            "--model",
+            model,
+            input=prompt.encode(),
+            timeout=CLI_TIMEOUT,
             env=clean_env,
         )
-        stdout, stderr = await process.communicate()
     except FileNotFoundError:
         log.error("claude CLI not found")
         return ""
@@ -60,18 +56,18 @@ async def _run_claude(prompt: str, model: str = "sonnet") -> str:
         log.exception("claude CLI subprocess failed")
         return ""
 
-    if process.returncode == 124:
+    if result.timed_out:
         log.warning("claude CLI timed out after %ds", CLI_TIMEOUT)
         return ""
-    if process.returncode != 0:
+    if result.returncode != 0:
         log.warning(
             "claude CLI returned %d: %s",
-            process.returncode,
-            stderr.decode()[:200],
+            result.returncode,
+            result.stderr.decode()[:200],
         )
         return ""
 
-    return stdout.decode().strip()
+    return result.stdout.decode().strip()
 
 
 # --- Evaluation prompt (quick-check + investigation in one call) ---
@@ -325,7 +321,9 @@ def parse_batch_draft_response(text: str) -> dict:
 
 
 async def evaluate_candidate(
-    candidate: CurationCandidate, platform: str = "twitter"
+    candidate: CurationCandidate,
+    platform: str = "twitter",
+    subprocesses: SubprocessOwner | None = None,
 ) -> dict:
     """Full evaluation of a single candidate using Claude Code CLI.
 
@@ -337,7 +335,11 @@ async def evaluate_candidate(
     """
     # Step 1: Evaluate
     eval_prompt = build_evaluate_prompt(candidate)
-    eval_text = await _run_claude(eval_prompt, model="haiku")
+    eval_text = await _run_claude(
+        eval_prompt,
+        model="haiku",
+        subprocesses=subprocesses,
+    )
     if not eval_text:
         return {"relevant": False, "reasoning": "CLI evaluation failed"}
 
@@ -351,7 +353,11 @@ async def evaluate_candidate(
 
     # Step 2: Batch draft (4 variants via Opus)
     draft_prompt = build_batch_draft_prompt(candidate, evaluation, platform)
-    draft_text = await _run_claude(draft_prompt, model="opus")
+    draft_text = await _run_claude(
+        draft_prompt,
+        model="opus",
+        subprocesses=subprocesses,
+    )
     if not draft_text:
         evaluation["share"] = False
         return evaluation
@@ -369,6 +375,7 @@ async def evaluate_batch(
     candidates: list[CurationCandidate],
     platform: str = "twitter",
     max_parallel: int = 5,
+    subprocesses: SubprocessOwner | None = None,
 ) -> list[tuple[CurationCandidate, dict]]:
     """Evaluate multiple candidates in parallel using Claude Code CLI subagents.
 
@@ -379,7 +386,11 @@ async def evaluate_batch(
 
     async def _eval_one(c: CurationCandidate) -> tuple[CurationCandidate, dict]:
         async with semaphore:
-            result = await evaluate_candidate(c, platform)
+            result = await evaluate_candidate(
+                c,
+                platform,
+                subprocesses=subprocesses,
+            )
             return (c, result)
 
     tasks = [_eval_one(c) for c in candidates]

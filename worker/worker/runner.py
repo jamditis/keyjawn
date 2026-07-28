@@ -1,8 +1,6 @@
 """Main runner -- orchestrates monitor and action loops."""
 
-import asyncio
 import logging
-from datetime import datetime, timezone
 
 import redis.asyncio as aioredis
 
@@ -20,6 +18,7 @@ from worker.platforms.bluesky import BlueskyClient
 from worker.platforms.producthunt import ProductHuntClient
 from worker.platforms.social_scroller import SocialScrollerClient
 from worker.platforms.twitter import TwitterClient
+from worker.subprocesses import SubprocessOwner
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +36,7 @@ class WorkerRunner:
         self.approvals: ApprovalManager = None
         self.curation_monitor = None
         self._redis_sub: aioredis.Redis = None
+        self.subprocesses = SubprocessOwner(logger=logger)
 
     async def start(self):
         """Initialize all components."""
@@ -52,6 +52,7 @@ class WorkerRunner:
         if self.config.social_scroller.enabled:
             self.social_scroller = SocialScrollerClient(
                 self.config.social_scroller,
+                subprocesses=self.subprocesses,
             )
         self.monitor = Monitor(self.config, self.db)
         self.picker = ActionPicker(self.config, self.db)
@@ -66,12 +67,22 @@ class WorkerRunner:
         )
 
         from worker.curation.monitor import CurationMonitor
-        self.curation_monitor = CurationMonitor(self.config.curation, self.db)
+        self.curation_monitor = CurationMonitor(
+            self.config.curation,
+            self.db,
+            subprocesses=self.subprocesses,
+        )
 
         logger.info("keyjawn-worker started")
 
     async def stop(self):
         """Clean shutdown."""
+        report = await self.subprocesses.shutdown()
+        if report.forced:
+            logger.warning(
+                "worker shutdown force-killed %d subprocess tree(s)",
+                report.forced,
+            )
         if self._redis_sub:
             await self._redis_sub.close()
         if self.db:
@@ -127,22 +138,28 @@ class WorkerRunner:
 
         # Generate content if it's a calendar post
         if action["source"] == "calendar":
-            generated = await generate_content(ContentRequest(
-                pillar=action.get("pillar", "demo"),
-                platform=action["platform"],
-                topic=content,
-            ))
+            generated = await generate_content(
+                ContentRequest(
+                    pillar=action.get("pillar", "demo"),
+                    platform=action["platform"],
+                    topic=content,
+                ),
+                subprocesses=self.subprocesses,
+            )
             if generated:
                 errors = validate_generated_content(
                     generated, action["platform"]
                 )
                 if errors:
                     logger.warning("generated content has issues: %s", errors)
-                    generated = await generate_content(ContentRequest(
-                        pillar=action.get("pillar", "demo"),
-                        platform=action["platform"],
-                        topic=content,
-                    ))
+                    generated = await generate_content(
+                        ContentRequest(
+                            pillar=action.get("pillar", "demo"),
+                            platform=action["platform"],
+                            topic=content,
+                        ),
+                        subprocesses=self.subprocesses,
+                    )
                     if generated:
                         errors = validate_generated_content(
                             generated, action["platform"]
@@ -171,12 +188,17 @@ class WorkerRunner:
         content = action["content"]
 
         if action["action_type"] == "reply":
-            generated = await generate_content(ContentRequest(
-                pillar="engagement",
-                platform=action["platform"],
-                topic=f"reply to: {content[:100]}",
-                context=f"@{action.get('source_user', 'user')} said: {content}",
-            ))
+            generated = await generate_content(
+                ContentRequest(
+                    pillar="engagement",
+                    platform=action["platform"],
+                    topic=f"reply to: {content[:100]}",
+                    context=(
+                        f"@{action.get('source_user', 'user')} said: {content}"
+                    ),
+                ),
+                subprocesses=self.subprocesses,
+            )
             if generated:
                 errors = validate_generated_content(
                     generated, action["platform"]

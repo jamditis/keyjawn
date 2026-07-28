@@ -249,18 +249,12 @@ class KeyboardLayoutTest {
         assertSame(KeyboardLayouts.symbols2, KeyboardLayouts.getLayer(3))
     }
 
-    // --- lower<->upper position-identity: the invariant the in-place shift
-    // relabel relies on ---
+    // --- lower<->upper position identity: the stable-geometry invariant ---
     //
-    // QwertyKeyboard.applyShiftCase() relabels the existing letter buttons in
-    // place on a lower<->upper toggle instead of tearing the grid down, which is
-    // only safe because the two layers are position-identical: every (row, col)
-    // holds the same KeyOutput type, so a held Character button always maps to a
-    // Character key in the target layer. applyShiftCase has a safety net that
-    // falls back to a full rebuild if a position diverges, so a broken invariant
-    // would not corrupt the grid, but it would silently defeat the optimization
-    // (every shift would rebuild again). These tests lock the invariant so that
-    // regression is caught at build time instead.
+    // QwertyKeyboardView retains the same KeyCell and RectF objects across a
+    // lower/upper toggle. That is safe because every (row, col) holds the same
+    // KeyOutput type and weight, so drawing and hit testing can update the model
+    // without recomputing geometry. These tests lock the invariant.
 
     @Test
     fun `lowercase and uppercase are position-identical in output type`() {
@@ -298,11 +292,9 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `symbol layers are not position-identical to lowercase so they must rebuild`() {
-        // The counterpart to the fast path: a switch to a symbol layer swaps the
-        // key set and count, so QwertyKeyboard rebuilds rather than relabeling.
-        // Assert the symbol layers genuinely are not position-identical, which
-        // documents why the in-place path is scoped to lower<->upper only.
+    fun `symbol layers are not position-identical to lowercase so geometry must update`() {
+        // A symbol layer swaps the key set and count, so the surface recomputes
+        // its retained cells and bounds. Lower/upper is the stable fast path.
         val lower = KeyboardLayouts.lowercase
         for ((name, symLayer) in listOf(
             "symbols" to KeyboardLayouts.symbols,

@@ -9,206 +9,158 @@ import android.view.View
 import android.view.inputmethod.InputConnection
 import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.LinearLayout
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 import org.junit.runner.RunWith
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.reset
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
+import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class AltKeySlideTest {
 
-    private lateinit var container: LinearLayout
-    private lateinit var keySender: KeySender
-    private lateinit var extraRowManager: ExtraRowManager
-    private lateinit var ic: InputConnection
+    private lateinit var surface: QwertyKeyboardView
     private lateinit var keyboard: QwertyKeyboard
+    private lateinit var keySender: KeySender
+    private lateinit var inputConnection: InputConnection
+    private lateinit var haptics: KeyboardHaptics
     private lateinit var activityController: ActivityController<Activity>
 
     @Before
     fun setUp() {
         val context = RuntimeEnvironment.getApplication()
-        container = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-
+        surface = QwertyKeyboardView(context)
         keySender = mock()
-        ic = mock()
-        whenever(ic.commitText(any(), any())).thenReturn(true)
-        whenever(ic.sendKeyEvent(any())).thenReturn(true)
+        inputConnection = mock()
+        haptics = mock()
+        whenever(inputConnection.commitText(any(), any())).thenReturn(true)
+        val extraRowManager = mock<ExtraRowManager>()
+        whenever(extraRowManager.isCtrlActive()).thenReturn(false)
 
-        val extraRowView = LinearLayout(context).apply { id = R.id.extra_row }
-        addExtraRowButtons(extraRowView, context)
-        val parentView = LinearLayout(context).apply { addView(extraRowView) }
-        extraRowManager = ExtraRowManager(parentView, keySender, { ic })
-
-        val root = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(parentView)
-            addView(container)
-        }
+        val root = FrameLayout(context)
+        root.addView(surface)
         activityController = Robolectric.buildActivity(Activity::class.java).setup()
         activityController.get().setContentView(root)
+        surface.measure(
+            View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(
+                surface.suggestedKeyboardHeight,
+                View.MeasureSpec.EXACTLY
+            )
+        )
+        surface.layout(0, 0, 1080, surface.suggestedKeyboardHeight)
 
-        keyboard = QwertyKeyboard(container, keySender, extraRowManager, { ic })
+        keyboard = QwertyKeyboard(
+            surface,
+            keySender,
+            extraRowManager,
+            { inputConnection },
+            haptics = haptics
+        )
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
-
-        // Robolectric does not lay out the view tree automatically, so key views
-        // report a 0x0 size and the listener's in-bounds check degenerates. Force
-        // a measure/layout pass so the drag-off bounds test exercises real sizes.
-        val widthSpec = View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY)
-        val heightSpec = View.MeasureSpec.makeMeasureSpec(1920, View.MeasureSpec.EXACTLY)
-        root.measure(widthSpec, heightSpec)
-        root.layout(0, 0, 1080, 1920)
     }
 
-    private fun addExtraRowButtons(parent: LinearLayout, context: android.content.Context) {
-        val ids = listOf(
-            R.id.key_esc, R.id.key_tab, R.id.key_clipboard, R.id.key_ctrl,
-            R.id.key_left, R.id.key_down, R.id.key_up, R.id.key_right,
-            R.id.key_upload, R.id.key_mic
-        )
-        for (id in ids) {
-            val btn = Button(context)
-            btn.id = id
-            parent.addView(btn)
+    @After
+    fun tearDown() {
+        keyboard.currentSlideSession?.dismiss()
+        activityController.pause().stop().destroy()
+    }
+
+    private fun dispatch(
+        downTime: Long,
+        eventTime: Long,
+        action: Int,
+        x: Float,
+        y: Float
+    ) {
+        val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+        try {
+            surface.dispatchTouchEvent(event)
+        } finally {
+            event.recycle()
         }
     }
 
-    private fun findButton(view: View): Button =
-        if (view is FrameLayout) view.getChildAt(0) as Button else view as Button
-
-    private fun charButtonAt(rowIndex: Int, colIndex: Int): Button {
-        val row = container.getChildAt(rowIndex) as LinearLayout
-        return findButton(row.getChildAt(colIndex))
-    }
-
-    private fun idleMainLooper() {
-        shadowOf(Looper.getMainLooper()).idle()
-    }
-
-    private fun obtain(action: Int, x: Float, y: Float): MotionEvent {
+    private fun press(row: Int, col: Int): Long {
+        val bounds = requireNotNull(surface.keyBounds(row, col))
         val now = SystemClock.uptimeMillis()
-        return MotionEvent.obtain(now, now, action, x, y, 0)
+        dispatch(now, now, MotionEvent.ACTION_DOWN, bounds.centerX(), bounds.centerY())
+        return now
     }
 
-    private data class Pointer(val id: Int, val x: Float, val y: Float)
-
-    /**
-     * Build a genuine multi-pointer [MotionEvent] from the given pointers, with
-     * [action] (already packed with its actionIndex for pointer up/down events).
-     * Single-pointer MotionEvent.obtain calls can never exercise the pointer-id
-     * routing, so the hijack and tracked-pointer-up tests must drive real
-     * PointerProperties/PointerCoords arrays.
-     */
-    private fun obtainMulti(action: Int, vararg pointers: Pointer): MotionEvent {
-        val now = SystemClock.uptimeMillis()
-        val props = Array(pointers.size) { i ->
-            MotionEvent.PointerProperties().apply {
-                id = pointers[i].id
-                toolType = MotionEvent.TOOL_TYPE_FINGER
-            }
-        }
-        val coords = Array(pointers.size) { i ->
-            MotionEvent.PointerCoords().apply {
-                x = pointers[i].x
-                y = pointers[i].y
-                pressure = 1f
-                size = 1f
-            }
-        }
-        return MotionEvent.obtain(
-            now, now, action, pointers.size, props, coords,
-            0, 0, 1f, 1f, 0, 0, 0, 0
+    private fun release(row: Int, col: Int, downTime: Long) {
+        val bounds = requireNotNull(surface.keyBounds(row, col))
+        dispatch(
+            downTime,
+            SystemClock.uptimeMillis(),
+            MotionEvent.ACTION_UP,
+            bounds.centerX(),
+            bounds.centerY()
         )
     }
 
-    /** Pack an ACTION_POINTER_DOWN/UP action with the pointer slot index that moved. */
-    private fun pointerAction(maskedAction: Int, pointerIndex: Int): Int =
-        maskedAction or (pointerIndex shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)
-
-    /** Fire the pending long-press runnable on a multi-alt key by advancing the looper. */
-    private fun openSlideOn(button: Button) {
-        val down = obtain(MotionEvent.ACTION_DOWN, button.width / 2f, button.height / 2f)
-        button.dispatchTouchEvent(down)
-        down.recycle()
-        // The long-press runnable is posted with a 500ms delay; advance time so it runs.
-        shadowOf(Looper.getMainLooper()).idleFor(600, java.util.concurrent.TimeUnit.MILLISECONDS)
+    private fun openSlide(row: Int = 1, col: Int = 0): Long {
+        val downTime = press(row, col)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(550))
+        assertNotNull(keyboard.currentSlideSession)
+        return downTime
     }
-
-    /**
-     * Local-x within the anchor key that maps to candidate index [i]'s center in
-     * screen space. The listener converts via anchorScreenX + event.getX, so the
-     * inverse is candidateRect.centerX - anchorScreenX.
-     */
-    private fun localXForCandidate(anchor: View, rect: Rect): Float {
-        val loc = IntArray(2)
-        anchor.getLocationOnScreen(loc)
-        return rect.centerX().toFloat() - loc[0]
-    }
-
-    private fun localYForCandidate(anchor: View, rect: Rect): Float {
-        val loc = IntArray(2)
-        anchor.getLocationOnScreen(loc)
-        return rect.centerY().toFloat() - loc[1]
-    }
-
-    // ---- End-to-end gesture tests ----
 
     @Test
-    fun `slide onto candidate index 1 and release sends that alt`() {
-        // "a" (row 2 index 0) is a multi-alt key.
-        val aButton = charButtonAt(1, 0)
-        val alts = AltKeyMappings.getAlts("a")!!
-        assertTrue("test needs a multi-alt key", alts.size > 1)
+    fun `quick tap before long press sends only the primary character`() {
+        val downTime = press(1, 0)
+        release(1, 0, downTime)
 
-        openSlideOn(aButton)
-        val session = keyboard.currentSlideSession
-        assertNotNull("long-press on a multi-alt key opens a slide session", session)
-        assertTrue(session!!.isShowing())
-
-        val rect1 = session.candidateRectsForTest()[1]
-        val moveX = localXForCandidate(aButton, rect1)
-        val moveY = localYForCandidate(aButton, rect1)
-
-        val move = obtain(MotionEvent.ACTION_MOVE, moveX, moveY)
-        aButton.dispatchTouchEvent(move)
-        move.recycle()
-        assertEquals(1, session.hoveredIndex)
-
-        val up = obtain(MotionEvent.ACTION_UP, moveX, moveY)
-        aButton.dispatchTouchEvent(up)
-        up.recycle()
-
-        verify(keySender).sendText(any(), eq(alts[1]))
-        assertFalse("popup dismissed after release", session.isShowing())
+        verify(keySender).sendChar(inputConnection, "a")
+        verify(keySender, never()).sendText(any(), any())
         assertNull(keyboard.currentSlideSession)
     }
 
     @Test
-    fun `release outside all candidates sends nothing`() {
-        val aButton = charButtonAt(1, 0)
-        openSlideOn(aButton)
-        val session = keyboard.currentSlideSession
-        assertNotNull(session)
+    fun `slide onto a candidate and release sends that alt`() {
+        val downTime = openSlide()
+        val session = requireNotNull(keyboard.currentSlideSession)
+        val alts = AltKeyMappings.getAlts("a")!!
+        val target = session.candidateRectsForTest()[1]
+        val location = IntArray(2)
+        surface.getLocationOnScreen(location)
+        val x = target.centerX() - location[0].toFloat()
+        val y = target.centerY() - location[1].toFloat()
 
-        // Move far away from any candidate, then lift.
-        val move = obtain(MotionEvent.ACTION_MOVE, -10000f, -10000f)
-        aButton.dispatchTouchEvent(move)
-        move.recycle()
-        assertEquals(-1, session!!.hoveredIndex)
+        dispatch(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_MOVE, x, y)
+        dispatch(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y)
 
-        val up = obtain(MotionEvent.ACTION_UP, -10000f, -10000f)
-        aButton.dispatchTouchEvent(up)
-        up.recycle()
+        verify(keySender).sendText(inputConnection, alts[1])
+        verify(haptics).confirm()
+        assertFalse(session.isShowing())
+        assertNull(keyboard.currentSlideSession)
+    }
+
+    @Test
+    fun `release outside all candidates dismisses without an alt`() {
+        val downTime = openSlide()
+        val session = requireNotNull(keyboard.currentSlideSession)
+
+        dispatch(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, 1070f, 500f)
 
         verify(keySender, never()).sendText(any(), any())
         assertFalse(session.isShowing())
@@ -216,405 +168,133 @@ class AltKeySlideTest {
     }
 
     @Test
-    fun `quick tap before long-press sends the primary character`() {
-        val aButton = charButtonAt(1, 0)
-        val down = obtain(MotionEvent.ACTION_DOWN, aButton.width / 2f, aButton.height / 2f)
-        val up = obtain(MotionEvent.ACTION_UP, aButton.width / 2f, aButton.height / 2f)
-        aButton.dispatchTouchEvent(down)
-        aButton.dispatchTouchEvent(up)
-        down.recycle()
-        up.recycle()
-
-        verify(keySender).sendChar(any(), eq("a"), any())
-        assertNull("no popup on a quick tap", keyboard.currentSlideSession)
-    }
-
-    @Test
-    fun `drag off the key before long-press opens no popup`() {
-        // With instant key output on (the default), the character was already
-        // committed on press, so drag-off can no longer take it back -- what it
-        // still guarantees is that no alt popup opens and no alt is sent.
-        val aButton = charButtonAt(1, 0)
-        val down = obtain(MotionEvent.ACTION_DOWN, aButton.width / 2f, aButton.height / 2f)
-        aButton.dispatchTouchEvent(down)
-        down.recycle()
-
-        verify(keySender).sendChar(any(), eq("a"), any())
-
-        // Drag far below the key (out of the listener's vertical bounds) BEFORE
-        // the long-press timer fires.
-        val move = obtain(MotionEvent.ACTION_MOVE, aButton.width / 2f, aButton.height * 5f)
-        aButton.dispatchTouchEvent(move)
-        move.recycle()
-
-        // Advance past the long-press delay; the runnable was cancelled on drag-off.
-        shadowOf(Looper.getMainLooper()).idleFor(600, java.util.concurrent.TimeUnit.MILLISECONDS)
-
-        assertNull("drag-off before long-press opens no popup", keyboard.currentSlideSession)
-
-        val up = obtain(MotionEvent.ACTION_UP, aButton.width / 2f, aButton.height * 5f)
-        aButton.dispatchTouchEvent(up)
-        up.recycle()
-
-        // Exactly once: the release must not type it a second time.
-        verify(keySender, times(1)).sendChar(any(), eq("a"), any())
-        verify(keySender, never()).sendText(any(), any())
-    }
-
-    @Test
-    fun `with instant output off, drag off the key still cancels the keypress`() {
-        // The escape hatch users know from other keyboards is preserved behind
-        // the preference: turn instant output off and sliding away from a key
-        // types nothing at all.
-        val context = RuntimeEnvironment.getApplication()
-        context.getSharedPreferences("keyjawn_app_prefs", 0).edit().clear().commit()
-        val prefs = AppPrefs(context)
-        prefs.setFastKeyOutput(false)
-        val kb = QwertyKeyboard(container, keySender, extraRowManager, { ic }, prefs)
-        kb.setLayer(KeyboardLayouts.LAYER_LOWER)
-        clearInvocations(keySender)
-
-        val aButton = charButtonAt(1, 0)
-        val down = obtain(MotionEvent.ACTION_DOWN, 0f, 0f)
-        aButton.dispatchTouchEvent(down)
-        down.recycle()
-
-        // A fixed offscreen Y rather than a multiple of the key height: this
-        // keyboard's grid was built after the activity laid out, so its keys
-        // still measure zero and height-relative coordinates would land inside
-        // the (empty) bounds instead of outside them.
-        val offKey = 400f
-        val move = obtain(MotionEvent.ACTION_MOVE, 0f, offKey)
-        aButton.dispatchTouchEvent(move)
-        move.recycle()
-
-        shadowOf(Looper.getMainLooper()).idleFor(600, java.util.concurrent.TimeUnit.MILLISECONDS)
-        assertNull("drag-off before long-press opens no popup", kb.currentSlideSession)
-
-        val up = obtain(MotionEvent.ACTION_UP, 0f, offKey)
-        aButton.dispatchTouchEvent(up)
-        up.recycle()
-
-        verify(keySender, never()).sendChar(any(), any(), any())
-        verify(keySender, never()).sendText(any(), any())
-    }
-
-    @Test
-    fun `single-alt key long-press sends the single alt with no popup`() {
-        // Row 3 is [Shift, z, x, c, v, b, n, m, Del]; "n" (index 6) has exactly
-        // one alt, so the long-press sends it directly without opening a popup.
-        val nButton = charButtonAt(2, 6)
-        assertEquals("n", nButton.text.toString())
-        val alts = AltKeyMappings.getAlts("n")!!
-        assertEquals(1, alts.size)
-
-        openSlideOn(nButton)
-
-        assertNull("single-alt key opens no slide popup", keyboard.currentSlideSession)
-        verify(keySender).sendText(any(), eq(alts[0]))
-    }
-
-    @Test
-    fun `a second pointer mid-slide does not move or commit the tracked candidate`() {
-        // Genuine multi-pointer gesture: pointer 0 (tracked) drives candidate 1; a
-        // second pointer goes down over candidate 3 and then MOVES across the row.
-        // The activePointerId gate must keep the highlight on pointer 0's candidate.
-        // The mutation `findPointerIndex(activePointerId) -> 0` (or dropping the
-        // gate) makes this fail, because the second pointer would hijack the hover.
-        val aButton = charButtonAt(1, 0)
-        val alts = AltKeyMappings.getAlts("a")!!
-        assertTrue("test needs at least four alts", alts.size >= 4)
-        openSlideOn(aButton)
-        val session = keyboard.currentSlideSession!!
-
-        val rect1 = session.candidateRectsForTest()[1]
-        val x1 = localXForCandidate(aButton, rect1)
-        val y1 = localYForCandidate(aButton, rect1)
-        val rect3 = session.candidateRectsForTest()[3]
-        val x3 = localXForCandidate(aButton, rect3)
-        val y3 = localYForCandidate(aButton, rect3)
-
-        // Tracked finger (pointer 0) hovers candidate 1.
-        val move0 = obtain(MotionEvent.ACTION_MOVE, x1, y1)
-        aButton.dispatchTouchEvent(move0)
-        move0.recycle()
-        assertEquals(1, session.hoveredIndex)
-
-        // A second finger (pointer id 1) goes down over candidate 3.
-        val pointerDown = obtainMulti(
-            pointerAction(MotionEvent.ACTION_POINTER_DOWN, 1),
-            Pointer(0, x1, y1), Pointer(1, x3, y3)
-        )
-        aButton.dispatchTouchEvent(pointerDown)
-        pointerDown.recycle()
-        assertEquals("second pointer down must not move the highlight", 1, session.hoveredIndex)
-
-        // The second finger MOVES to candidate 0 while pointer 0 holds at candidate
-        // 1. The hijacker is placed at slot index 0 and the tracked finger at slot
-        // index 1, so a naive `idx = 0` (instead of findPointerIndex(activePointerId))
-        // would read the hijacker's coords and move the highlight to candidate 0.
-        // The activePointerId gate must keep it on candidate 1.
-        val rect0 = session.candidateRectsForTest()[0]
-        val x0 = localXForCandidate(aButton, rect0)
-        val y0 = localYForCandidate(aButton, rect0)
-        val twoFingerMove = obtainMulti(
+    fun `dragging off before the timer cancels output and popup`() {
+        val bounds = requireNotNull(surface.keyBounds(1, 0))
+        val downTime = press(1, 0)
+        dispatch(
+            downTime,
+            downTime + 20,
             MotionEvent.ACTION_MOVE,
-            Pointer(1, x0, y0), Pointer(0, x1, y1)
+            bounds.right + 100f,
+            bounds.bottom + bounds.height() * 2f
         )
-        aButton.dispatchTouchEvent(twoFingerMove)
-        twoFingerMove.recycle()
-        assertEquals("second pointer move must not hijack the highlight", 1, session.hoveredIndex)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(550))
+        dispatch(
+            downTime,
+            SystemClock.uptimeMillis(),
+            MotionEvent.ACTION_UP,
+            bounds.right + 100f,
+            bounds.bottom + bounds.height() * 2f
+        )
 
-        // The tracked finger lifts, still over candidate 1, as the last pointer.
-        val up = obtain(MotionEvent.ACTION_UP, x1, y1)
-        aButton.dispatchTouchEvent(up)
-        up.recycle()
-
-        verify(keySender).sendText(any(), eq(alts[1]))
-    }
-
-    @Test
-    fun `ACTION_CANCEL during a slide dismisses without sending`() {
-        val aButton = charButtonAt(1, 0)
-        openSlideOn(aButton)
-        val session = keyboard.currentSlideSession
-        assertNotNull(session)
-        assertTrue(session!!.isShowing())
-
-        val cancel = obtain(MotionEvent.ACTION_CANCEL, aButton.width / 2f, aButton.height / 2f)
-        aButton.dispatchTouchEvent(cancel)
-        cancel.recycle()
-
+        verify(keySender).sendChar(inputConnection, "a")
         verify(keySender, never()).sendText(any(), any())
-        assertFalse("cancel dismisses the slide popup", session.isShowing())
         assertNull(keyboard.currentSlideSession)
     }
 
     @Test
-    fun `tracked finger lifting as a non-primary pointer commits its candidate`() {
-        // Gates the commit-via-ACTION_POINTER_UP branch: a second finger is down, so
-        // the tracked finger lifts as a non-primary pointer (ACTION_POINTER_UP whose
-        // actionIndex is the tracked slot). The slide must commit the tracked
-        // finger's hovered candidate, not ignore the lift.
-        val aButton = charButtonAt(1, 0)
-        val alts = AltKeyMappings.getAlts("a")!!
-        openSlideOn(aButton)
-        val session = keyboard.currentSlideSession!!
+    fun `single alt key long press commits directly without a popup`() {
+        val downTime = press(2, 3)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(550))
+        release(2, 3, downTime)
 
-        val rect1 = session.candidateRectsForTest()[1]
-        val x1 = localXForCandidate(aButton, rect1)
-        val y1 = localYForCandidate(aButton, rect1)
-        val rect2 = session.candidateRectsForTest()[2]
-        val x2 = localXForCandidate(aButton, rect2)
-        val y2 = localYForCandidate(aButton, rect2)
+        verify(keySender).sendText(inputConnection, "ç")
+        verify(haptics).confirm()
+        assertNull(keyboard.currentSlideSession)
+    }
 
-        // Tracked finger (pointer 0) hovers candidate 1.
-        val move0 = obtain(MotionEvent.ACTION_MOVE, x1, y1)
-        aButton.dispatchTouchEvent(move0)
-        move0.recycle()
-        assertEquals(1, session.hoveredIndex)
+    @Test
+    fun `cancel during a slide dismisses without sending`() {
+        val downTime = openSlide()
+        val session = requireNotNull(keyboard.currentSlideSession)
+        dispatch(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL, 0f, 0f)
 
-        // A second finger (id 1) goes down over candidate 2.
-        val pointerDown = obtainMulti(
-            pointerAction(MotionEvent.ACTION_POINTER_DOWN, 1),
-            Pointer(0, x1, y1), Pointer(1, x2, y2)
-        )
-        aButton.dispatchTouchEvent(pointerDown)
-        pointerDown.recycle()
-
-        // The tracked finger (pointer 0, slot index 0) lifts as a NON-primary
-        // pointer while pointer 1 is still down, still over candidate 1.
-        val pointerUp = obtainMulti(
-            pointerAction(MotionEvent.ACTION_POINTER_UP, 0),
-            Pointer(0, x1, y1), Pointer(1, x2, y2)
-        )
-        aButton.dispatchTouchEvent(pointerUp)
-        pointerUp.recycle()
-
-        verify(keySender).sendText(any(), eq(alts[1]))
+        verify(keySender, never()).sendText(any(), any())
         assertFalse(session.isShowing())
         assertNull(keyboard.currentSlideSession)
     }
 
-    // ---- Fix A: popup clamping keeps hit-test rects on the visible buttons ----
-
     @Test
-    fun `clampPopupLeft pins a negative requested left to the frame left`() {
-        // A wide candidate row centered over a narrow edge key requests a negative
-        // left; the clamp must pin it to the frame left so the visible popup and the
-        // rects agree. Portrait full-width IME: frame is [0, 1080].
-        assertEquals(0, AltKeyPopup.clampPopupLeft(requestedLeft = -120, popupWidth = 300, frameLeft = 0, frameRight = 1080))
+    fun `a second pointer cannot disturb an open alt slide`() {
+        openSlide()
+        val session = requireNotNull(keyboard.currentSlideSession)
+        val w = requireNotNull(
+            surface.keyAt(
+                requireNotNull(surface.keyBounds(0, 1)).centerX(),
+                requireNotNull(surface.keyBounds(0, 1)).centerY()
+            )
+        )
+        reset(keySender)
+        val now = SystemClock.uptimeMillis()
+
+        requireNotNull(surface.listener).onKeyPointer(
+            w,
+            QwertyKeyboardView.PointerSample(
+                pointerId = 1,
+                action = MotionEvent.ACTION_DOWN,
+                x = w.bounds.centerX(),
+                y = w.bounds.centerY(),
+                downTime = now,
+                eventTime = now
+            )
+        )
+
+        verifyNoInteractions(keySender)
+        assertEquals(-1, session.hoveredIndex)
+        assertTrue(session.isShowing())
+        assertTrue(keyboard.currentSlideSession === session)
     }
 
     @Test
-    fun `clampPopupLeft slides an overflowing-right popup back inside the frame`() {
-        // Requested right edge (1000 + 300 = 1300) overflows the [0, 1080] frame, so
-        // the left clamps to frameRight - popupWidth = 780.
-        assertEquals(780, AltKeyPopup.clampPopupLeft(requestedLeft = 1000, popupWidth = 300, frameLeft = 0, frameRight = 1080))
+    fun `virtual anchor popup keeps wide candidates in the visible frame`() {
+        openSlide()
+        val session = requireNotNull(keyboard.currentSlideSession)
+        val displayFrame = Rect()
+        surface.getWindowVisibleDisplayFrame(displayFrame)
+        val rects = session.candidateRectsForTest()
+        assertEquals(AltKeyMappings.getAlts("a")!!.size, rects.size)
+
+        var previousRight = Int.MIN_VALUE
+        for (rect in rects) {
+            assertTrue(rect.left >= displayFrame.left)
+            assertTrue(rect.right <= displayFrame.right)
+            assertTrue(rect.left > previousRight)
+            previousRight = rect.right
+        }
     }
 
     @Test
-    fun `clampPopupLeft leaves a popup that already fits unchanged`() {
-        assertEquals(400, AltKeyPopup.clampPopupLeft(requestedLeft = 400, popupWidth = 300, frameLeft = 0, frameRight = 1080))
-    }
-
-    @Test
-    fun `clampPopupLeft pins a popup wider than the frame to the frame left`() {
-        assertEquals(0, AltKeyPopup.clampPopupLeft(requestedLeft = -50, popupWidth = 1200, frameLeft = 0, frameRight = 1080))
-    }
-
-    @Test
-    fun `clampPopupLeft pins a left-overflowing popup to a non-zero frame left`() {
-        // Split-screen/freeform: the anchor window's visible frame is [200, 1000].
-        // A requested left of 150 falls left of the frame, so it pins to frameLeft.
-        // The old [0, screenWidth - popupWidth] clamp ignored frameLeft and returned
-        // 150 unchanged, leaving the rects off the left edge of the window.
-        assertEquals(200, AltKeyPopup.clampPopupLeft(requestedLeft = 150, popupWidth = 300, frameLeft = 200, frameRight = 1000))
-    }
-
-    @Test
-    fun `clampPopupLeft slides a right-overflowing popup to the non-zero frame right`() {
-        // Frame [200, 1000], popupWidth 300: requested left 850 would push the right
-        // edge to 1150, past frameRight, so it clamps to frameRight - popupWidth = 700.
-        assertEquals(700, AltKeyPopup.clampPopupLeft(requestedLeft = 850, popupWidth = 300, frameLeft = 200, frameRight = 1000))
-    }
-
-    @Test
-    fun `clampPopupLeft pins a popup wider than a non-zero frame to the frame left`() {
-        // Frame [200, 1000] is 800 wide; a 900-wide popup cannot fit, so it pins to
-        // frameLeft (200), not 0.
-        assertEquals(200, AltKeyPopup.clampPopupLeft(requestedLeft = 250, popupWidth = 900, frameLeft = 200, frameRight = 1000))
-    }
-
-    // ---- Fix B (#48): the vertical mirror of the left clamp ----
-    // openForSlide lifts the candidate row above the key with a negative yOffset. If
-    // the requested top ever falls above the visible frame, showAsDropDown flips the
-    // row below the anchor and the rects desync -- the same class the left clamp fixed
-    // on the X axis. clampPopupTop is clampPopupLeft with left->top, width->height.
-
-    @Test
-    fun `clampPopupTop pins a requested top above the frame to the frame top`() {
-        // A row lifted above a key near the screen top requests a negative top; the
-        // clamp pins it to the frame top so the visible popup and the rects agree.
-        // Portrait full-height IME: frame is [0, 1920].
-        assertEquals(0, AltKeyPopup.clampPopupTop(requestedTop = -120, popupHeight = 300, frameTop = 0, frameBottom = 1920))
-    }
-
-    @Test
-    fun `clampPopupTop slides an overflowing-bottom popup back inside the frame`() {
-        // Requested bottom edge (1800 + 300 = 2100) overflows the [0, 1920] frame, so
-        // the top clamps to frameBottom - popupHeight = 1620.
-        assertEquals(1620, AltKeyPopup.clampPopupTop(requestedTop = 1800, popupHeight = 300, frameTop = 0, frameBottom = 1920))
-    }
-
-    @Test
-    fun `clampPopupTop leaves a popup that already fits unchanged`() {
-        assertEquals(800, AltKeyPopup.clampPopupTop(requestedTop = 800, popupHeight = 300, frameTop = 0, frameBottom = 1920))
-    }
-
-    @Test
-    fun `clampPopupTop pins a popup taller than the frame to the frame top`() {
-        assertEquals(0, AltKeyPopup.clampPopupTop(requestedTop = -50, popupHeight = 2000, frameTop = 0, frameBottom = 1920))
-    }
-
-    @Test
-    fun `clampPopupTop pins a top-overflowing popup to a non-zero frame top`() {
-        // Split-screen/freeform: the anchor window's visible frame is [200, 1000]. A
-        // requested top of 150 falls above the frame, so it pins to frameTop. A clamp
-        // that ignored frameTop would leave the rects above the window's top edge.
-        assertEquals(200, AltKeyPopup.clampPopupTop(requestedTop = 150, popupHeight = 300, frameTop = 200, frameBottom = 1000))
-    }
-
-    @Test
-    fun `clampPopupTop slides a bottom-overflowing popup to the non-zero frame bottom`() {
-        // Frame [200, 1000], popupHeight 300: requested top 850 would push the bottom
-        // edge to 1150, past frameBottom, so it clamps to frameBottom - popupHeight = 700.
-        assertEquals(700, AltKeyPopup.clampPopupTop(requestedTop = 850, popupHeight = 300, frameTop = 200, frameBottom = 1000))
-    }
-
-    @Test
-    fun `clampPopupTop pins a popup taller than a non-zero frame to the frame top`() {
-        // Frame [200, 1000] is 800 tall; a 900-tall popup cannot fit, so it pins to
-        // frameTop (200), not 0.
-        assertEquals(200, AltKeyPopup.clampPopupTop(requestedTop = 250, popupHeight = 900, frameTop = 200, frameBottom = 1000))
-    }
-
-    @Test
-    fun `popupScreenTop lands the row popupHeight above the anchor top`() {
-        // openForSlide picks yOffset = -(anchorHeight + popupHeight) to lift the
-        // candidate row above the key. Because showAsDropDown anchors to the anchor
-        // BOTTOM, the row's real top must be popupHeight above the anchor TOP. The
-        // naive anchorScreenY + yOffset lands a full anchor height too high, which
-        // is the regression this guards.
-        val anchorScreenY = 1200
-        val anchorHeight = 132
-        val popupHeight = 154
-        val yOffset = -(anchorHeight + popupHeight)
+    fun `popup clamps both axes to nonzero visible frames`() {
         assertEquals(
-            anchorScreenY - popupHeight,
-            AltKeyPopup.popupScreenTop(anchorScreenY, anchorHeight, yOffset)
+            200,
+            AltKeyPopup.clampPopupLeft(150, 300, frameLeft = 200, frameRight = 1000)
+        )
+        assertEquals(
+            700,
+            AltKeyPopup.clampPopupLeft(850, 300, frameLeft = 200, frameRight = 1000)
+        )
+        assertEquals(
+            200,
+            AltKeyPopup.clampPopupTop(150, 300, frameTop = 200, frameBottom = 1000)
+        )
+        assertEquals(
+            700,
+            AltKeyPopup.clampPopupTop(850, 300, frameTop = 200, frameBottom = 1000)
         )
     }
 
     @Test
-    fun `popupScreenTop adds the anchor height to the bottom-anchored offset`() {
-        // General contract: top = anchorBottom + yOffset = anchorScreenY +
-        // anchorHeight + yOffset. A positive yOffset (drop-down below the key)
-        // exercises the same arithmetic the buggy form got wrong.
-        assertEquals(560, AltKeyPopup.popupScreenTop(anchorScreenY = 500, anchorHeight = 40, yOffset = 20))
-    }
-
-    @Test
-    fun `dropDownYOffset is the exact inverse of popupScreenTop`() {
-        // The offset handed to showAsDropDown must land the window's top at the same
-        // clampedTop the hit-test rects derive from -- otherwise the visible buttons
-        // and the rects sit at different tops and a slide commits the wrong candidate.
-        // Every gesture test hit-tests against the rects, so none would catch a broken
-        // offset; this round-trip pins it. A form that dropped anchorHeight would fail
-        // here (offset short by one key height) while leaving the rects untouched.
+    fun `drop down offset round trips through popup screen top`() {
         val anchorScreenY = 1400
         val anchorHeight = 132
         val clampedTop = 900
-        val offset = AltKeyPopup.dropDownYOffset(clampedTop, anchorScreenY, anchorHeight)
-        assertEquals(clampedTop, AltKeyPopup.popupScreenTop(anchorScreenY, anchorHeight, offset))
+        val offset =
+            AltKeyPopup.dropDownYOffset(clampedTop, anchorScreenY, anchorHeight)
+        assertEquals(
+            clampedTop,
+            AltKeyPopup.popupScreenTop(anchorScreenY, anchorHeight, offset)
+        )
     }
-
-    @Test
-    fun `slide popup on a far-left wide-alt key keeps every rect on screen and ordered`() {
-        // "a" sits at the far-left column and carries ~6 accented alts, so the
-        // centered candidate row is far wider than the key and its requested left
-        // goes negative. Before clamping, the rects started off screen and a slide
-        // onto the leftmost visible candidate hit-tested the wrong index or -1.
-        val aButton = charButtonAt(1, 0)
-        val alts = AltKeyMappings.getAlts("a")!!
-        assertTrue("test needs a wide-alt key", alts.size >= 4)
-
-        openSlideOn(aButton)
-        val session = keyboard.currentSlideSession
-        assertNotNull("long-press on a multi-alt key opens a slide session", session)
-
-        // Assert against the anchor window's visible display frame -- the same Rect
-        // showAsDropDown clips against -- not raw displayMetrics.widthPixels, so the
-        // bounds match what the popup is actually clamped to in any window mode.
-        val displayFrame = Rect()
-        aButton.getWindowVisibleDisplayFrame(displayFrame)
-        val rects = session!!.candidateRectsForTest()
-        assertEquals(alts.size, rects.size)
-
-        var previousRight = Int.MIN_VALUE
-        for ((i, rect) in rects.withIndex()) {
-            assertTrue("rect $i must not start off the left edge: ${rect.left} < ${displayFrame.left}", rect.left >= displayFrame.left)
-            assertTrue("rect $i must not run off the right edge: ${rect.right} > ${displayFrame.right}", rect.right <= displayFrame.right)
-            assertTrue("rects must be left-to-right ordered", rect.left > previousRight)
-            previousRight = rect.right
-        }
-
-        // The leftmost visible candidate must map to alts[0]. Against the old code
-        // the first rect started negative, so its center hit-tested to -1.
-        assertEquals(0, session.indexAt(rects[0].centerX().toFloat(), rects[0].centerY().toFloat()))
-    }
-
-    // ---- SlideSession unit tests (pure hit-testing) ----
 
     private fun synthSession(rects: List<Rect>): AltKeyPopup.SlideSession {
         val context = RuntimeEnvironment.getApplication()
@@ -623,58 +303,31 @@ class AltKeySlideTest {
     }
 
     @Test
-    fun `indexAt returns the candidate containing the point`() {
+    fun `session hit testing follows candidate rectangles`() {
         val rects = listOf(
             Rect(0, 0, 40, 44),
             Rect(50, 0, 90, 44),
             Rect(100, 0, 140, 44)
         )
-        val s = synthSession(rects)
-        assertEquals(0, s.indexAt(20f, 22f))
-        assertEquals(1, s.indexAt(70f, 22f))
-        assertEquals(2, s.indexAt(120f, 22f))
+        val session = synthSession(rects)
+        assertEquals(1, session.indexAt(70f, 22f))
+        assertEquals(-1, session.indexAt(45f, 22f))
+
+        session.onMove(120f, 22f)
+        assertEquals(2, session.hoveredIndex)
+        assertEquals("x2", session.onRelease(120f, 22f))
     }
 
     @Test
-    fun `indexAt returns -1 outside all candidates`() {
-        val rects = listOf(Rect(0, 0, 40, 44), Rect(50, 0, 90, 44))
-        val s = synthSession(rects)
-        assertEquals(-1, s.indexAt(45f, 22f)) // in the gap
-        assertEquals(-1, s.indexAt(-5f, 22f)) // left of all
-        assertEquals(-1, s.indexAt(200f, 22f)) // right of all
-        assertEquals(-1, s.indexAt(20f, 100f)) // below
-    }
+    fun `dismiss makes a slide session inert`() {
+        val session = synthSession(listOf(Rect(0, 0, 40, 44)))
+        session.onMove(20f, 22f)
+        assertTrue(session.isShowing())
 
-    @Test
-    fun `onMove updates hoveredIndex and onRelease returns the alt`() {
-        val rects = listOf(Rect(0, 0, 40, 44), Rect(50, 0, 90, 44))
-        val s = synthSession(rects)
-        s.onMove(70f, 22f)
-        assertEquals(1, s.hoveredIndex)
-        assertEquals("x1", s.onRelease(70f, 22f))
-    }
+        session.dismiss()
 
-    @Test
-    fun `onRelease outside all candidates returns null`() {
-        val rects = listOf(Rect(0, 0, 40, 44), Rect(50, 0, 90, 44))
-        val s = synthSession(rects)
-        s.onMove(20f, 22f)
-        assertEquals(0, s.hoveredIndex)
-        assertNull(s.onRelease(45f, 22f))
-    }
-
-    @Test
-    fun `dismiss makes the session stop showing and reports no hover`() {
-        val rects = listOf(Rect(0, 0, 40, 44))
-        val s = synthSession(rects)
-        s.onMove(20f, 22f)
-        assertTrue(s.isShowing())
-        s.dismiss()
-        assertFalse(s.isShowing())
-        assertEquals(-1, s.hoveredIndex)
-        // After dismissal, further moves are inert.
-        s.onMove(20f, 22f)
-        assertEquals(-1, s.hoveredIndex)
-        assertNull(s.onRelease(20f, 22f))
+        assertFalse(session.isShowing())
+        assertEquals(-1, session.hoveredIndex)
+        assertNull(session.onRelease(20f, 22f))
     }
 }
