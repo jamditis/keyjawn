@@ -14,7 +14,8 @@ class SlashCommandPopup(
     private val registry: SlashCommandRegistry,
     private val onCommandSelected: (String) -> Unit,
     private val onDismissedEmpty: () -> Unit,
-    private val themeManager: ThemeManager? = null
+    private val themeManager: ThemeManager? = null,
+    private val haptics: KeyboardHaptics? = null
 ) {
 
     private var popup: PopupWindow? = null
@@ -38,6 +39,7 @@ class SlashCommandPopup(
             item.setOnClickListener {
                 registry.recordUsage(command)
                 onCommandSelected(command)
+                haptics?.confirm()
                 dismiss()
             }
             commandList.addView(item)

@@ -83,6 +83,8 @@ targets:
         CFBundleDisplayName: KeyJawn
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        KeychainAccessGroup: "$(AppIdentifierPrefix)com.keyjawn.shared"
+        LegacyKeychainAccessGroup: "$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)"
         LSRequiresIPhoneOS: true
         UILaunchScreen:
           UIColorName: LaunchScreenBackground
@@ -143,6 +145,8 @@ targets:
         CFBundleDisplayName: KeyJawn Keyboard
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        KeychainAccessGroup: "$(AppIdentifierPrefix)com.keyjawn.shared"
+        LegacyKeychainAccessGroup: "$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)"
         NSExtension:
           NSExtensionAttributes:
             IsASCIICapable: false

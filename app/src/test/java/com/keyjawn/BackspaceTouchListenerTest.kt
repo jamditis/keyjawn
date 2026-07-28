@@ -33,6 +33,7 @@ class BackspaceTouchListenerTest {
 
     private fun listener(
         counts: Counts,
+        onHaptic: () -> Unit = {},
         initialDelayMs: Long = 100,
         repeatIntervalMs: Long = 50,
         fastIntervalMs: Long = 50,
@@ -42,6 +43,7 @@ class BackspaceTouchListenerTest {
     ) = BackspaceTouchListener(
         onDeleteChar = { counts.chars++ },
         onDeleteWord = { counts.words++ },
+        onHaptic = onHaptic,
         initialDelayMs = initialDelayMs,
         repeatIntervalMs = repeatIntervalMs,
         fastIntervalMs = fastIntervalMs,
@@ -98,6 +100,25 @@ class BackspaceTouchListenerTest {
         assertEquals(2, counts.words)
         // The character gear stopped once the word gear took over.
         assertEquals(3, counts.chars)
+
+        l.onTouch(v, event(MotionEvent.ACTION_UP))
+    }
+
+    @Test
+    fun `a held delete haptics once even after word repeat starts`() {
+        val counts = Counts()
+        var haptics = 0
+        val l = listener(counts, onHaptic = { haptics++ })
+        val v = makeView()
+
+        l.onTouch(v, event(MotionEvent.ACTION_DOWN))
+        idle(100) // repeat 1
+        idle(50)  // repeat 2
+        idle(50)  // repeat 3: first word delete
+        idle(50)  // repeat 4: second word delete
+
+        assertEquals(2, counts.words)
+        assertEquals(1, haptics)
 
         l.onTouch(v, event(MotionEvent.ACTION_UP))
     }
