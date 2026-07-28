@@ -72,7 +72,7 @@ internal sealed class VoiceSupportDecision {
 internal fun shouldUseOnDeviceRecognizer(
     sdkInt: Int,
     onDeviceAvailable: Boolean
-): Boolean = sdkInt >= Build.VERSION_CODES.S && onDeviceAvailable
+): Boolean = sdkInt >= Build.VERSION_CODES.TIRAMISU && onDeviceAvailable
 
 private fun languageMatches(candidate: String, requested: String): Boolean {
     val candidateLocale = Locale.forLanguageTag(candidate.replace('_', '-'))
@@ -505,6 +505,9 @@ class VoiceInputHandler internal constructor(
                 finishSession()
             }
             VoiceSupportDecision.Unavailable -> {
+                // The user can install this model without rebuilding the IME.
+                // Do not let today's blocking result reject every later attempt.
+                clearRecognitionSupport()
                 listener?.onVoiceStatus(
                     "Offline voice is not available for $requestedLanguage. " +
                         "Install the language in Speech Services settings."

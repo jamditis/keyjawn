@@ -125,8 +125,9 @@ class VoiceInputHandlerTest {
     }
 
     @Test
-    fun `on-device recognizer is selected from Android 12 when available`() {
-        assertTrue(shouldUseOnDeviceRecognizer(sdkInt = 31, onDeviceAvailable = true))
+    fun `on-device recognizer is selected only when language probing is available`() {
+        assertFalse(shouldUseOnDeviceRecognizer(sdkInt = 31, onDeviceAvailable = true))
+        assertFalse(shouldUseOnDeviceRecognizer(sdkInt = 32, onDeviceAvailable = true))
         assertTrue(shouldUseOnDeviceRecognizer(sdkInt = 33, onDeviceAvailable = true))
         assertFalse(shouldUseOnDeviceRecognizer(sdkInt = 30, onDeviceAvailable = true))
         assertFalse(shouldUseOnDeviceRecognizer(sdkInt = 33, onDeviceAvailable = false))
@@ -243,6 +244,28 @@ class VoiceInputHandlerTest {
     }
 
     @Test
+    fun `cached unavailable language is rechecked after its model is installed`() {
+        val recognizer = FakeVoiceRecognizer(
+            isOnDevice = true,
+            support = VoiceRecognitionSupport(installed = listOf("fr-FR"))
+        )
+        val handler = handlerWith(recognizer)
+        val statuses = mutableListOf<String>()
+        handler.listener = recordingListener(onStatus = statuses::add)
+
+        handler.startListening()
+        assertTrue(statuses.single().contains("Speech Services settings"))
+
+        recognizer.support = VoiceRecognitionSupport(installed = listOf("en-US"))
+
+        handler.startListening()
+
+        assertEquals(2, recognizer.supportChecks)
+        assertNotNull(recognizer.startedIntent)
+        assertTrue(handler.isListening())
+    }
+
+    @Test
     fun `fallback recognizer starts when offline support is unavailable`() {
         val recognizer = FakeVoiceRecognizer(
             isOnDevice = false,
@@ -289,12 +312,13 @@ class VoiceInputHandlerTest {
 
     private class FakeVoiceRecognizer(
         override val isOnDevice: Boolean,
-        private val support: VoiceRecognitionSupport? = null,
+        var support: VoiceRecognitionSupport? = null,
         private val supportError: Int? = null,
         private val deferSupport: Boolean = false
     ) : VoiceRecognizer {
         var startedIntent: Intent? = null
         var downloadIntent: Intent? = null
+        var supportChecks = 0
 
         override fun setRecognitionListener(listener: RecognitionListener) {}
 
@@ -311,6 +335,7 @@ class VoiceInputHandlerTest {
             onSupport: (VoiceRecognitionSupport) -> Unit,
             onError: (Int) -> Unit
         ) {
+            supportChecks++
             if (deferSupport) return
             support?.let(onSupport) ?: onError(
                 supportError ?: SpeechRecognizer.ERROR_CANNOT_CHECK_SUPPORT
