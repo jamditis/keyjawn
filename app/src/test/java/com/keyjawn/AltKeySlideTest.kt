@@ -31,6 +31,7 @@ class AltKeySlideTest {
     private lateinit var extraRowManager: ExtraRowManager
     private lateinit var ic: InputConnection
     private lateinit var keyboard: QwertyKeyboard
+    private lateinit var haptics: KeyboardHaptics
     private lateinit var activityController: ActivityController<Activity>
 
     @Before
@@ -49,6 +50,7 @@ class AltKeySlideTest {
         addExtraRowButtons(extraRowView, context)
         val parentView = LinearLayout(context).apply { addView(extraRowView) }
         extraRowManager = ExtraRowManager(parentView, keySender, { ic })
+        haptics = mock()
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -58,7 +60,13 @@ class AltKeySlideTest {
         activityController = Robolectric.buildActivity(Activity::class.java).setup()
         activityController.get().setContentView(root)
 
-        keyboard = QwertyKeyboard(container, keySender, extraRowManager, { ic })
+        keyboard = QwertyKeyboard(
+            container,
+            keySender,
+            extraRowManager,
+            { ic },
+            haptics = haptics
+        )
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
 
         // Robolectric does not lay out the view tree automatically, so key views
@@ -174,6 +182,7 @@ class AltKeySlideTest {
         val session = keyboard.currentSlideSession
         assertNotNull("long-press on a multi-alt key opens a slide session", session)
         assertTrue(session!!.isShowing())
+        clearInvocations(haptics)
 
         val rect1 = session.candidateRectsForTest()[1]
         val moveX = localXForCandidate(aButton, rect1)
@@ -189,6 +198,7 @@ class AltKeySlideTest {
         up.recycle()
 
         verify(keySender).sendText(any(), eq(alts[1]))
+        verify(haptics).confirm()
         assertFalse("popup dismissed after release", session.isShowing())
         assertNull(keyboard.currentSlideSession)
     }
@@ -312,6 +322,7 @@ class AltKeySlideTest {
 
         assertNull("single-alt key opens no slide popup", keyboard.currentSlideSession)
         verify(keySender).sendText(any(), eq(alts[0]))
+        verify(haptics).confirm()
     }
 
     @Test

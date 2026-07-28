@@ -375,7 +375,7 @@ extension KeyboardViewController: ExtraRowDelegate {
     }
 
     private func performUpload(imageData: Data, to host: HostConfig) {
-        guard let keyData = AppGroupSSHKeyStore.shared.privateKeyData else {
+        guard let keyData = SharedSSHKeyStore.shared.privateKeyData else {
             uploadPanel?.statusMessage = "SSH key not found. Open the main app first."
             return
         }

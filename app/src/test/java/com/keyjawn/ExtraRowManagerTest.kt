@@ -24,6 +24,7 @@ class ExtraRowManagerTest {
     private lateinit var keySender: KeySender
     private lateinit var mockIc: InputConnection
     private lateinit var erm: ExtraRowManager
+    private lateinit var haptics: KeyboardHaptics
 
     @Before
     fun setUp() {
@@ -32,10 +33,12 @@ class ExtraRowManagerTest {
         keySender = KeySender()
         mockIc = mock()
         whenever(mockIc.sendKeyEvent(any())).thenReturn(true)
+        haptics = mock()
         erm = ExtraRowManager(
             view = view,
             keySender = keySender,
-            inputConnectionProvider = { mockIc }
+            inputConnectionProvider = { mockIc },
+            haptics = haptics
         )
     }
 
@@ -140,6 +143,63 @@ class ExtraRowManagerTest {
         val captor = argumentCaptor<KeyEvent>()
         verify(ic, atLeast(1)).sendKeyEvent(captor.capture())
         assertTrue(captor.allValues.any { it.keyCode == KeyEvent.KEYCODE_TAB })
+    }
+
+    @Test
+    fun `arrow press uses repeat context haptic flags`() {
+        val context = RuntimeEnvironment.getApplication()
+        val view = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null)
+        val localHaptics: KeyboardHaptics = mock()
+        val ic: InputConnection = mock()
+        whenever(ic.sendKeyEvent(any())).thenReturn(true)
+        ExtraRowManager(
+            view = view,
+            keySender = KeySender(),
+            inputConnectionProvider = { ic },
+            haptics = localHaptics
+        )
+        val left = view.findViewById<View>(R.id.key_left)
+        val down = android.view.MotionEvent.obtain(
+            0, 0, android.view.MotionEvent.ACTION_DOWN, 0f, 0f, 0
+        )
+        val up = android.view.MotionEvent.obtain(
+            0, 0, android.view.MotionEvent.ACTION_UP, 0f, 0f, 0
+        )
+
+        left.dispatchTouchEvent(down)
+        left.dispatchTouchEvent(up)
+
+        verify(localHaptics).repeatPress()
+        down.recycle()
+        up.recycle()
+    }
+
+    @Test
+    fun `clipboard item selection fires one confirm style haptic`() {
+        val context = RuntimeEnvironment.getApplication()
+        val view = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null)
+        val history = ClipboardHistoryManager(context)
+        history.addToHistory("copy me")
+        val localHaptics: KeyboardHaptics = mock()
+        val ic: InputConnection = mock()
+        val panel = view.findViewById<android.widget.ScrollView>(R.id.clipboard_panel)
+        val list = view.findViewById<android.widget.LinearLayout>(R.id.clipboard_list)
+        ExtraRowManager(
+            view = view,
+            keySender = KeySender(),
+            inputConnectionProvider = { ic },
+            clipboardHistoryManager = history,
+            clipboardPanelView = panel,
+            clipboardListView = list,
+            haptics = localHaptics
+        )
+
+        view.findViewById<View>(R.id.key_clipboard).performClick()
+        list.getChildAt(1).performClick() // index 0 is the flexible spacer
+
+        verify(localHaptics).confirm()
+        verify(ic).commitText("copy me", 1)
+        history.destroy()
     }
 
     // --- Critical tooltips bypass the tooltips-disabled preference (Codex 5.4 finding) ---

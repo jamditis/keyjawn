@@ -17,6 +17,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -63,6 +65,25 @@ class SlashCommandPopupTest {
     fun `popup colors background and item text from the light theme tokens`() {
         themeManager.currentTheme = KeyboardTheme.LIGHT
         assertPopupThemed(KeyboardTheme.LIGHT)
+    }
+
+    @Test
+    fun `selecting a command fires one confirm style haptic`() {
+        val haptics: KeyboardHaptics = mock()
+        val popup = SlashCommandPopup(
+            registry = registry,
+            onCommandSelected = {},
+            onDismissedEmpty = {},
+            themeManager = themeManager,
+            haptics = haptics
+        )
+        popup.show(anchor)
+        val content = popupWindowField(popup).contentView as ScrollView
+        val list = content.findViewById<LinearLayout>(R.id.command_list)
+
+        list.getChildAt(0).performClick()
+
+        verify(haptics).confirm()
     }
 
     private fun assertPopupThemed(theme: KeyboardTheme) {

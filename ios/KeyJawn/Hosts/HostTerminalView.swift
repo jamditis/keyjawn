@@ -4,11 +4,14 @@ import KeyJawnKit
 /// Full-screen terminal view for a specific SSH host.
 /// Creates its own SSHSession and manages the full connect/disconnect lifecycle.
 struct HostTerminalView: View {
-    let host: HostConfig
-
+    @EnvironmentObject private var hostStore: HostStore
+    @State private var host: HostConfig
     @StateObject private var session = SSHSession()
     @State private var showingPasswordPrompt = false
-    @State private var showingKeyWarning = false
+
+    init(host: HostConfig) {
+        _host = State(initialValue: host)
+    }
 
     var body: some View {
         ZStack {
@@ -29,6 +32,16 @@ struct HostTerminalView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(.black.opacity(0.85))
 
+            case .awaitingHostKey:
+                VStack(spacing: 12) {
+                    Image(systemName: "lock.shield")
+                        .font(.system(size: 42))
+                    Text("Waiting for host key approval")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.black.opacity(0.85))
+
             case .connected:
                 EmptyView()
 
@@ -40,18 +53,8 @@ struct HostTerminalView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: 12) {
-                    if session.connectionState == .connected && !session.isHostKeyVerified {
-                        Button {
-                            showingKeyWarning = true
-                        } label: {
-                            Image(systemName: "shield.slash")
-                                .foregroundStyle(.orange)
-                        }
-                    }
-                    if session.connectionState == .connected {
-                        Button("Disconnect") { session.disconnect() }
-                    }
+                if session.connectionState == .connected {
+                    Button("Disconnect") { session.disconnect() }
                 }
             }
         }
@@ -72,13 +75,43 @@ struct HostTerminalView: View {
                 session.connect(to: host, password: password)
             }
         }
-        .alert("Host key not verified", isPresented: $showingKeyWarning) {
-            Button("OK", role: .cancel) {}
+        .alert("Trust this host key?", isPresented: hostKeyPromptIsPresented) {
+            Button("Cancel", role: .cancel) {
+                session.rejectPendingHostKey()
+            }
+            Button("Trust") {
+                trustPendingHostKey()
+            }
         } message: {
-            // The previous wording pointed at "host settings", which did not exist —
-            // there was no edit path at all. Name the gesture that now does, and let
-            // HostConfig build the scan command so a non-default port is carried.
-            Text("No host key is configured for \(host.label). The server's identity cannot be confirmed, making this connection susceptible to interception.\n\nTo fix it, run: \(host.hostKeyScanCommand)\n\nThen go back to Hosts, swipe right on \(host.label), tap Edit, and paste the output into Host key. It takes effect on the next connection.")
+            if let presentedKey = session.pendingHostKey {
+                Text(
+                    "\(host.hostname):\(host.port) presented this key:\n\n"
+                    + "\(presentedKey.fingerprint)\n\n"
+                    + "Trust it only if the fingerprint matches the server. "
+                    + "KeyJawn will save it and reject later changes."
+                )
+            }
+        }
+    }
+
+    private var hostKeyPromptIsPresented: Binding<Bool> {
+        Binding(
+            get: { session.pendingHostKey != nil },
+            // Both alert buttons explicitly finish the trust decision. Keeping this
+            // setter passive avoids a framework-driven dismissal racing the button action.
+            set: { _ in }
+        )
+    }
+
+    private func trustPendingHostKey() {
+        guard let presentedKey = session.pendingHostKey else { return }
+        var updatedHost = host
+        updatedHost.hostPublicKey = presentedKey.openSSHKey
+        if hostStore.update(updatedHost) {
+            host = updatedHost
+            session.connectAfterTrust(to: updatedHost)
+        } else {
+            session.rejectPendingHostKey(.storageFailed)
         }
     }
 

@@ -62,6 +62,10 @@ class KeyJawnService : InputMethodService() {
 
         val view = LayoutInflater.from(this).inflate(R.layout.keyboard_view, null)
         val tm = themeManager
+        val haptics = KeyboardHaptics(
+            view,
+            enabled = { appPrefs.isHapticEnabled() }
+        )
         // The theme can be changed from SettingsActivity (a separate
         // ThemeManager instance writing the shared pref). The palette is cached,
         // so re-resolve it from prefs before applying colors to pick up a change
@@ -137,7 +141,8 @@ class KeyJawnService : InputMethodService() {
                 // toggle has to invalidate that cache to take effect without a
                 // keyboard restart. No keycap changes, so no re-render.
                 qwertyKeyboard?.refreshTypingPrefs()
-            }
+            },
+            haptics = haptics
         )
         extraRowManager = erm
 
@@ -159,11 +164,22 @@ class KeyJawnService : InputMethodService() {
                     val ic = currentInputConnection ?: return@SlashCommandPopup
                     keySender.sendText(ic, "/")
                 },
-                themeManager = tm
+                themeManager = tm,
+                haptics = haptics
             )
         } else null
 
-        val qwerty = QwertyKeyboard(container, keySender, erm, { currentInputConnection }, appPrefs, slashPopup, tm, keyPreview)
+        val qwerty = QwertyKeyboard(
+            container,
+            keySender,
+            erm,
+            { currentInputConnection },
+            appPrefs,
+            slashPopup,
+            tm,
+            keyPreview,
+            haptics
+        )
         qwerty.setLayer(KeyboardLayouts.LAYER_LOWER)
         qwertyKeyboard = qwerty
 

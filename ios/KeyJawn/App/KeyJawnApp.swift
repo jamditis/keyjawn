@@ -5,11 +5,9 @@ struct KeyJawnApp: App {
     @StateObject private var hostStore = HostStore()
 
     init() {
-        // Reconcile the extension-visible key mirror with the Keychain at launch.
-        // Without this, an install whose mirror is missing or stale — a storage format
-        // change, a reset group container — leaves SFTP upload from the keyboard
-        // reporting "SSH key not found" with nothing the user can do about it.
-        SSHKeyStore.shared.syncAppGroupMirror()
+        // Migrate the pre-shared-keychain item before the extension can request it.
+        // This preserves every existing authorized_keys entry instead of rotating.
+        SSHKeyStore.shared.prepareSharedIdentity()
     }
 
     var body: some Scene {

@@ -1,7 +1,6 @@
 package com.keyjawn
 
 import android.graphics.Typeface
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
@@ -32,7 +31,11 @@ class QwertyKeyboard(
     private val appPrefs: AppPrefs? = null,
     private val slashPopup: SlashCommandPopup? = null,
     private val themeManager: ThemeManager? = null,
-    private val keyPreview: KeyPreview? = null
+    private val keyPreview: KeyPreview? = null,
+    private val haptics: KeyboardHaptics = KeyboardHaptics(
+        container,
+        enabled = { appPrefs?.isHapticEnabled() != false }
+    )
 ) {
 
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider, themeManager)
@@ -337,7 +340,7 @@ class QwertyKeyboard(
                         true
                     }
                 }
-                if (handled) performHaptic(HapticFeedbackConstants.LONG_PRESS)
+                if (handled) haptics.perform(HapticFeedbackConstants.LONG_PRESS)
                 handled
             })
         }
@@ -462,7 +465,7 @@ class QwertyKeyboard(
                                 }
                             }
                         },
-                        onHaptic = { performHaptic() }
+                        onHaptic = { haptics.repeatPress() }
                     )
                 )
             }
@@ -592,6 +595,7 @@ class QwertyKeyboard(
                                 if (currentAlts.size == 1) {
                                     val ic = inputConnectionProvider() ?: return@Runnable
                                     keySender.sendText(ic, currentAlts[0])
+                                    haptics.confirm()
                                 } else {
                                     // Open the slide popup and capture the anchor's
                                     // screen position so MOVE can convert key-local
@@ -759,7 +763,10 @@ class QwertyKeyboard(
             null
         }
         if (selected != null) {
-            inputConnectionProvider()?.let { ic -> keySender.sendText(ic, selected) }
+            inputConnectionProvider()?.let { ic ->
+                keySender.sendText(ic, selected)
+                haptics.confirm()
+            }
         }
         session.dismiss()
         if (currentSlideSession === session) currentSlideSession = null
@@ -771,20 +778,8 @@ class QwertyKeyboard(
         if (currentSlideSession === session) currentSlideSession = null
     }
 
-    private fun performHaptic(type: Int = HapticFeedbackConstants.KEYBOARD_TAP) {
-        if (appPrefs?.isHapticEnabled() != false) {
-            container.performHapticFeedback(type)
-        }
-    }
-
     private fun handleKeyPress(key: Key) {
-        // Determine haptic type based on key output (item 6)
-        val hapticType = when (key.output) {
-            is KeyOutput.Enter -> if (Build.VERSION.SDK_INT >= 27)
-                HapticFeedbackConstants.KEYBOARD_PRESS else HapticFeedbackConstants.KEYBOARD_TAP
-            else -> HapticFeedbackConstants.KEYBOARD_TAP
-        }
-        performHaptic(hapticType)
+        haptics.key(key.output)
 
         // Reset double-tap space tracking for any non-space key (item 3)
         if (key.output !is KeyOutput.Space) {
@@ -882,7 +877,7 @@ class QwertyKeyboard(
     }
 
     private fun handleShiftTap() {
-        performHaptic(HapticFeedbackConstants.CLOCK_TICK)
+        haptics.perform(HapticFeedbackConstants.CLOCK_TICK)
         val now = System.currentTimeMillis()
         val timeSinceLastTap = now - lastShiftTapTime
         lastShiftTapTime = now
