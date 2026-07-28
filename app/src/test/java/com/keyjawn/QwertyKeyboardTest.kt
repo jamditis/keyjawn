@@ -54,6 +54,7 @@ class QwertyKeyboardTest {
         keySender = mock()
         extraRowManager = mock()
         inputConnection = mock()
+        haptics = mock()
         whenever(extraRowManager.isCtrlActive()).thenReturn(false)
         whenever(inputConnection.commitText(any(), any())).thenReturn(true)
         whenever(inputConnection.sendKeyEvent(any())).thenReturn(true)
@@ -75,7 +76,8 @@ class QwertyKeyboardTest {
             surface,
             keySender,
             extraRowManager,
-            { inputConnection }
+            { inputConnection },
+            haptics = haptics
         )
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
     }
@@ -174,7 +176,8 @@ class QwertyKeyboardTest {
             keySender,
             extraRowManager,
             { inputConnection },
-            prefs
+            prefs,
+            haptics = haptics
         )
         result.setLayer(KeyboardLayouts.LAYER_LOWER)
         return result
@@ -206,6 +209,21 @@ class QwertyKeyboardTest {
 
         tap(3, 3)
         verify(keySender).sendChar(inputConnection, "/")
+    }
+
+    @Test
+    fun `enter dispatches the semantic enter haptic`() {
+        tap(3, 4)
+
+        verify(haptics).key(KeyOutput.Enter)
+    }
+
+    @Test
+    fun `backspace press uses repeat context haptic flags`() {
+        val downTime = press(2, 8)
+        release(2, 8, downTime)
+
+        verify(haptics).repeatPress()
     }
 
     @Test

@@ -42,6 +42,7 @@ class AltKeySlideTest {
     private lateinit var keyboard: QwertyKeyboard
     private lateinit var keySender: KeySender
     private lateinit var inputConnection: InputConnection
+    private lateinit var haptics: KeyboardHaptics
     private lateinit var activityController: ActivityController<Activity>
 
     @Before
@@ -50,6 +51,7 @@ class AltKeySlideTest {
         surface = QwertyKeyboardView(context)
         keySender = mock()
         inputConnection = mock()
+        haptics = mock()
         whenever(inputConnection.commitText(any(), any())).thenReturn(true)
         val extraRowManager = mock<ExtraRowManager>()
         whenever(extraRowManager.isCtrlActive()).thenReturn(false)
@@ -71,7 +73,8 @@ class AltKeySlideTest {
             surface,
             keySender,
             extraRowManager,
-            { inputConnection }
+            { inputConnection },
+            haptics = haptics
         )
         keyboard.setLayer(KeyboardLayouts.LAYER_LOWER)
     }
@@ -147,6 +150,7 @@ class AltKeySlideTest {
         dispatch(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y)
 
         verify(keySender).sendText(inputConnection, alts[1])
+        verify(haptics).confirm()
         assertFalse(session.isShowing())
         assertNull(keyboard.currentSlideSession)
     }
@@ -195,6 +199,7 @@ class AltKeySlideTest {
         release(2, 3, downTime)
 
         verify(keySender).sendText(inputConnection, "ç")
+        verify(haptics).confirm()
         assertNull(keyboard.currentSlideSession)
     }
 

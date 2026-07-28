@@ -1,7 +1,6 @@
 package com.keyjawn
 
 import android.graphics.RectF
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
@@ -105,7 +104,7 @@ class QwertyKeyboard(
             }
         },
         onDeleteWord = { deleteWordOrCharacter() },
-        onHaptic = { performHaptic() }
+        onHaptic = { haptics.repeatPress() }
     )
 
     private val spacebarCursorController = SpacebarCursorController(
@@ -154,7 +153,7 @@ class QwertyKeyboard(
                 true
             }
         }
-        if (handled) performHaptic(HapticFeedbackConstants.LONG_PRESS)
+        if (handled) haptics.perform(HapticFeedbackConstants.LONG_PRESS)
         handled
     }
 
@@ -416,6 +415,7 @@ class QwertyKeyboard(
                 if (alts.size == 1) {
                     inputConnectionProvider()?.let { ic ->
                         keySender.sendText(ic, alts[0])
+                        haptics.confirm()
                     }
                 } else {
                     val location = IntArray(2)
@@ -539,6 +539,7 @@ class QwertyKeyboard(
                 if (selected != null) {
                     inputConnectionProvider()?.let { ic ->
                         keySender.sendText(ic, selected)
+                        haptics.confirm()
                     }
                 }
                 slide.dismiss()
@@ -605,7 +606,7 @@ class QwertyKeyboard(
     private fun performVirtualClick(key: Key) {
         when (key.output) {
             is KeyOutput.Backspace -> {
-                performHaptic()
+                haptics.repeatPress()
                 inputConnectionProvider()?.let { ic ->
                     keySender.sendKey(ic, KeyEvent.KEYCODE_DEL)
                 }
@@ -619,12 +620,14 @@ class QwertyKeyboard(
         return when (key.output) {
             is KeyOutput.Character -> {
                 val alt = AltKeyMappings.getAlts(key.label)?.firstOrNull() ?: return false
-                performHaptic(HapticFeedbackConstants.LONG_PRESS)
-                inputConnectionProvider()?.let { ic -> keySender.sendText(ic, alt) }
+                inputConnectionProvider()?.let { ic ->
+                    keySender.sendText(ic, alt)
+                    haptics.confirm()
+                }
                 true
             }
             is KeyOutput.Backspace -> {
-                performHaptic(HapticFeedbackConstants.LONG_PRESS)
+                haptics.perform(HapticFeedbackConstants.LONG_PRESS)
                 deleteWordOrCharacter()
                 true
             }
@@ -656,15 +659,7 @@ class QwertyKeyboard(
     }
 
     private fun handleKeyPress(key: Key) {
-        val hapticType = when (key.output) {
-            is KeyOutput.Enter -> if (Build.VERSION.SDK_INT >= 27) {
-                HapticFeedbackConstants.KEYBOARD_PRESS
-            } else {
-                HapticFeedbackConstants.KEYBOARD_TAP
-            }
-            else -> HapticFeedbackConstants.KEYBOARD_TAP
-        }
-        performHaptic(hapticType)
+        haptics.key(key.output)
         if (key.output !is KeyOutput.Space) lastWasSpace = false
 
         val ic = inputConnectionProvider() ?: return
