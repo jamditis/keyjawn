@@ -16,8 +16,8 @@ class MacroStore(context: Context) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun load(): Map<String, Macro> {
-        val json = prefs.getString(PREFS_KEY, null) ?: return emptyMap()
         return try {
+            val json = prefs.getString(PREFS_KEY, null) ?: return emptyMap()
             deserialize(json)
         } catch (_: Exception) {
             emptyMap()

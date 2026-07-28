@@ -76,4 +76,14 @@ class MacroStoreTest {
 
         assertTrue(MacroStore(context).load().isEmpty())
     }
+
+    @Test
+    fun `non-string macros load as empty without throwing`() {
+        context.getSharedPreferences(MacroStore.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(MacroStore.PREFS_KEY, 42)
+            .commit()
+
+        assertTrue(MacroStore(context).load().isEmpty())
+    }
 }
