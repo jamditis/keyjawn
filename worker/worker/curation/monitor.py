@@ -13,12 +13,18 @@ from worker.curation.sources.news import NewsSource
 from worker.curation.sources.twitch import TwitchSource
 from worker.curation.sources.youtube import YouTubeSource
 from worker.db import Database
+from worker.subprocesses import SubprocessOwner
 
 log = logging.getLogger(__name__)
 
 
 class CurationMonitor:
-    def __init__(self, config: CurationConfig, db: Database):
+    def __init__(
+        self,
+        config: CurationConfig,
+        db: Database,
+        subprocesses: SubprocessOwner | None = None,
+    ):
         self.config = config
         self.db = db
 
@@ -32,7 +38,9 @@ class CurationMonitor:
         if config.twitch_client_id and config.twitch_client_secret:
             self.twitch = TwitchSource(config.twitch_client_id, config.twitch_client_secret)
         self.pipeline = CurationPipeline(
-            db=db, max_parallel=config.max_parallel_evaluations
+            db=db,
+            max_parallel=config.max_parallel_evaluations,
+            subprocesses=subprocesses,
         )
 
     async def scan_sources(self, include_twitch: bool = False) -> list[CurationCandidate]:

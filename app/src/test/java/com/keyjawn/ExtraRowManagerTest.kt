@@ -2,6 +2,7 @@ package com.keyjawn
 
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputConnection
 import android.widget.TextView
@@ -12,7 +13,9 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
+import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -21,6 +24,7 @@ class ExtraRowManagerTest {
     private lateinit var keySender: KeySender
     private lateinit var mockIc: InputConnection
     private lateinit var erm: ExtraRowManager
+    private lateinit var haptics: KeyboardHaptics
 
     @Before
     fun setUp() {
@@ -29,10 +33,12 @@ class ExtraRowManagerTest {
         keySender = KeySender()
         mockIc = mock()
         whenever(mockIc.sendKeyEvent(any())).thenReturn(true)
+        haptics = mock()
         erm = ExtraRowManager(
             view = view,
             keySender = keySender,
-            inputConnectionProvider = { mockIc }
+            inputConnectionProvider = { mockIc },
+            haptics = haptics
         )
     }
 
@@ -139,6 +145,63 @@ class ExtraRowManagerTest {
         assertTrue(captor.allValues.any { it.keyCode == KeyEvent.KEYCODE_TAB })
     }
 
+    @Test
+    fun `arrow press uses repeat context haptic flags`() {
+        val context = RuntimeEnvironment.getApplication()
+        val view = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null)
+        val localHaptics: KeyboardHaptics = mock()
+        val ic: InputConnection = mock()
+        whenever(ic.sendKeyEvent(any())).thenReturn(true)
+        ExtraRowManager(
+            view = view,
+            keySender = KeySender(),
+            inputConnectionProvider = { ic },
+            haptics = localHaptics
+        )
+        val left = view.findViewById<View>(R.id.key_left)
+        val down = android.view.MotionEvent.obtain(
+            0, 0, android.view.MotionEvent.ACTION_DOWN, 0f, 0f, 0
+        )
+        val up = android.view.MotionEvent.obtain(
+            0, 0, android.view.MotionEvent.ACTION_UP, 0f, 0f, 0
+        )
+
+        left.dispatchTouchEvent(down)
+        left.dispatchTouchEvent(up)
+
+        verify(localHaptics).repeatPress()
+        down.recycle()
+        up.recycle()
+    }
+
+    @Test
+    fun `clipboard item selection fires one confirm style haptic`() {
+        val context = RuntimeEnvironment.getApplication()
+        val view = LayoutInflater.from(context).inflate(R.layout.keyboard_view, null)
+        val history = ClipboardHistoryManager(context)
+        history.addToHistory("copy me")
+        val localHaptics: KeyboardHaptics = mock()
+        val ic: InputConnection = mock()
+        val panel = view.findViewById<android.widget.ScrollView>(R.id.clipboard_panel)
+        val list = view.findViewById<android.widget.LinearLayout>(R.id.clipboard_list)
+        ExtraRowManager(
+            view = view,
+            keySender = KeySender(),
+            inputConnectionProvider = { ic },
+            clipboardHistoryManager = history,
+            clipboardPanelView = panel,
+            clipboardListView = list,
+            haptics = localHaptics
+        )
+
+        view.findViewById<View>(R.id.key_clipboard).performClick()
+        list.getChildAt(1).performClick() // index 0 is the flexible spacer
+
+        verify(localHaptics).confirm()
+        verify(ic).commitText("copy me", 1)
+        history.destroy()
+    }
+
     // --- Critical tooltips bypass the tooltips-disabled preference (Codex 5.4 finding) ---
     // The tooltips toggle is meant to silence transient hints, not operation
     // results and errors. These gate that distinction.
@@ -226,5 +289,61 @@ class ExtraRowManagerTest {
 
         val bar = view.findViewById<TextView>(R.id.tooltip_bar)
         assertEquals(View.VISIBLE, bar.visibility)
+    }
+
+    @Test
+    fun `offline language setup status remains visible when tooltips disabled`() {
+        val prefs = AppPrefs(RuntimeEnvironment.getApplication())
+        prefs.setTooltipsEnabled(false)
+        val voice: VoiceInputHandler = mock()
+        val (view, _) = managerWith(prefs, voice = voice)
+
+        val captor = argumentCaptor<VoiceInputListener>()
+        verify(voice).listener = captor.capture()
+        captor.lastValue.onVoiceStatus("Downloading offline voice. Try again when it finishes.")
+
+        val bar = view.findViewById<TextView>(R.id.tooltip_bar)
+        assertEquals(View.VISIBLE, bar.visibility)
+        assertEquals(
+            "Downloading offline voice. Try again when it finishes.",
+            bar.text.toString()
+        )
+    }
+
+    @Test
+    fun `model download during push-to-talk does not start a hands-free session on release`() {
+        val prefs = AppPrefs(RuntimeEnvironment.getApplication())
+        val voice: VoiceInputHandler = mock()
+        whenever(voice.isSessionActive()).thenReturn(false)
+        whenever(voice.isHoldToTalk()).thenReturn(false)
+        val (view, _) = managerWith(prefs, voice)
+        val mic = view.findViewById<View>(R.id.key_mic)
+        val now = android.os.SystemClock.uptimeMillis()
+        val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, 1f, 1f, 0)
+        val up = MotionEvent.obtain(
+            now,
+            now + ExtraRowManager.MIC_HOLD_START_MS,
+            MotionEvent.ACTION_UP,
+            1f,
+            1f,
+            0
+        )
+
+        mic.dispatchTouchEvent(down)
+        Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(
+            Duration.ofMillis(ExtraRowManager.MIC_HOLD_START_MS)
+        )
+        mic.dispatchTouchEvent(up)
+        // Android dispatches the click after the touch listener returns false.
+        // Robolectric does not synthesize it for this unattached test view.
+        mic.performClick()
+
+        verify(voice).startListening(holdToTalk = true)
+        verify(voice, never()).startListening(holdToTalk = false)
+
+        mic.performClick()
+        verify(voice).startListening(holdToTalk = false)
+        down.recycle()
+        up.recycle()
     }
 }

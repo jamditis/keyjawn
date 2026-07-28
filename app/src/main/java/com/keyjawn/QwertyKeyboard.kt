@@ -1,7 +1,6 @@
 package com.keyjawn
 
 import android.graphics.RectF
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
@@ -25,7 +24,11 @@ class QwertyKeyboard(
     private val appPrefs: AppPrefs? = null,
     private val slashPopup: SlashCommandPopup? = null,
     private val themeManager: ThemeManager? = null,
-    private val keyPreview: KeyPreview? = null
+    private val keyPreview: KeyPreview? = null,
+    private val haptics: KeyboardHaptics = KeyboardHaptics(
+        container,
+        enabled = { appPrefs?.isHapticEnabled() != false }
+    )
 ) {
 
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider, themeManager)
@@ -101,7 +104,7 @@ class QwertyKeyboard(
             }
         },
         onDeleteWord = { deleteWordOrCharacter() },
-        onHaptic = { performHaptic() }
+        onHaptic = { haptics.repeatPress() }
     )
 
     private val spacebarCursorController = SpacebarCursorController(
@@ -150,7 +153,7 @@ class QwertyKeyboard(
                 true
             }
         }
-        if (handled) performHaptic(HapticFeedbackConstants.LONG_PRESS)
+        if (handled) haptics.perform(HapticFeedbackConstants.LONG_PRESS)
         handled
     }
 
@@ -412,6 +415,7 @@ class QwertyKeyboard(
                 if (alts.size == 1) {
                     inputConnectionProvider()?.let { ic ->
                         keySender.sendText(ic, alts[0])
+                        haptics.confirm()
                     }
                 } else {
                     val location = IntArray(2)
@@ -535,6 +539,7 @@ class QwertyKeyboard(
                 if (selected != null) {
                     inputConnectionProvider()?.let { ic ->
                         keySender.sendText(ic, selected)
+                        haptics.confirm()
                     }
                 }
                 slide.dismiss()
@@ -601,7 +606,7 @@ class QwertyKeyboard(
     private fun performVirtualClick(key: Key) {
         when (key.output) {
             is KeyOutput.Backspace -> {
-                performHaptic()
+                haptics.repeatPress()
                 inputConnectionProvider()?.let { ic ->
                     keySender.sendKey(ic, KeyEvent.KEYCODE_DEL)
                 }
@@ -615,12 +620,14 @@ class QwertyKeyboard(
         return when (key.output) {
             is KeyOutput.Character -> {
                 val alt = AltKeyMappings.getAlts(key.label)?.firstOrNull() ?: return false
-                performHaptic(HapticFeedbackConstants.LONG_PRESS)
-                inputConnectionProvider()?.let { ic -> keySender.sendText(ic, alt) }
+                inputConnectionProvider()?.let { ic ->
+                    keySender.sendText(ic, alt)
+                    haptics.confirm()
+                }
                 true
             }
             is KeyOutput.Backspace -> {
-                performHaptic(HapticFeedbackConstants.LONG_PRESS)
+                haptics.perform(HapticFeedbackConstants.LONG_PRESS)
                 deleteWordOrCharacter()
                 true
             }
@@ -651,22 +658,8 @@ class QwertyKeyboard(
         }
     }
 
-    private fun performHaptic(type: Int = HapticFeedbackConstants.KEYBOARD_TAP) {
-        if (appPrefs?.isHapticEnabled() != false) {
-            container.performHapticFeedback(type)
-        }
-    }
-
     private fun handleKeyPress(key: Key) {
-        val hapticType = when (key.output) {
-            is KeyOutput.Enter -> if (Build.VERSION.SDK_INT >= 27) {
-                HapticFeedbackConstants.KEYBOARD_PRESS
-            } else {
-                HapticFeedbackConstants.KEYBOARD_TAP
-            }
-            else -> HapticFeedbackConstants.KEYBOARD_TAP
-        }
-        performHaptic(hapticType)
+        haptics.key(key.output)
         if (key.output !is KeyOutput.Space) lastWasSpace = false
 
         val ic = inputConnectionProvider() ?: return
@@ -753,7 +746,7 @@ class QwertyKeyboard(
     }
 
     private fun handleShiftTap() {
-        performHaptic(HapticFeedbackConstants.CLOCK_TICK)
+        haptics.perform(HapticFeedbackConstants.CLOCK_TICK)
         val now = System.currentTimeMillis()
         val timeSinceLastTap = now - lastShiftTapTime
         lastShiftTapTime = now
