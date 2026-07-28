@@ -44,6 +44,7 @@ class QwertyKeyboardTest {
     private lateinit var extraRowManager: ExtraRowManager
     private lateinit var inputConnection: InputConnection
     private lateinit var keyboard: QwertyKeyboard
+    private lateinit var haptics: KeyboardHaptics
     private lateinit var activityController: ActivityController<Activity>
 
     @Before

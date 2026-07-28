@@ -33,10 +33,16 @@ final class HostStore: ObservableObject {
         save()
     }
 
-    func update(_ host: HostConfig) {
-        guard let index = hosts.firstIndex(where: { $0.id == host.id }) else { return }
+    @discardableResult
+    func update(_ host: HostConfig) -> Bool {
+        guard let index = hosts.firstIndex(where: { $0.id == host.id }) else { return false }
+        let previousHost = hosts[index]
         hosts[index] = host
-        save()
+        guard save() else {
+            hosts[index] = previousHost
+            return false
+        }
+        return true
     }
 
     // MARK: - Persistence
@@ -59,11 +65,13 @@ final class HostStore: ObservableObject {
         }
     }
 
-    private func save() {
-        guard let data = try? JSONEncoder().encode(hosts) else { return }
-        keychainSave(data)
+    @discardableResult
+    private func save() -> Bool {
+        guard let data = try? JSONEncoder().encode(hosts),
+              keychainSave(data) else { return false }
         // Mirror to App Group so the keyboard extension can read host configs.
         UserDefaults(suiteName: AppGroupConfig.suiteName)?.set(data, forKey: account)
+        return true
     }
 
     // MARK: - Keychain
@@ -84,7 +92,7 @@ final class HostStore: ObservableObject {
         return result as? Data
     }
 
-    private func keychainSave(_ data: Data) {
+    private func keychainSave(_ data: Data) -> Bool {
         var addAttrs = keychainQuery
         addAttrs[kSecValueData as String] = data
         addAttrs[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
@@ -92,7 +100,8 @@ final class HostStore: ObservableObject {
         let status = SecItemAdd(addAttrs as CFDictionary, nil)
         if status == errSecDuplicateItem {
             let update: [String: Any] = [kSecValueData as String: data]
-            SecItemUpdate(keychainQuery as CFDictionary, update as CFDictionary)
+            return SecItemUpdate(keychainQuery as CFDictionary, update as CFDictionary) == errSecSuccess
         }
+        return status == errSecSuccess
     }
 }

@@ -16,6 +16,7 @@ from worker.curation.evaluate import evaluate_batch
 from worker.curation.keywords import score_keywords
 from worker.curation.models import CurationCandidate
 from worker.db import Database
+from worker.subprocesses import SubprocessOwner
 
 log = logging.getLogger(__name__)
 
@@ -23,9 +24,15 @@ KEYWORD_THRESHOLD = 0.3
 
 
 class CurationPipeline:
-    def __init__(self, db: Optional[Database] = None, max_parallel: int = 5):
+    def __init__(
+        self,
+        db: Optional[Database] = None,
+        max_parallel: int = 5,
+        subprocesses: SubprocessOwner | None = None,
+    ):
         self.db = db
         self.max_parallel = max_parallel
+        self.subprocesses = subprocesses
 
     def _keyword_filter(self, candidates: list[CurationCandidate]) -> list[CurationCandidate]:
         """Stage 1: Local keyword scoring. Drop candidates below threshold."""
@@ -58,7 +65,10 @@ class CurationPipeline:
         to_evaluate = filtered[:20]
 
         approved_pairs = await evaluate_batch(
-            to_evaluate, platform=platform, max_parallel=self.max_parallel
+            to_evaluate,
+            platform=platform,
+            max_parallel=self.max_parallel,
+            subprocesses=self.subprocesses,
         )
 
         # Update candidate fields from evaluation results

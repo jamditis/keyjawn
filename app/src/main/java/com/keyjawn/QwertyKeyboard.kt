@@ -25,7 +25,11 @@ class QwertyKeyboard(
     private val appPrefs: AppPrefs? = null,
     private val slashPopup: SlashCommandPopup? = null,
     private val themeManager: ThemeManager? = null,
-    private val keyPreview: KeyPreview? = null
+    private val keyPreview: KeyPreview? = null,
+    private val haptics: KeyboardHaptics = KeyboardHaptics(
+        container,
+        enabled = { appPrefs?.isHapticEnabled() != false }
+    )
 ) {
 
     private val altKeyPopup = AltKeyPopup(keySender, inputConnectionProvider, themeManager)
@@ -651,12 +655,6 @@ class QwertyKeyboard(
         }
     }
 
-    private fun performHaptic(type: Int = HapticFeedbackConstants.KEYBOARD_TAP) {
-        if (appPrefs?.isHapticEnabled() != false) {
-            container.performHapticFeedback(type)
-        }
-    }
-
     private fun handleKeyPress(key: Key) {
         val hapticType = when (key.output) {
             is KeyOutput.Enter -> if (Build.VERSION.SDK_INT >= 27) {
@@ -753,7 +751,7 @@ class QwertyKeyboard(
     }
 
     private fun handleShiftTap() {
-        performHaptic(HapticFeedbackConstants.CLOCK_TICK)
+        haptics.perform(HapticFeedbackConstants.CLOCK_TICK)
         val now = System.currentTimeMillis()
         val timeSinceLastTap = now - lastShiftTapTime
         lastShiftTapTime = now
