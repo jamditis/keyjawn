@@ -76,6 +76,11 @@ internal fun shouldUseOnDeviceRecognizer(
 ): Boolean = sdkInt >= Build.VERSION_CODES.S && onDeviceAvailable
 
 @SuppressLint("InlinedApi")
+internal fun isLanguageSupportError(error: Int): Boolean =
+    error == SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED ||
+        error == SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE
+
+@SuppressLint("InlinedApi")
 internal fun shouldFallbackFromOnDeviceRecognizer(
     sdkInt: Int,
     error: Int,
@@ -83,8 +88,7 @@ internal fun shouldFallbackFromOnDeviceRecognizer(
 ): Boolean =
     sdkInt in Build.VERSION_CODES.S until Build.VERSION_CODES.TIRAMISU &&
         onDeviceRecognizer &&
-        (error == SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED ||
-            error == SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE)
+        isLanguageSupportError(error)
 
 private fun languageMatches(candidate: String, requested: String): Boolean {
     val candidateLocale = Locale.forLanguageTag(candidate.replace('_', '-'))
@@ -482,7 +486,15 @@ class VoiceInputHandler internal constructor(
             return
         }
         if (supportCheckRequired && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            checkRequiredRecognitionSupport(recognizer, intent)
+            if (holdToTalk) {
+                // A held utterance cannot wait for an asynchronous support
+                // probe: the user may release before audio capture begins.
+                supportCheckRequired = false
+                startUtterance(recognizer, intent)
+                preflightRecognitionSupport(recognizer, intent)
+            } else {
+                checkRequiredRecognitionSupport(recognizer, intent)
+            }
             return
         }
 
@@ -873,6 +885,15 @@ class VoiceInputHandler internal constructor(
                         finishSession()
                     }
                     return
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    owner.isOnDevice &&
+                    isLanguageSupportError(error)
+                ) {
+                    // A previously installed model can be removed or invalidated
+                    // after the support result was cached.
+                    requireFreshRecognitionSupport()
                 }
 
                 // A silent round is the normal end of a sentence in continuous

@@ -208,6 +208,26 @@ class VoiceInputHandlerTest {
     }
 
     @Test
+    fun `API 33 language error invalidates stale installed support`() {
+        val recognizer = FakeVoiceRecognizer(
+            isOnDevice = true,
+            support = VoiceRecognitionSupport(installed = listOf("en-US"))
+        )
+        val handler = handlerWith(recognizer)
+
+        handler.startListening()
+        recognizer.sendError(SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE)
+
+        recognizer.support = VoiceRecognitionSupport(supported = listOf("en-US"))
+        handler.startListening()
+
+        assertEquals(2, recognizer.supportChecks)
+        assertEquals(1, recognizer.downloadCount)
+        assertFalse(handler.isListening())
+        assertFalse(handler.isSessionActive())
+    }
+
+    @Test
     fun `installed offline language starts recognition`() {
         val recognizer = FakeVoiceRecognizer(
             isOnDevice = true,
@@ -398,6 +418,27 @@ class VoiceInputHandlerTest {
         )
         assertNotNull(recognizer.startedIntent)
         assertTrue(handler.isListening())
+    }
+
+    @Test
+    fun `push-to-talk retry captures while required support refresh is pending`() {
+        val recognizer = FakeVoiceRecognizer(
+            isOnDevice = true,
+            support = VoiceRecognitionSupport(installed = listOf("fr-FR"))
+        )
+        val handler = handlerWith(recognizer)
+
+        handler.startListening()
+        recognizer.support = VoiceRecognitionSupport(installed = listOf("en-US"))
+        recognizer.deferSupport = true
+
+        handler.startListening(holdToTalk = true)
+
+        assertNotNull(recognizer.startedIntent)
+        assertEquals(2, recognizer.supportChecks)
+        assertTrue(handler.isListening())
+        handler.stopListening()
+        assertFalse(handler.isSessionActive())
     }
 
     @Test
