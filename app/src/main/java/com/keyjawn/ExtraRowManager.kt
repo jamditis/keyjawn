@@ -63,6 +63,9 @@ class ExtraRowManager(
     /** Pending push-to-talk start, cancelled if the press turns out to be a tap. */
     private var micHoldRunnable: Runnable? = null
 
+    /** The current physical press crossed the push-to-talk threshold. */
+    private var micHoldTriggered = false
+
     /** The next mic click is the tail of a hold and must not re-open the mic. */
     private var suppressNextMicClick = false
 
@@ -360,9 +363,13 @@ class ExtraRowManager(
             micButton.setOnTouchListener { _, event ->
                 when (event.actionMasked) {
                     android.view.MotionEvent.ACTION_DOWN -> {
+                        micHoldTriggered = false
                         val runnable = Runnable {
                             micHoldRunnable = null
                             if (!voiceInputHandler.isSessionActive()) {
+                                // Set this before startListening(): model setup can
+                                // finish the handler session synchronously.
+                                micHoldTriggered = true
                                 voiceInputHandler.startListening(holdToTalk = true)
                             }
                         }
@@ -375,12 +382,17 @@ class ExtraRowManager(
                         micHoldRunnable = null
                         // Only a hold ends on release; a tap-started session
                         // keeps running until the user taps again.
-                        if (voiceInputHandler.isHoldToTalk()) {
-                            voiceInputHandler.stopListening()
-                            // The click still fires after this touch listener
-                            // returns, and it must not read the just-closed
-                            // session as an invitation to open a new one.
-                            suppressNextMicClick = true
+                        if (micHoldTriggered) {
+                            micHoldTriggered = false
+                            if (voiceInputHandler.isHoldToTalk()) {
+                                voiceInputHandler.stopListening()
+                            }
+                            if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
+                                // The click still fires after this touch listener
+                                // returns, even when model setup already closed
+                                // the handler's hold session.
+                                suppressNextMicClick = true
+                            }
                         }
                     }
                 }
@@ -430,6 +442,11 @@ class ExtraRowManager(
                 // Reached only when no partial arrived for this utterance, so
                 // there is no transcription on screen to overwrite.
                 voiceText?.text = "Transcribing"
+            }
+
+            override fun onVoiceStatus(message: String) {
+                voiceText?.text = ""
+                showTooltip(message, 4000L, critical = true)
             }
 
             override fun onVoiceContinue() {

@@ -2,6 +2,7 @@ package com.keyjawn
 
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputConnection
 import android.widget.TextView
@@ -12,7 +13,9 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
+import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -286,5 +289,61 @@ class ExtraRowManagerTest {
 
         val bar = view.findViewById<TextView>(R.id.tooltip_bar)
         assertEquals(View.VISIBLE, bar.visibility)
+    }
+
+    @Test
+    fun `offline language setup status remains visible when tooltips disabled`() {
+        val prefs = AppPrefs(RuntimeEnvironment.getApplication())
+        prefs.setTooltipsEnabled(false)
+        val voice: VoiceInputHandler = mock()
+        val (view, _) = managerWith(prefs, voice = voice)
+
+        val captor = argumentCaptor<VoiceInputListener>()
+        verify(voice).listener = captor.capture()
+        captor.lastValue.onVoiceStatus("Downloading offline voice. Try again when it finishes.")
+
+        val bar = view.findViewById<TextView>(R.id.tooltip_bar)
+        assertEquals(View.VISIBLE, bar.visibility)
+        assertEquals(
+            "Downloading offline voice. Try again when it finishes.",
+            bar.text.toString()
+        )
+    }
+
+    @Test
+    fun `model download during push-to-talk does not start a hands-free session on release`() {
+        val prefs = AppPrefs(RuntimeEnvironment.getApplication())
+        val voice: VoiceInputHandler = mock()
+        whenever(voice.isSessionActive()).thenReturn(false)
+        whenever(voice.isHoldToTalk()).thenReturn(false)
+        val (view, _) = managerWith(prefs, voice)
+        val mic = view.findViewById<View>(R.id.key_mic)
+        val now = android.os.SystemClock.uptimeMillis()
+        val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, 1f, 1f, 0)
+        val up = MotionEvent.obtain(
+            now,
+            now + ExtraRowManager.MIC_HOLD_START_MS,
+            MotionEvent.ACTION_UP,
+            1f,
+            1f,
+            0
+        )
+
+        mic.dispatchTouchEvent(down)
+        Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(
+            Duration.ofMillis(ExtraRowManager.MIC_HOLD_START_MS)
+        )
+        mic.dispatchTouchEvent(up)
+        // Android dispatches the click after the touch listener returns false.
+        // Robolectric does not synthesize it for this unattached test view.
+        mic.performClick()
+
+        verify(voice).startListening(holdToTalk = true)
+        verify(voice, never()).startListening(holdToTalk = false)
+
+        mic.performClick()
+        verify(voice).startListening(holdToTalk = false)
+        down.recycle()
+        up.recycle()
     }
 }
