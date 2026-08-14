@@ -35,6 +35,7 @@ struct OnboardingView: View {
                     Button(OnboardingCopy.skipTitle) {
                         finish()
                     }
+                    .accessibilityIdentifier("onboarding.skip")
                     Spacer()
                     Button(page == OnboardingCopy.pages.count - 1
                            ? OnboardingCopy.doneTitle
@@ -46,6 +47,11 @@ struct OnboardingView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier(
+                        page == OnboardingCopy.pages.count - 1
+                            ? "onboarding.done"
+                            : "onboarding.continue"
+                    )
                 }
             }
             .padding()
