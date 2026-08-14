@@ -18,14 +18,15 @@ final class LaunchFlowTests: XCTestCase {
             skip.tap()
         }
 
-        XCTAssertTrue(app.tabBars.buttons["Hosts"].waitForExistence(timeout: 5))
-        app.tabBars.buttons["Preview"].tap()
+        activateTab("Hosts")
+        XCTAssertTrue(app.navigationBars["Hosts"].waitForExistence(timeout: 5))
+        activateTab("Preview")
         XCTAssertTrue(app.navigationBars["Preview"].waitForExistence(timeout: 3))
-        app.tabBars.buttons["Settings"].tap()
+        activateTab("Settings")
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["settings.setupKeyboard"].exists)
 
-        app.tabBars.buttons["Hosts"].tap()
+        activateTab("Hosts")
         XCTAssertTrue(app.navigationBars["Hosts"].waitForExistence(timeout: 3))
     }
 
@@ -35,7 +36,7 @@ final class LaunchFlowTests: XCTestCase {
             skip.tap()
         }
 
-        app.tabBars.buttons["Settings"].tap()
+        activateTab("Settings")
         let setup = app.buttons["settings.setupKeyboard"]
         XCTAssertTrue(setup.waitForExistence(timeout: 3))
         setup.tap()
@@ -49,7 +50,7 @@ final class LaunchFlowTests: XCTestCase {
         if skip.waitForExistence(timeout: 5) {
             skip.tap()
         }
-        app.tabBars.buttons["Settings"].tap()
+        activateTab("Settings")
         app.buttons["settings.setupKeyboard"].tap()
 
         let continueButton = app.buttons["onboarding.continue"]
@@ -61,5 +62,35 @@ final class LaunchFlowTests: XCTestCase {
         XCTAssertTrue(done.waitForExistence(timeout: 2))
         done.tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
+    }
+
+    /// iPhone uses a standard tab bar. iPad iOS 26 uses a floating tab bar
+    /// that is not an XCUI tabBars query, and `buttons[name]` matches both the
+    /// outer item and a nested `_UIFloatingTabBarItemView`. Prefer the tab
+    /// bar, then the SF Symbol identifier (one match), then the label with
+    /// `firstMatch`.
+    private func activateTab(_ name: String) {
+        let tab = app.tabBars.buttons[name]
+        if tab.waitForExistence(timeout: 2) {
+            tab.tap()
+            return
+        }
+
+        let identifiers = [
+            "Hosts": "server.rack",
+            "Preview": "terminal",
+            "Settings": "gearshape",
+        ]
+        if let id = identifiers[name] {
+            let byId = app.buttons[id].firstMatch
+            if byId.waitForExistence(timeout: 2) {
+                byId.tap()
+                return
+            }
+        }
+
+        let button = app.buttons[name].firstMatch
+        XCTAssertTrue(button.waitForExistence(timeout: 3), "tab \(name)")
+        button.tap()
     }
 }

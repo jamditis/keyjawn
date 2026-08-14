@@ -19,35 +19,7 @@ public final class KeyboardViewController: UIInputViewController {
     private var numberRowHeight: NSLayoutConstraint!
     private var qwertyTop: NSLayoutConstraint!
     private var keyboardHeight: NSLayoutConstraint!
-    private var appliedMetrics: Metrics?
-
-    // MARK: - Metrics
-
-    /// Row heights for the current device and orientation.
-    ///
-    /// The keyboard used to be a hardcoded 322pt everywhere. On a phone in landscape
-    /// that is most of the available height, leaving the app it is typing into as a
-    /// sliver; on iPad the same 322pt reads as a cramped strip of tiny keys. Phone
-    /// portrait keeps its existing numbers exactly, so the common case is unchanged.
-    private struct Metrics: Equatable {
-        let extraRow: CGFloat
-        let numberRow: CGFloat
-        let gap: CGFloat
-        let qwerty: CGFloat
-
-        var total: CGFloat { extraRow + gap + numberRow + gap + qwerty }
-
-        static let phonePortrait  = Metrics(extraRow: 52, numberRow: 42, gap: 4, qwerty: 220)
-        static let phoneLandscape = Metrics(extraRow: 40, numberRow: 32, gap: 3, qwerty: 150)
-        static let pad            = Metrics(extraRow: 62, numberRow: 52, gap: 6, qwerty: 300)
-
-        static func current(for traits: UITraitCollection) -> Metrics {
-            if traits.userInterfaceIdiom == .pad { return .pad }
-            // A compact vertical size class on a phone is landscape, including the
-            // larger phones that stay regular-width there.
-            return traits.verticalSizeClass == .compact ? .phoneLandscape : .phonePortrait
-        }
-    }
+    private var appliedMetrics: KeyboardMetrics?
 
     // MARK: - Lifecycle
 
@@ -84,7 +56,7 @@ public final class KeyboardViewController: UIInputViewController {
     /// touching a constraint once the metrics for the current traits are applied, so
     /// it cannot drive a layout loop.
     private func applyMetrics() {
-        let metrics = Metrics.current(for: traitCollection)
+        let metrics = KeyboardMetrics.current(for: traitCollection)
         guard metrics != appliedMetrics else { return }
         appliedMetrics = metrics
 
@@ -104,7 +76,7 @@ public final class KeyboardViewController: UIInputViewController {
         extraRow.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(extraRow)
 
-        extraRowHeight = extraRow.heightAnchor.constraint(equalToConstant: Metrics.phonePortrait.extraRow)
+        extraRowHeight = extraRow.heightAnchor.constraint(equalToConstant: KeyboardMetrics.phonePortrait.extraRow)
         NSLayoutConstraint.activate([
             extraRow.topAnchor.constraint(equalTo: view.topAnchor),
             extraRow.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -121,8 +93,8 @@ public final class KeyboardViewController: UIInputViewController {
         view.addSubview(numberRow)
 
         numberRowTop = numberRow.topAnchor.constraint(equalTo: extraRow.bottomAnchor,
-                                                      constant: Metrics.phonePortrait.gap)
-        numberRowHeight = numberRow.heightAnchor.constraint(equalToConstant: Metrics.phonePortrait.numberRow)
+                                                      constant: KeyboardMetrics.phonePortrait.gap)
+        numberRowHeight = numberRow.heightAnchor.constraint(equalToConstant: KeyboardMetrics.phonePortrait.numberRow)
         NSLayoutConstraint.activate([
             numberRowTop,
             numberRow.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -139,7 +111,7 @@ public final class KeyboardViewController: UIInputViewController {
         view.addSubview(qwerty)
 
         qwertyTop = qwerty.topAnchor.constraint(equalTo: numberRow.bottomAnchor,
-                                                constant: Metrics.phonePortrait.gap)
+                                                constant: KeyboardMetrics.phonePortrait.gap)
         NSLayoutConstraint.activate([
             qwertyTop,
             qwerty.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -151,7 +123,7 @@ public final class KeyboardViewController: UIInputViewController {
     private func setupHeightConstraint() {
         // Priority 999 avoids conflicting with the system's own height constraint during
         // the animation when the keyboard appears.
-        keyboardHeight = view.heightAnchor.constraint(equalToConstant: Metrics.phonePortrait.total)
+        keyboardHeight = view.heightAnchor.constraint(equalToConstant: KeyboardMetrics.phonePortrait.total)
         keyboardHeight.priority = UILayoutPriority(999)
         keyboardHeight.isActive = true
     }
@@ -184,57 +156,27 @@ public final class KeyboardViewController: UIInputViewController {
 extension KeyboardViewController: ExtraRowDelegate {
 
     public func extraRow(_ view: ExtraRowView, send output: KeyOutput, ctrlActive: Bool) {
+        applyInsert(output, ctrlActive: ctrlActive)
+    }
+
+    /// Shared with QWERTY taps so extra-row and letter keys hit the same mapping.
+    func applyInsert(_ output: KeyOutput, ctrlActive: Bool) {
         let proxy = textDocumentProxy
-
-        switch output {
-        case .slash:
+        switch KeyboardDocumentInsert.action(
+            for: output,
+            ctrlActive: ctrlActive,
+            terminalArrows: KeyboardPrefs.shared.terminalArrowKeys
+        ) {
+        case .openSlash:
             showSlashPanel()
-
-        case .tab, .escape, .ctrlC, .ctrlD:
-            // Control characters and Esc go in as literal bytes. Terminal apps forward
-            // inserted text straight to the pty, which is how Esc has always worked
-            // here; Ctrl+C used to fall through to the default branch and do nothing
-            // at all, which made the row's leading key — the one the layout comments
-            // call the most-used key in an agent session — inert.
-            if let text = ANSISequence.text(for: output, ctrlActive: ctrlActive) {
-                proxy.insertText(text)
-            }
-
-        case .arrowUp, .arrowDown:
-            // No cursor equivalent exists for vertical movement through
-            // UITextDocumentProxy, so outside terminal mode these have nothing to do.
-            if KeyboardPrefs.shared.terminalArrowKeys,
-               let text = ANSISequence.text(for: output, ctrlActive: ctrlActive) {
-                proxy.insertText(text)
-            }
-
-        case .arrowLeft:
-            if KeyboardPrefs.shared.terminalArrowKeys,
-               let text = ANSISequence.text(for: output, ctrlActive: ctrlActive) {
-                proxy.insertText(text)
-            } else {
-                proxy.adjustTextPosition(byCharacterOffset: -1)
-            }
-
-        case .arrowRight:
-            if KeyboardPrefs.shared.terminalArrowKeys,
-               let text = ANSISequence.text(for: output, ctrlActive: ctrlActive) {
-                proxy.insertText(text)
-            } else {
-                proxy.adjustTextPosition(byCharacterOffset: 1)
-            }
-
-        case .character(let s):
-            proxy.insertText(s)
-
-        case .backspace:
+        case .insert(let text):
+            proxy.insertText(text)
+        case .deleteBackward:
             proxy.deleteBackward()
-
-        case .return:
-            proxy.insertText("\n")
-
-        case .space:
-            proxy.insertText(" ")
+        case .adjustPosition(let offset):
+            proxy.adjustTextPosition(byCharacterOffset: offset)
+        case nil:
+            break
         }
     }
 
@@ -414,26 +356,12 @@ extension KeyboardViewController: NumberRowDelegate {
 extension KeyboardViewController: QwertyKeyboardDelegate {
 
     public func keyboard(_ keyboard: QwertyKeyboardView, insertText text: String) {
-        // Apply an armed or locked Ctrl modifier to letters typed on the QWERTY grid.
-        //
-        // The modifier is armed by long-pressing ^C in the extra row, and without this
-        // the arming had nowhere to land: letters went straight to the proxy, so
-        // Ctrl+D, Ctrl+Z, Ctrl+L and Ctrl+A/E worked in the in-app terminal and not in
-        // the keyboard extension, which is the surface the product is actually for.
-        // Restricted to single characters so a multi-character insertion is not
-        // collapsed into one control byte.
-        if extraRow.ctrl.isActive,
-           text.count == 1,
-           let control = ANSISequence.text(for: .character(text), ctrlActive: true) {
-            textDocumentProxy.insertText(control)
-            extraRow.ctrl.consume()
-            return
-        }
-        textDocumentProxy.insertText(text)
+        applyInsert(.character(text), ctrlActive: extraRow.ctrl.isActive)
+        extraRow.ctrl.consume()
     }
 
     public func keyboardDeleteBackward(_ keyboard: QwertyKeyboardView) {
-        textDocumentProxy.deleteBackward()
+        applyInsert(.backspace, ctrlActive: false)
     }
 
     /// `UITextDocumentProxy` has no word-delete primitive, so this is N backward
@@ -457,3 +385,5 @@ extension KeyboardViewController: QwertyKeyboardDelegate {
         advanceToNextInputMode()
     }
 }
+
+
