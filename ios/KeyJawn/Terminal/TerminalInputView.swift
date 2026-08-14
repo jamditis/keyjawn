@@ -77,8 +77,10 @@ final class TerminalInputView: UITextView {
             return
         }
         onRawInput?(TerminalInputMapping.bytes(forInsertedText: text))
-        extraRow.ctrl.consume()
         // Intentionally no super call — keeps UITextView text empty.
+        // Armed Ctrl is only consumed when a single-character control mapping
+        // actually fired, so a paste or dictation result does not eat the next
+        // Ctrl+letter.
     }
 
     override func deleteBackward() {
@@ -135,9 +137,14 @@ extension TerminalInputView {
 
     private func showOverlay(_ panel: UIView) {
         let host = overlayHost()
-        panel.frame = host.bounds
-        panel.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        panel.translatesAutoresizingMaskIntoConstraints = false
         host.addSubview(panel)
+        NSLayoutConstraint.activate([
+            panel.topAnchor.constraint(equalTo: host.topAnchor),
+            panel.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+            panel.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+            panel.bottomAnchor.constraint(equalTo: host.keyboardLayoutGuide.topAnchor),
+        ])
     }
 
     // MARK: Slash

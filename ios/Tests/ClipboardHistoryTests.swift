@@ -16,6 +16,26 @@ final class ClipboardHistoryTests: XCTestCase {
         XCTAssertEqual(reader.pinned, ["pinned-path"])
     }
 
+    func testLegacyStandardSuitePinsMoveToTheAppGroup() {
+        let suiteName = "com.keyjawn.tests.clip-migrate.\(UUID().uuidString)"
+        let suite = UserDefaults(suiteName: suiteName)!
+        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+
+        let previous = UserDefaults.standard.stringArray(forKey: "keyjawn.clipboard.pinned")
+        UserDefaults.standard.set(["legacy-pin"], forKey: "keyjawn.clipboard.pinned")
+        defer {
+            if let previous {
+                UserDefaults.standard.set(previous, forKey: "keyjawn.clipboard.pinned")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "keyjawn.clipboard.pinned")
+            }
+        }
+
+        let history = ClipboardHistory(defaults: suite, migratesLegacyValues: true)
+        XCTAssertTrue(history.isPinned("legacy-pin"))
+        XCTAssertTrue(ClipboardHistory(defaults: suite, migratesLegacyValues: false).isPinned("legacy-pin"))
+    }
+
     func testUninjectedHistoryUsesAppGroupSuite() {
         let suite = UserDefaults(suiteName: AppGroupConfig.suiteName)
         XCTAssertNotNil(suite, "group.com.keyjawn suite must resolve in tests")

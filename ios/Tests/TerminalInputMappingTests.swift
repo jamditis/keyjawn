@@ -72,6 +72,19 @@ final class TerminalInputViewTests: XCTestCase {
         XCTAssertEqual(got, [Array("ab".utf8)])
     }
 
+    func testArmedCtrlSurvivesAMultilinePaste() {
+        let sink = TerminalInputView()
+        sink.extraRow.ctrl.toggle()
+        XCTAssertTrue(sink.extraRow.ctrl.isActive)
+        sink.insertText("ab\ncd")
+        XCTAssertTrue(sink.extraRow.ctrl.isActive, "paste must not consume armed Ctrl")
+        var got: [[UInt8]] = []
+        sink.onRawInput = { got.append($0) }
+        sink.insertText("c")
+        XCTAssertEqual(got, [[0x03]])
+        XCTAssertFalse(sink.extraRow.ctrl.isActive)
+    }
+
     func testExtraRowSlashOpensPanelAndCompactWritesTrigger() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
         let sink = TerminalInputView(frame: window.bounds)

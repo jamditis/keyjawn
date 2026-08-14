@@ -17,17 +17,45 @@ public final class ClipboardHistory {
     private let maxPinned = 10
     private let historyKey = "keyjawn.clipboard.history"
     private let pinnedKey  = "keyjawn.clipboard.pinned"
+    private let migratedKey = "keyjawn.clipboard.migrated.v1"
     private let injectedDefaults: UserDefaults?
+    private let migratesLegacyValues: Bool
 
-    /// - Parameter defaults: backing store. Defaults to the shared App Group
-    ///   suite, resolved per access. Injectable so tests can use a scratch suite.
-    public init(defaults: UserDefaults? = nil) {
+    /// - Parameters:
+    ///   - defaults: backing store. Defaults to the shared App Group suite.
+    ///   - migratesLegacyValues: copy pins/history from `UserDefaults.standard`
+    ///     once. Off for injected test suites and the keyboard extension
+    ///     (the extension cannot see the app's standard suite).
+    public init(defaults: UserDefaults? = nil, migratesLegacyValues: Bool? = nil) {
         self.injectedDefaults = defaults
+        self.migratesLegacyValues = migratesLegacyValues ?? (defaults == nil && !Self.isAppExtension)
+        migrateLegacyValuesIfNeeded()
+    }
+
+    private static var isAppExtension: Bool {
+        Bundle.main.bundleURL.pathExtension == "appex"
     }
 
     private var defaults: UserDefaults {
         if let injectedDefaults { return injectedDefaults }
         return UserDefaults(suiteName: AppGroupConfig.suiteName) ?? .standard
+    }
+
+    private func migrateLegacyValuesIfNeeded() {
+        guard migratesLegacyValues else { return }
+        let store = defaults
+        guard !store.bool(forKey: migratedKey) else { return }
+        let legacy = UserDefaults.standard
+        guard legacy != store else { return }
+        defer { store.set(true, forKey: migratedKey) }
+        if store.object(forKey: historyKey) == nil,
+           let items = legacy.stringArray(forKey: historyKey) {
+            store.set(items, forKey: historyKey)
+        }
+        if store.object(forKey: pinnedKey) == nil,
+           let pinned = legacy.stringArray(forKey: pinnedKey) {
+            store.set(pinned, forKey: pinnedKey)
+        }
     }
 
     // MARK: - Recent items
