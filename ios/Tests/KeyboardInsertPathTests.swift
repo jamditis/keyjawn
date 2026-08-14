@@ -120,9 +120,29 @@ final class KeyboardInsertPathTests: XCTestCase {
         window.makeKeyAndVisible()
         panel.layoutIfNeeded()
 
-        let compact = SlashCommand.all.first { $0.id == "compact" }
-        XCTAssertEqual(compact?.trigger, "/compact")
-        panel.onSelect?(compact!)
+        guard let table = panel.subviews.compactMap({ $0 as? UITableView }).first else {
+            return XCTFail("SlashCommandPanel has no table")
+        }
+        table.reloadData()
+        table.layoutIfNeeded()
+
+        var compactPath: IndexPath?
+        for section in 0..<table.numberOfSections {
+            for row in 0..<table.numberOfRows(inSection: section) {
+                let path = IndexPath(row: row, section: section)
+                let cell = table.dataSource?.tableView(table, cellForRowAt: path)
+                if cell?.accessibilityLabel?.contains("/compact") == true {
+                    compactPath = path
+                    break
+                }
+            }
+        }
+        guard let compactPath else {
+            return XCTFail("table has no /compact row")
+        }
+
+        table.selectRow(at: compactPath, animated: false, scrollPosition: .none)
+        table.delegate?.tableView?(table, didSelectRowAt: compactPath)
         XCTAssertEqual(selected, "/compact")
         window.isHidden = true
     }
