@@ -12,6 +12,7 @@ struct ContentView: View {
     // nothing — a first launch that looks broken. Hosts is where the app actually
     // starts: add a server, tap it, get a shell.
     @State private var selection: Tab = .hosts
+    @State private var showOnboarding = !KeyboardPrefs.shared.hasCompletedOnboarding
 
     var body: some View {
         TabView(selection: $selection) {
@@ -23,11 +24,16 @@ struct ContentView: View {
                 .tabItem { Label("Preview", systemImage: "terminal") }
                 .tag(Tab.preview)
 
-            SettingsView()
+            SettingsView(showOnboarding: $showOnboarding)
                 .tabItem { Label("Settings", systemImage: "gearshape") }
                 .tag(Tab.settings)
         }
         .preferredColorScheme(.dark)
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView {
+                showOnboarding = false
+            }
+        }
     }
 }
 

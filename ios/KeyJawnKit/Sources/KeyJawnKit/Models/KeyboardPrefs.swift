@@ -23,6 +23,7 @@ public final class KeyboardPrefs: @unchecked Sendable {
         static let haptics = "keyjawn.haptics"
         static let terminalArrows = "keyjawn.terminalArrows"
         static let migrated = "keyjawn.prefs.migrated.v2"
+        static let onboardingCompleted = "keyjawn.onboarding.completed"
     }
 
     /// Storage supplied by a test. When nil the suite is looked up per access below.
@@ -96,6 +97,16 @@ public final class KeyboardPrefs: @unchecked Sendable {
     public var terminalArrowKeys: Bool {
         get { bool(Key.terminalArrows, default: true) }
         set { defaults.set(newValue, forKey: Key.terminalArrows) }
+    }
+
+    /// Whether the first-launch keyboard setup screens have been finished or skipped.
+    ///
+    /// Stored in the App Group suite so both the containing app and any later
+    /// process that can open `group.com.keyjawn` see the same value. Unset means
+    /// not completed — a fresh install shows the wizard.
+    public var hasCompletedOnboarding: Bool {
+        get { bool(Key.onboardingCompleted, default: false) }
+        set { defaults.set(newValue, forKey: Key.onboardingCompleted) }
     }
 
     // MARK: - Helpers

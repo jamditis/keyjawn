@@ -8,6 +8,7 @@ struct SettingsView: View {
     // the theme picker changed nothing, the haptics switch changed nothing, and the
     // autocorrect switch was not wired to any code at all. Every control here now
     // changes what the keyboard does.
+    @Binding var showOnboarding: Bool
     @State private var theme = KeyboardPrefs.shared.theme
     @State private var hapticsEnabled = KeyboardPrefs.shared.hapticsEnabled
     @State private var terminalArrowKeys = KeyboardPrefs.shared.terminalArrowKeys
@@ -19,6 +20,17 @@ struct SettingsView: View {
                     NavigationLink("SSH keys") {
                         SSHKeysView()
                     }
+                }
+
+                Section {
+                    Button(OnboardingCopy.reopenTitle) {
+                        showOnboarding = true
+                    }
+                } header: {
+                    Text("Setup")
+                } footer: {
+                    Text("How to enable KeyJawn Keyboard and add a host. You can skip it.")
+                        .font(.caption)
                 }
 
                 Section {
