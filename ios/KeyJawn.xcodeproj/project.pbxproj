@@ -8,8 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		08A795D28CCACD6079370712 /* CitadelSCPUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9C051D02F5B8C10F3E75D7A /* CitadelSCPUploader.swift */; };
+		112B82237850CDFD6CE0A92C /* SlashCommandStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD05F7B8B824B359DEE870C9 /* SlashCommandStoreTests.swift */; };
 		12AE43CD002393743BACEB75 /* KeyboardThemeContrastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAA8A921E20FE294CCFC815A /* KeyboardThemeContrastTests.swift */; };
+		1537E06440732A988EE7463F /* ExtensionHonestyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF4D90B05932E700713A941 /* ExtensionHonestyTests.swift */; };
 		15533E56B3ECB76AAEE83116 /* OnboardingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F48343C46F1026C97DFEE5F1 /* OnboardingTests.swift */; };
+		1796EA69BCD6FDFC5C4544A2 /* VoiceSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838BAAD1067A5FE9A2DDE1E4 /* VoiceSessionTests.swift */; };
 		1C5FD6A31F1A4AFF704FFF74 /* SharedSSHKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7A1E2373DA280920653B41 /* SharedSSHKeyStore.swift */; };
 		1F3BC0FB1DEE09CF9586840D /* HostTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7588DD4C7951CF1F99C3A433 /* HostTerminalView.swift */; };
 		1F6BA06DD660C887B3E1F79C /* KeyJawnApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD9AC295E87CCA2D770BDB6A /* KeyJawnApp.swift */; };
@@ -33,6 +36,7 @@
 		68B8A22CEFDB19DE99CA2EB5 /* HostListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 301482A615F90B93947563BC /* HostListView.swift */; };
 		76503EE687E0F88885DD27DE /* NIOSSH in Frameworks */ = {isa = PBXBuildFile; productRef = 974D61CF6F7ADA4824D53DC7 /* NIOSSH */; };
 		7E2C29A442AE9E2630A2F301 /* HostStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC5405F0BD516F74C8E0EED5 /* HostStore.swift */; };
+		913F17D07A48356C667DF51A /* TerminalVoiceInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458667FC8591E01311ADA8AF /* TerminalVoiceInput.swift */; };
 		9DA97D841DD222F4BC99CFC9 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1BD7D5FD852EEF611DFEF3BA /* KeyJawnKit */; };
 		A58E56EF6474C8DBC8512A2F /* KeyboardStressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BD88603C1C49C4DCF6E4364 /* KeyboardStressTests.swift */; };
 		A793BD0FFA4FDCD6DA278117 /* WordBoundaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 686608D07F38BF2952BC2A05 /* WordBoundaryTests.swift */; };
@@ -52,6 +56,7 @@
 		CCDB3D09BF10D8B0C6C4B9BD /* ExtraRowPresetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54003BE0AD4A0942B2C7D0F1 /* ExtraRowPresetTests.swift */; };
 		D4959C7C420241BE04B8CD59 /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = 060BD31A2DD85CF9C0F6FE6F /* Citadel */; };
 		D833730B6D5B5B7CD1D39B17 /* TerminalInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F295D7985B88063D1F195088 /* TerminalInputView.swift */; };
+		DC086B3EB381E69972DDC0AA /* HardwareKeyMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F5FD863B6B104B7A7FBE477 /* HardwareKeyMappingTests.swift */; };
 		DE63F87E7794F4FF03DA7A43 /* ANSISequenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE81ADA79A468E5CF872E5B1 /* ANSISequenceTests.swift */; };
 		DF7E0C0E55646C2A8443B118 /* KeyboardInsertPathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D7B5B0254BBE72FA1A9ADA0 /* KeyboardInsertPathTests.swift */; };
 		E488DF8C0300EA5A5A26626B /* SlashScreenshotRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524D3943A19BA98402D9549F /* SlashScreenshotRenderTests.swift */; };
@@ -112,7 +117,9 @@
 		33E1CA9E994C39BD29662DF0 /* LaunchFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchFlowTests.swift; sourceTree = "<group>"; };
 		38264316C6A0140F8FEB1667 /* ClipboardHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardHistoryTests.swift; sourceTree = "<group>"; };
 		396D44A07DE95A000C7627D0 /* KeyboardPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardPrefsTests.swift; sourceTree = "<group>"; };
+		3AF4D90B05932E700713A941 /* ExtensionHonestyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionHonestyTests.swift; sourceTree = "<group>"; };
 		3CE214E0B998D01BC698998B /* KeyboardMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardMetricsTests.swift; sourceTree = "<group>"; };
+		458667FC8591E01311ADA8AF /* TerminalVoiceInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalVoiceInput.swift; sourceTree = "<group>"; };
 		524D3943A19BA98402D9549F /* SlashScreenshotRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlashScreenshotRenderTests.swift; sourceTree = "<group>"; };
 		54003BE0AD4A0942B2C7D0F1 /* ExtraRowPresetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtraRowPresetTests.swift; sourceTree = "<group>"; };
 		62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -120,6 +127,8 @@
 		665662BFA6DECCD61154BEE8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		686608D07F38BF2952BC2A05 /* WordBoundaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordBoundaryTests.swift; sourceTree = "<group>"; };
 		7588DD4C7951CF1F99C3A433 /* HostTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostTerminalView.swift; sourceTree = "<group>"; };
+		7F5FD863B6B104B7A7FBE477 /* HardwareKeyMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareKeyMappingTests.swift; sourceTree = "<group>"; };
+		838BAAD1067A5FE9A2DDE1E4 /* VoiceSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionTests.swift; sourceTree = "<group>"; };
 		88516F15428436E247E65FD4 /* AppGroupHostStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupHostStore.swift; sourceTree = "<group>"; };
 		8BD88603C1C49C4DCF6E4364 /* KeyboardStressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardStressTests.swift; sourceTree = "<group>"; };
 		97D63ED3E15ECBC88F45E3B6 /* InputViewAudioFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputViewAudioFeedback.swift; sourceTree = "<group>"; };
@@ -141,6 +150,7 @@
 		D9913D1DFEB392733BA6B353 /* KeyJawnKitTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KeyJawnKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D9C051D02F5B8C10F3E75D7A /* CitadelSCPUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CitadelSCPUploader.swift; sourceTree = "<group>"; };
 		DB7A1E2373DA280920653B41 /* SharedSSHKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSSHKeyStore.swift; sourceTree = "<group>"; };
+		DD05F7B8B824B359DEE870C9 /* SlashCommandStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlashCommandStoreTests.swift; sourceTree = "<group>"; };
 		DE81ADA79A468E5CF872E5B1 /* ANSISequenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ANSISequenceTests.swift; sourceTree = "<group>"; };
 		DF6FA031277F874D263EF7AD /* TerminalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalViewController.swift; sourceTree = "<group>"; };
 		F295D7985B88063D1F195088 /* TerminalInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalInputView.swift; sourceTree = "<group>"; };
@@ -190,6 +200,7 @@
 				23A4B394C56787E8E05B58A1 /* SSHSession.swift */,
 				F295D7985B88063D1F195088 /* TerminalInputView.swift */,
 				DF6FA031277F874D263EF7AD /* TerminalViewController.swift */,
+				458667FC8591E01311ADA8AF /* TerminalVoiceInput.swift */,
 			);
 			path = Terminal;
 			sourceTree = "<group>";
@@ -210,7 +221,9 @@
 				DE81ADA79A468E5CF872E5B1 /* ANSISequenceTests.swift */,
 				38264316C6A0140F8FEB1667 /* ClipboardHistoryTests.swift */,
 				D02EAAA4D51DA2E825C9B5BA /* CtrlStateTests.swift */,
+				3AF4D90B05932E700713A941 /* ExtensionHonestyTests.swift */,
 				54003BE0AD4A0942B2C7D0F1 /* ExtraRowPresetTests.swift */,
+				7F5FD863B6B104B7A7FBE477 /* HardwareKeyMappingTests.swift */,
 				9B940C548C192782A1073E16 /* HostConfigTests.swift */,
 				2D7B5B0254BBE72FA1A9ADA0 /* KeyboardInsertPathTests.swift */,
 				98604D5BA08246970836FD92 /* KeyboardLayersTests.swift */,
@@ -219,9 +232,11 @@
 				8BD88603C1C49C4DCF6E4364 /* KeyboardStressTests.swift */,
 				FAA8A921E20FE294CCFC815A /* KeyboardThemeContrastTests.swift */,
 				F48343C46F1026C97DFEE5F1 /* OnboardingTests.swift */,
+				DD05F7B8B824B359DEE870C9 /* SlashCommandStoreTests.swift */,
 				B9DF2807E8DD4CB2A02999BA /* SlashCommandTests.swift */,
 				524D3943A19BA98402D9549F /* SlashScreenshotRenderTests.swift */,
 				64762D93ADF3F2AB82F1A548 /* TerminalInputMappingTests.swift */,
+				838BAAD1067A5FE9A2DDE1E4 /* VoiceSessionTests.swift */,
 				686608D07F38BF2952BC2A05 /* WordBoundaryTests.swift */,
 			);
 			path = Tests;
@@ -497,7 +512,9 @@
 				68B2C30E8CD52FC6DE13253C /* AltKeyMappingsTests.swift in Sources */,
 				3E7E682B7731F46E6D232280 /* ClipboardHistoryTests.swift in Sources */,
 				5D3FA20C7AADA0E3754284D5 /* CtrlStateTests.swift in Sources */,
+				1537E06440732A988EE7463F /* ExtensionHonestyTests.swift in Sources */,
 				CCDB3D09BF10D8B0C6C4B9BD /* ExtraRowPresetTests.swift in Sources */,
+				DC086B3EB381E69972DDC0AA /* HardwareKeyMappingTests.swift in Sources */,
 				C2CB34B81FFC8B56D356D8AF /* HostConfigTests.swift in Sources */,
 				DF7E0C0E55646C2A8443B118 /* KeyboardInsertPathTests.swift in Sources */,
 				EAD2BFA42A42418E10696035 /* KeyboardLayersTests.swift in Sources */,
@@ -506,9 +523,11 @@
 				A58E56EF6474C8DBC8512A2F /* KeyboardStressTests.swift in Sources */,
 				12AE43CD002393743BACEB75 /* KeyboardThemeContrastTests.swift in Sources */,
 				15533E56B3ECB76AAEE83116 /* OnboardingTests.swift in Sources */,
+				112B82237850CDFD6CE0A92C /* SlashCommandStoreTests.swift in Sources */,
 				C01DB065ADBBD129FDFA832F /* SlashCommandTests.swift in Sources */,
 				E488DF8C0300EA5A5A26626B /* SlashScreenshotRenderTests.swift in Sources */,
 				3694F662CD2D10BFC8388AF2 /* TerminalInputMappingTests.swift in Sources */,
+				1796EA69BCD6FDFC5C4544A2 /* VoiceSessionTests.swift in Sources */,
 				A793BD0FFA4FDCD6DA278117 /* WordBoundaryTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -553,6 +572,7 @@
 				67B39BE35B75861A3813BF5C /* SettingsView.swift in Sources */,
 				D833730B6D5B5B7CD1D39B17 /* TerminalInputView.swift in Sources */,
 				5A4CC73980A76F9DB9E5A5E2 /* TerminalViewController.swift in Sources */,
+				913F17D07A48356C667DF51A /* TerminalVoiceInput.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
