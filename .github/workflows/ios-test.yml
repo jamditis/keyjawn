@@ -1,0 +1,73 @@
+name: iOS test
+
+# Separate workflow so Android-only and worker-only PRs never start a macos-26 runner.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-test.yml"
+  push:
+    branches: [main, dev]
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-test.yml"
+
+jobs:
+  ios-test:
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          set -euo pipefail
+          if [ -d /Applications/Xcode_26.6.app ]; then
+            sudo xcode-select -s /Applications/Xcode_26.6.app
+          elif [ -d /Applications/Xcode_26.3.app ]; then
+            sudo xcode-select -s /Applications/Xcode_26.3.app
+          fi
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Pick iPhone simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          LIST=$(xcrun simctl list devices available)
+          if printf '%s\n' "$LIST" | grep -F -q 'iPhone 17 Pro'; then
+            echo "name=iPhone 17 Pro" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          NAME=$(printf '%s\n' "$LIST" | sed -n 's/^[[:space:]]*\(iPhone [^([:space:]][^()]*\).*/\1/p' | sed 's/[[:space:]]*$//' | tail -n 1)
+          if [ -z "$NAME" ]; then
+            echo "No available iPhone simulator:"
+            printf '%s\n' "$LIST"
+            exit 1
+          fi
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Test KeyJawn
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project KeyJawn.xcodeproj \
+            -scheme KeyJawn \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -resultBundlePath "$GITHUB_WORKSPACE/TestResults.xcresult"
+
+      - name: Upload xcresult
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-xcresult
+          path: TestResults.xcresult
+          if-no-files-found: ignore
