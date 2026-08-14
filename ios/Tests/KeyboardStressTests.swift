@@ -123,9 +123,10 @@ final class KeyboardStressTests: XCTestCase {
     }
 
     func testClipboardHistoryCapsAtThirtyAndDropsOldest() {
-        let history = ClipboardHistory.shared
-        history.clear()
-        defer { history.clear() }
+        let name = "com.keyjawn.tests.clipboard.\(UUID().uuidString)"
+        let suite = UserDefaults(suiteName: name)!
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let history = ClipboardHistory(defaults: suite)
 
         for i in 0..<80 {
             history.add("item-\(i)")

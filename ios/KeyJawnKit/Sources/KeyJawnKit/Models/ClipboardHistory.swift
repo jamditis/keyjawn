@@ -6,13 +6,16 @@ import UIKit
 @MainActor
 public final class ClipboardHistory {
     public static let shared = ClipboardHistory()
-    private init() {}
 
     private let maxItems = 30
     private let maxPinned = 10
     private let historyKey = "keyjawn.clipboard.history"
     private let pinnedKey  = "keyjawn.clipboard.pinned"
-    private let defaults   = UserDefaults.standard
+    private let defaults: UserDefaults
+
+    public init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
 
     // MARK: - Recent items
 

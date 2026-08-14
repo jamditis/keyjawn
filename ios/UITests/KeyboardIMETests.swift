@@ -126,9 +126,10 @@ final class KeyboardIMETests: XCTestCase {
 
         switchToKeyJawn(in: notes)
 
-        let keys = notes.keys
-        XCTAssertTrue(keys["h"].waitForExistence(timeout: 4) || notes.buttons["h"].waitForExistence(timeout: 2),
-                      "KeyJawn letter keys should be visible after switching")
+        XCTAssertTrue(
+            notes.buttons["^C"].waitForExistence(timeout: 4) || notes.keys["^C"].waitForExistence(timeout: 2),
+            "KeyJawn extra-row ^C must be visible before letter taps"
+        )
         tapKey(in: notes, "h")
         tapKey(in: notes, "i")
         XCTAssertTrue(

@@ -14,9 +14,8 @@ final class LaunchFlowTests: XCTestCase {
 
     func testColdLaunchCanSkipOnboardingAndReachTheThreeTabs() {
         let skip = app.buttons["onboarding.skip"]
-        if skip.waitForExistence(timeout: 5) {
-            skip.tap()
-        }
+        XCTAssertTrue(skip.waitForExistence(timeout: 5), "first launch must show Skip")
+        skip.tap()
 
         activateTab("Hosts")
         XCTAssertTrue(app.navigationBars["Hosts"].waitForExistence(timeout: 5))
