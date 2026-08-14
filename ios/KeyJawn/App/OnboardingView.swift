@@ -17,19 +17,23 @@ struct OnboardingView: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 20) {
                 let current = OnboardingCopy.pages[page]
-                Text(current.title)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Text(current.body)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if page == 1 {
-                    Button(OnboardingCopy.openSettingsTitle) {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text(current.title)
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        Text(current.body)
+                            .foregroundStyle(.secondary)
+                        if page == 1 {
+                            Button(OnboardingCopy.openSettingsTitle) {
+                                if let url = URL(string: UIApplication.openSettingsURLString) {
+                                    UIApplication.shared.open(url)
+                                }
+                            }
+                            .buttonStyle(.bordered)
                         }
                     }
-                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 HStack {
                     Button(OnboardingCopy.skipTitle) {

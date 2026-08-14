@@ -51,6 +51,18 @@ final class KeyboardInsertPathTests: XCTestCase {
         )
     }
 
+    func testArmedCtrlSurvivesAMultiCharacterAlternate() {
+        XCTAssertTrue(
+            KeyboardDocumentInsert.consumesCtrl(for: .character("c"), ctrlActive: true)
+        )
+        XCTAssertFalse(
+            KeyboardDocumentInsert.consumesCtrl(for: .character(".."), ctrlActive: true)
+        )
+        XCTAssertFalse(
+            KeyboardDocumentInsert.consumesCtrl(for: .character("c"), ctrlActive: false)
+        )
+    }
+
     func testExtraRowButtonsEmitEscTabAndSlash() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 80))
         let extra = ExtraRowView()

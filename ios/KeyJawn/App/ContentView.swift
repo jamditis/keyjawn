@@ -12,7 +12,16 @@ struct ContentView: View {
     // nothing — a first launch that looks broken. Hosts is where the app actually
     // starts: add a server, tap it, get a shell.
     @State private var selection: Tab = .hosts
-    @State private var showOnboarding = !KeyboardPrefs.shared.hasCompletedOnboarding
+    @State private var showOnboarding = Self.shouldShowOnboarding()
+
+    /// UI tests pass `-ui-testing` so a reused simulator still presents first
+    /// launch. The flag is not stored; production launches keep the prefs value.
+    private static func shouldShowOnboarding() -> Bool {
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
+            return true
+        }
+        return !KeyboardPrefs.shared.hasCompletedOnboarding
+    }
 
     var body: some View {
         TabView(selection: $selection) {

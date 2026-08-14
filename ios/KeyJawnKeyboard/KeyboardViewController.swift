@@ -356,8 +356,12 @@ extension KeyboardViewController: NumberRowDelegate {
 extension KeyboardViewController: QwertyKeyboardDelegate {
 
     public func keyboard(_ keyboard: QwertyKeyboardView, insertText text: String) {
-        applyInsert(.character(text), ctrlActive: extraRow.ctrl.isActive)
-        extraRow.ctrl.consume()
+        let output = KeyOutput.character(text)
+        let ctrlActive = extraRow.ctrl.isActive
+        applyInsert(output, ctrlActive: ctrlActive)
+        if KeyboardDocumentInsert.consumesCtrl(for: output, ctrlActive: ctrlActive) {
+            extraRow.ctrl.consume()
+        }
     }
 
     public func keyboardDeleteBackward(_ keyboard: QwertyKeyboardView) {

@@ -85,4 +85,13 @@ final class ANSISequenceTests: XCTestCase {
                               "\(key.label) falls back to its glyph for VoiceOver")
         }
     }
+
+    func testExtraRowIdentifiersAreStableAndNotTheVisibleGlyph() throws {
+        let ctrl = try XCTUnwrap(ExtraRowKey.defaults.first { $0.slot == .ctrlC })
+        XCTAssertEqual(ctrl.accessibilityIdentifier, "extra.ctrlC")
+        XCTAssertNotEqual(ctrl.accessibilityIdentifier, ctrl.label)
+        for key in ExtraRowKey.defaults {
+            XCTAssertEqual(key.accessibilityIdentifier, "extra.\(key.slot)")
+        }
+    }
 }

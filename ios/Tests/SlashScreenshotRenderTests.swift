@@ -18,16 +18,11 @@ final class SlashScreenshotRenderTests: XCTestCase {
         let data = try XCTUnwrap(image.pngData())
         XCTAssertGreaterThan(data.count, 50_000)
 
-        // Local runs refresh the store/website asset. CI leaves the committed PNG alone.
-        if ProcessInfo.processInfo.environment["CI"] == nil {
-            let repo = URL(fileURLWithPath: #filePath)
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-            let out = repo.appendingPathComponent(
-                "website/public/screenshots/ios-screenshots/ios-slash-commands.png"
-            )
-            try data.write(to: out)
+        // Opt-in only. Ordinary local `xcodebuild test` must not rewrite the
+        // tracked listing PNG.
+        if let dest = ProcessInfo.processInfo.environment["SLASH_SCREENSHOT_PATH"],
+           !dest.isEmpty {
+            try data.write(to: URL(fileURLWithPath: dest))
         }
     }
 
