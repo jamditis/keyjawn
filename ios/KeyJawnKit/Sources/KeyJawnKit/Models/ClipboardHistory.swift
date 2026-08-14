@@ -1,8 +1,14 @@
 import UIKit
 
-/// Stores recent clipboard items in UserDefaults.
-/// Works in both the main app and the keyboard extension (each has its own sandbox).
-/// Items are added manually when the user taps the Clip button — no background monitoring.
+/// Stores recent clipboard items in the `group.com.keyjawn` App Group suite.
+///
+/// The app and the keyboard extension are separate processes. `UserDefaults.standard`
+/// is a per-process sandbox, so pins written in one never appeared in the other —
+/// the same class of bug `KeyboardPrefs` already fixed. Items are added when the
+/// user taps Clip; there is no background monitoring.
+///
+/// A keyboard extension can only open the shared suite with Full Access. Without
+/// it the suite lookup falls back to the extension sandbox and pins stay local.
 @MainActor
 public final class ClipboardHistory {
     public static let shared = ClipboardHistory()
@@ -11,10 +17,43 @@ public final class ClipboardHistory {
     private let maxPinned = 10
     private let historyKey = "keyjawn.clipboard.history"
     private let pinnedKey  = "keyjawn.clipboard.pinned"
-    private let defaults: UserDefaults
+    private let migratedKey = "keyjawn.clipboard.migrated.v1"
+    private let injectedDefaults: UserDefaults?
+    private let migratesLegacyValues: Bool
 
-    public init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    /// - Parameters:
+    ///   - defaults: backing store. Defaults to the shared App Group suite.
+    ///   - migratesLegacyValues: copy pins/history from this process's
+    ///     `UserDefaults.standard` once. The extension was the production
+    ///     caller, so its sandbox holds the legacy pins; the app may have a
+    ///     separate set. Each process copies its own standard suite into the
+    ///     App Group when the shared keys are empty. Off for injected tests.
+    public init(defaults: UserDefaults? = nil, migratesLegacyValues: Bool? = nil) {
+        self.injectedDefaults = defaults
+        self.migratesLegacyValues = migratesLegacyValues ?? (defaults == nil)
+        migrateLegacyValuesIfNeeded()
+    }
+
+    private var defaults: UserDefaults {
+        if let injectedDefaults { return injectedDefaults }
+        return UserDefaults(suiteName: AppGroupConfig.suiteName) ?? .standard
+    }
+
+    private func migrateLegacyValuesIfNeeded() {
+        guard migratesLegacyValues else { return }
+        let store = defaults
+        guard !store.bool(forKey: migratedKey) else { return }
+        let legacy = UserDefaults.standard
+        guard legacy != store else { return }
+        defer { store.set(true, forKey: migratedKey) }
+        if store.object(forKey: historyKey) == nil,
+           let items = legacy.stringArray(forKey: historyKey) {
+            store.set(items, forKey: historyKey)
+        }
+        if store.object(forKey: pinnedKey) == nil,
+           let pinned = legacy.stringArray(forKey: pinnedKey) {
+            store.set(pinned, forKey: pinnedKey)
+        }
     }
 
     // MARK: - Recent items

@@ -47,6 +47,7 @@ public final class ClipboardPanel: UIView, UITableViewDataSource, UITableViewDel
     public init(theme: KeyboardTheme = .dark) {
         self.theme = theme
         super.init(frame: .zero)
+        accessibilityIdentifier = "clipboard-panel"
         setupView()
     }
 

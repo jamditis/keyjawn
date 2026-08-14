@@ -6,7 +6,9 @@ import CryptoKit
 import KeyJawnKit
 
 /// Uploads image data to a remote host via SFTP using Citadel.
-/// Lives in the keyboard extension (not KeyJawnKit) so it can import Citadel freely.
+/// Compiled into both the app and the keyboard extension so the in-app extra
+/// row can use the same upload path as the IME. Not in KeyJawnKit because
+/// the kit must stay free of the Citadel dependency.
 enum CitadelSCPUploader {
 
     enum UploadError: Error, LocalizedError {

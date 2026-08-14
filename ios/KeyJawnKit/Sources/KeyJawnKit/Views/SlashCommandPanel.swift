@@ -25,6 +25,7 @@ public final class SlashCommandPanel: UIView {
         }
         self.theme = theme
         super.init(frame: .zero)
+        accessibilityIdentifier = "slash-command-panel"
         build()
     }
 

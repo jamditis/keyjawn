@@ -50,6 +50,7 @@ public final class UploadPanel: UIView {
     public init(theme: KeyboardTheme = .dark) {
         self.theme = theme
         super.init(frame: .zero)
+        accessibilityIdentifier = "upload-panel"
         setup()
     }
 
