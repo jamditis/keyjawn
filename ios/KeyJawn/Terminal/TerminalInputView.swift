@@ -23,6 +23,8 @@ final class TerminalInputView: UITextView {
     private var slashPanel: SlashCommandPanel?
     private var clipboardPanel: ClipboardPanel?
     private var uploadPanel: UploadPanel?
+    private let voice = TerminalVoiceInput()
+    private var lastHardwareEmit: (bytes: [UInt8], at: CFTimeInterval)?
 
     override init(frame: CGRect, textContainer: NSTextContainer?) {
         super.init(frame: frame, textContainer: textContainer)
@@ -48,12 +50,29 @@ final class TerminalInputView: UITextView {
         smartInsertDeleteType    = .no
 
         extraRow.frame     = CGRect(x: 0, y: 0, width: 0, height: 52)
+        extraRow.setKeys(KeyboardPrefs.shared.extraRowPreset.terminalKeys)
         extraRow.delegate  = self
         // Same theme the keyboard extension uses, so the row looks like one component
         // wherever it appears rather than defaulting to dark here and themed there.
         extraRow.applyTheme(KeyboardPrefs.shared.theme)
         KeyboardHaptics.refresh()
         inputAccessoryView = extraRow
+        voice.onCommit = { [weak self] text in
+            self?.onRawInput?(Array(text.utf8))
+        }
+        voice.onListeningChange = { [weak self] listening in
+            self?.extraRow.setMicListening(listening)
+        }
+    }
+
+    /// Re-read the App Group preset. The accessory lives across tab switches.
+    func applyExtraRowPreset() {
+        extraRow.setKeys(KeyboardPrefs.shared.extraRowPreset.terminalKeys)
+        extraRow.applyTheme(KeyboardPrefs.shared.theme)
+    }
+
+    func cancelVoice() {
+        voice.cancel()
     }
 
     // MARK: UIKeyInput — intercept before text hits the text view
@@ -99,6 +118,85 @@ final class TerminalInputView: UITextView {
     func submitLine() {
         onRawInput?(TerminalInputMapping.submitBytes)
     }
+
+    // MARK: Hardware keyboard
+
+    override var keyCommands: [UIKeyCommand]? {
+        [
+            UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [], action: #selector(hardwareEscape)),
+            UIKeyCommand(input: "\t", modifierFlags: [], action: #selector(hardwareTab)),
+            UIKeyCommand(input: UIKeyCommand.inputUpArrow, modifierFlags: [], action: #selector(hardwareUp)),
+            UIKeyCommand(input: UIKeyCommand.inputDownArrow, modifierFlags: [], action: #selector(hardwareDown)),
+            UIKeyCommand(input: UIKeyCommand.inputLeftArrow, modifierFlags: [], action: #selector(hardwareLeft)),
+            UIKeyCommand(input: UIKeyCommand.inputRightArrow, modifierFlags: [], action: #selector(hardwareRight)),
+            UIKeyCommand(input: "c", modifierFlags: .control, action: #selector(hardwareCtrlC)),
+            UIKeyCommand(input: "d", modifierFlags: .control, action: #selector(hardwareCtrlD)),
+            UIKeyCommand(input: "z", modifierFlags: .control, action: #selector(hardwareCtrlZ)),
+        ]
+    }
+
+    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        var handled = false
+        for press in presses {
+            guard let key = press.key,
+                  let mapped = hardwareKey(from: key) else { continue }
+            let modifiers = hardwareModifiers(from: key)
+            if emitHardware(mapped, modifiers: modifiers) {
+                handled = true
+            }
+        }
+        if !handled {
+            super.pressesBegan(presses, with: event)
+        }
+    }
+
+    @discardableResult
+    private func emitHardware(_ key: HardwareKey, modifiers: HardwareModifiers) -> Bool {
+        guard let bytes = HardwareKeyMapping.bytes(for: key, modifiers: modifiers) else {
+            return false
+        }
+        let now = CACurrentMediaTime()
+        if let last = lastHardwareEmit, last.bytes == bytes, now - last.at < 0.03 {
+            return true
+        }
+        lastHardwareEmit = (bytes, now)
+        onRawInput?(bytes)
+        return true
+    }
+
+    private func hardwareKey(from key: UIKey) -> HardwareKey? {
+        switch key.keyCode {
+        case .keyboardEscape: return .escape
+        case .keyboardTab: return .tab
+        case .keyboardUpArrow: return .arrowUp
+        case .keyboardDownArrow: return .arrowDown
+        case .keyboardLeftArrow: return .arrowLeft
+        case .keyboardRightArrow: return .arrowRight
+        default:
+            let chars = key.charactersIgnoringModifiers
+            guard chars.count == 1 else { return nil }
+            return .character(chars)
+        }
+    }
+
+    private func hardwareModifiers(from key: UIKey) -> HardwareModifiers {
+        var mods = HardwareModifiers()
+        if key.modifierFlags.contains(.control) { mods.insert(.control) }
+        if key.modifierFlags.contains(.command) { mods.insert(.command) }
+        if key.modifierFlags.contains(.alternate) { mods.insert(.alternate) }
+        if key.modifierFlags.contains(.shift) { mods.insert(.shift) }
+        return mods
+    }
+
+    @objc private func hardwareEscape() { emitHardware(.escape, modifiers: []) }
+    @objc private func hardwareTab() { emitHardware(.tab, modifiers: []) }
+    @objc private func hardwareUp() { emitHardware(.arrowUp, modifiers: []) }
+    @objc private func hardwareDown() { emitHardware(.arrowDown, modifiers: []) }
+    @objc private func hardwareLeft() { emitHardware(.arrowLeft, modifiers: []) }
+    @objc private func hardwareRight() { emitHardware(.arrowRight, modifiers: []) }
+    @objc private func hardwareCtrlC() { emitHardware(.character("c"), modifiers: .control) }
+    @objc private func hardwareCtrlD() { emitHardware(.character("d"), modifiers: .control) }
+    @objc private func hardwareCtrlZ() { emitHardware(.character("z"), modifiers: .control) }
 }
 
 extension TerminalInputView: ExtraRowDelegate {
@@ -128,6 +226,14 @@ extension TerminalInputView: ExtraRowDelegate {
             showUploadPanel()
         }
     }
+
+    func extraRowDidTapMic(_ view: ExtraRowView) {
+        voice.toggle()
+    }
+
+    func extraRowDidCancelMic(_ view: ExtraRowView) {
+        voice.cancel()
+    }
 }
 
 // MARK: - Overlays
@@ -156,7 +262,11 @@ extension TerminalInputView {
         hideClipboardPanel()
         hideUploadPanel()
 
-        let panel = SlashCommandPanel(theme: KeyboardPrefs.shared.theme)
+        let customs = SlashCommandStore.commands(from: SlashCommandStore.appGroupDefaults())
+        let panel = SlashCommandPanel(
+            commands: SlashCommand.all + customs,
+            theme: KeyboardPrefs.shared.theme
+        )
         panel.onSelect = { [weak self] command in
             self?.onRawInput?(Array(command.trigger.utf8))
             self?.hideSlashPanel()

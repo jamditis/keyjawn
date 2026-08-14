@@ -42,7 +42,9 @@ public enum KeyboardDocumentInsert: Equatable, Sendable {
             return .insert(s)
         case .backspace:
             return .deleteBackward
-        case .return:
+        case .return, .send, .newline:
+            // The IME cannot submit to a remote PTY. All three are an honest
+            // newline. The SSH sink maps `.send` to CR and `.newline` to LF.
             return .insert("\n")
         case .space:
             return .insert(" ")

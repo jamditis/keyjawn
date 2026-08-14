@@ -195,6 +195,8 @@ private final class ExtraRecorder: ExtraRowDelegate {
     }
     func extraRowDidTapClipboard(_ view: ExtraRowView) {}
     func extraRowDidTapUpload(_ view: ExtraRowView) {}
+    func extraRowDidTapMic(_ view: ExtraRowView) {}
+    func extraRowDidCancelMic(_ view: ExtraRowView) {}
 }
 
 @MainActor
