@@ -23,17 +23,15 @@ public final class ClipboardHistory {
 
     /// - Parameters:
     ///   - defaults: backing store. Defaults to the shared App Group suite.
-    ///   - migratesLegacyValues: copy pins/history from `UserDefaults.standard`
-    ///     once. Off for injected test suites and the keyboard extension
-    ///     (the extension cannot see the app's standard suite).
+    ///   - migratesLegacyValues: copy pins/history from this process's
+    ///     `UserDefaults.standard` once. The extension was the production
+    ///     caller, so its sandbox holds the legacy pins; the app may have a
+    ///     separate set. Each process copies its own standard suite into the
+    ///     App Group when the shared keys are empty. Off for injected tests.
     public init(defaults: UserDefaults? = nil, migratesLegacyValues: Bool? = nil) {
         self.injectedDefaults = defaults
-        self.migratesLegacyValues = migratesLegacyValues ?? (defaults == nil && !Self.isAppExtension)
+        self.migratesLegacyValues = migratesLegacyValues ?? (defaults == nil)
         migrateLegacyValuesIfNeeded()
-    }
-
-    private static var isAppExtension: Bool {
-        Bundle.main.bundleURL.pathExtension == "appex"
     }
 
     private var defaults: UserDefaults {

@@ -85,6 +85,13 @@ final class TerminalInputViewTests: XCTestCase {
         XCTAssertFalse(sink.extraRow.ctrl.isActive)
     }
 
+    func testArmedCtrlIsConsumedOnSystemReturn() {
+        let sink = TerminalInputView()
+        sink.extraRow.ctrl.toggle()
+        sink.insertText("\n")
+        XCTAssertFalse(sink.extraRow.ctrl.isActive, "submit must consume armed Ctrl")
+    }
+
     func testExtraRowSlashOpensPanelAndCompactWritesTrigger() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
         let sink = TerminalInputView(frame: window.bounds)

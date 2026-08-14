@@ -77,10 +77,12 @@ final class TerminalInputView: UITextView {
             return
         }
         onRawInput?(TerminalInputMapping.bytes(forInsertedText: text))
+        if text == "\n" || text == "\r" {
+            extraRow.ctrl.consume()
+        }
         // Intentionally no super call — keeps UITextView text empty.
-        // Armed Ctrl is only consumed when a single-character control mapping
-        // actually fired, so a paste or dictation result does not eat the next
-        // Ctrl+letter.
+        // Armed Ctrl is only consumed for a control mapping or a submit, so a
+        // paste or dictation result does not eat the next Ctrl+letter.
     }
 
     override func deleteBackward() {
