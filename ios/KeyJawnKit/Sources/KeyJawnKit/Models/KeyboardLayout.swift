@@ -61,6 +61,7 @@ public enum ExtraRowSlot: Int, CaseIterable, Sendable {
     case digit1
     case digit2
     case digit3
+    case mic
 }
 
 public struct ExtraRowKey: Sendable {
@@ -92,6 +93,7 @@ public struct ExtraRowKey: Sendable {
         case .digit1:     return "1"
         case .digit2:     return "2"
         case .digit3:     return "3"
+        case .mic:        return "Microphone"
         }
     }
 
@@ -115,8 +117,11 @@ public struct ExtraRowKey: Sendable {
     /// Terminal accessory: the default ten keys plus Send. The extension keeps
     /// `defaults` until remappable presets can place Send without crowding
     /// the phone IME row.
+    public static let micKey = ExtraRowKey(slot: .mic, label: "Mic", output: nil)
+
     public static let terminalKeys: [ExtraRowKey] = defaults + [
         ExtraRowKey(slot: .send, label: "Send", output: .send),
+        micKey,
     ]
 
     public init(slot: ExtraRowSlot, label: String, output: KeyOutput?) {

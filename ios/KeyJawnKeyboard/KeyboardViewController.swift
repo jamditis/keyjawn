@@ -198,12 +198,19 @@ extension KeyboardViewController: ExtraRowDelegate {
         }
     }
 
+    public func extraRowDidTapMic(_ view: ExtraRowView) {
+        // The extension cannot use the microphone. Mic is not on this row.
+    }
+
+    public func extraRowDidCancelMic(_ view: ExtraRowView) {}
+
     // MARK: - Slash command panel
 
     private func showSlashPanel() {
         guard slashPanel == nil else { return }
 
-        let panel = SlashCommandPanel(theme: theme)
+        let customs = SlashCommandStore.commands(from: SlashCommandStore.appGroupDefaults())
+        let panel = SlashCommandPanel(commands: SlashCommand.all + customs, theme: theme)
         panel.onSelect = { [weak self] command in
             self?.textDocumentProxy.insertText(command.trigger)
             self?.hideSlashPanel()

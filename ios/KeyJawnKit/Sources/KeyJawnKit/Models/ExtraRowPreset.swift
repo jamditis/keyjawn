@@ -44,7 +44,7 @@ public enum ExtraRowPreset: String, Sendable, CaseIterable, Equatable {
         case .agent:
             return ExtraRowKey.terminalKeys
         case .confirm:
-            return keys
+            return keys + [ExtraRowKey.micKey]
         }
     }
 

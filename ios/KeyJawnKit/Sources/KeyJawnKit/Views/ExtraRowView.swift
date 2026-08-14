@@ -11,6 +11,8 @@ public protocol ExtraRowDelegate: AnyObject {
     func extraRow(_ view: ExtraRowView, send output: KeyOutput, ctrlActive: Bool)
     func extraRowDidTapClipboard(_ view: ExtraRowView)
     func extraRowDidTapUpload(_ view: ExtraRowView)
+    func extraRowDidTapMic(_ view: ExtraRowView)
+    func extraRowDidCancelMic(_ view: ExtraRowView)
 }
 
 // MARK: - ExtraRowView
@@ -34,6 +36,7 @@ public final class ExtraRowView: UIView {
 
     private let stack = UIStackView()
     private var ctrlCButton: ExtraRowButton?
+    private var micButton: ExtraRowButton?
     private var repeatTimer: Timer?
 
     // MARK: - Theme
@@ -96,13 +99,20 @@ public final class ExtraRowView: UIView {
             $0.removeFromSuperview()
         }
         ctrlCButton = nil
+        micButton = nil
         for key in keys {
             let btn = ExtraRowButton(key: key, bgColor: keyBg, textColor: theme.extraRowKeyText)
             wire(btn)
             stack.addArrangedSubview(btn)
             if key.slot == .ctrlC { ctrlCButton = btn }
+            if key.slot == .mic { micButton = btn }
         }
         applyCtrlVisual(ctrl.state)
+    }
+
+    public func setMicListening(_ listening: Bool) {
+        guard let micButton else { return }
+        micButton.backgroundColor = listening ? armed : keyBg
     }
 
     /// Stop auto-repeat when the row leaves the hierarchy.
@@ -141,6 +151,12 @@ public final class ExtraRowView: UIView {
 
         case .upload:
             btn.addTarget(self, action: #selector(uploadTapped), for: .touchUpInside)
+
+        case .mic:
+            btn.addTarget(self, action: #selector(micTapped), for: .touchUpInside)
+            let lp = UILongPressGestureRecognizer(target: self, action: #selector(micLongPressed(_:)))
+            lp.minimumPressDuration = 0.45
+            btn.addGestureRecognizer(lp)
 
         case .send:
             btn.addTarget(self, action: #selector(sendTapped), for: .touchUpInside)
@@ -210,6 +226,17 @@ public final class ExtraRowView: UIView {
     @objc private func uploadTapped() {
         KeyboardHaptics.keyPress()
         delegate?.extraRowDidTapUpload(self)
+    }
+
+    @objc private func micTapped() {
+        KeyboardHaptics.keyPress()
+        delegate?.extraRowDidTapMic(self)
+    }
+
+    @objc private func micLongPressed(_ gr: UILongPressGestureRecognizer) {
+        guard gr.state == .began else { return }
+        KeyboardHaptics.keyPress()
+        delegate?.extraRowDidCancelMic(self)
     }
 
     @objc private func sendTapped() {
