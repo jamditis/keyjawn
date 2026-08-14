@@ -30,10 +30,12 @@
 		76503EE687E0F88885DD27DE /* NIOSSH in Frameworks */ = {isa = PBXBuildFile; productRef = 974D61CF6F7ADA4824D53DC7 /* NIOSSH */; };
 		7E2C29A442AE9E2630A2F301 /* HostStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC5405F0BD516F74C8E0EED5 /* HostStore.swift */; };
 		9DA97D841DD222F4BC99CFC9 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1BD7D5FD852EEF611DFEF3BA /* KeyJawnKit */; };
+		A58E56EF6474C8DBC8512A2F /* KeyboardStressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BD88603C1C49C4DCF6E4364 /* KeyboardStressTests.swift */; };
 		A793BD0FFA4FDCD6DA278117 /* WordBoundaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 686608D07F38BF2952BC2A05 /* WordBoundaryTests.swift */; };
 		A9DB22FF0F4C815305CC6106 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = D3233B073CCE7B0FEFB818EA /* KeyJawnKit */; };
 		AA523563B70682B4341E113C /* SSHKeysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CC90B529187AE9DAFC1CDE6 /* SSHKeysView.swift */; };
 		B958AD522581630C2F77C218 /* NIOCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9319CFF9722F6941701039BF /* NIOCore */; };
+		B986125E4F44A5EC63F660C4 /* LaunchFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33E1CA9E994C39BD29662DF0 /* LaunchFlowTests.swift */; };
 		BB7A5E0F892D8EA9821654B3 /* NIOCore in Frameworks */ = {isa = PBXBuildFile; productRef = C5D92697896E36FD6161FB69 /* NIOCore */; };
 		BD84EA7B58CE9D2536EADB34 /* KeyJawnKit in Frameworks */ = {isa = PBXBuildFile; productRef = 77314FC70430F6B0FC36684C /* KeyJawnKit */; };
 		BF99261856285D2DA591AEB2 /* KeyJawnKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 22D494658DBEB0D051FF4A8C /* KeyJawnKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -54,6 +56,13 @@
 
 /* Begin PBXContainerItemProxy section */
 		563D214484F90B42E8D0A3E8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CCE8758E3FDE1B4AD2B13B6F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8DE24E0AF7D60F6E8E2BA73E;
+			remoteInfo = KeyJawn;
+		};
+		87E90F807D474A3484B00E20 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = CCE8758E3FDE1B4AD2B13B6F /* Project object */;
 			proxyType = 1;
@@ -87,10 +96,12 @@
 		1455FBB90189E98F89DA75E3 /* KeyJawn.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KeyJawn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		22D494658DBEB0D051FF4A8C /* KeyJawnKeyboard.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = KeyJawnKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		23A4B394C56787E8E05B58A1 /* SSHSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHSession.swift; sourceTree = "<group>"; };
+		2B762F3DAF0B75F1359515C7 /* KeyJawnUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KeyJawnUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2B92C187EB65640055598EB8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2CC90B529187AE9DAFC1CDE6 /* SSHKeysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHKeysView.swift; sourceTree = "<group>"; };
 		2DE62DD6DE973B1FB26C0314 /* SSHKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHKeyStore.swift; sourceTree = "<group>"; };
 		301482A615F90B93947563BC /* HostListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostListView.swift; sourceTree = "<group>"; };
+		33E1CA9E994C39BD29662DF0 /* LaunchFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchFlowTests.swift; sourceTree = "<group>"; };
 		396D44A07DE95A000C7627D0 /* KeyboardPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardPrefsTests.swift; sourceTree = "<group>"; };
 		524D3943A19BA98402D9549F /* SlashScreenshotRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlashScreenshotRenderTests.swift; sourceTree = "<group>"; };
 		62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -98,6 +109,7 @@
 		686608D07F38BF2952BC2A05 /* WordBoundaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordBoundaryTests.swift; sourceTree = "<group>"; };
 		7588DD4C7951CF1F99C3A433 /* HostTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostTerminalView.swift; sourceTree = "<group>"; };
 		88516F15428436E247E65FD4 /* AppGroupHostStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupHostStore.swift; sourceTree = "<group>"; };
+		8BD88603C1C49C4DCF6E4364 /* KeyboardStressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardStressTests.swift; sourceTree = "<group>"; };
 		97D63ED3E15ECBC88F45E3B6 /* InputViewAudioFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputViewAudioFeedback.swift; sourceTree = "<group>"; };
 		98604D5BA08246970836FD92 /* KeyboardLayersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLayersTests.swift; sourceTree = "<group>"; };
 		98623C822345E60C48D7464D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -187,6 +199,7 @@
 				9B940C548C192782A1073E16 /* HostConfigTests.swift */,
 				98604D5BA08246970836FD92 /* KeyboardLayersTests.swift */,
 				396D44A07DE95A000C7627D0 /* KeyboardPrefsTests.swift */,
+				8BD88603C1C49C4DCF6E4364 /* KeyboardStressTests.swift */,
 				FAA8A921E20FE294CCFC815A /* KeyboardThemeContrastTests.swift */,
 				F48343C46F1026C97DFEE5F1 /* OnboardingTests.swift */,
 				B9DF2807E8DD4CB2A02999BA /* SlashCommandTests.swift */,
@@ -221,6 +234,14 @@
 			path = Hosts;
 			sourceTree = "<group>";
 		};
+		84FDAD7891497578203FF372 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				33E1CA9E994C39BD29662DF0 /* LaunchFlowTests.swift */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
 		8E4EBFABD25F91780E7231E1 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -249,6 +270,7 @@
 				1455FBB90189E98F89DA75E3 /* KeyJawn.app */,
 				22D494658DBEB0D051FF4A8C /* KeyJawnKeyboard.appex */,
 				D9913D1DFEB392733BA6B353 /* KeyJawnKitTests.xctest */,
+				2B762F3DAF0B75F1359515C7 /* KeyJawnUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -260,6 +282,7 @@
 				B0C968F9E2B99A69F54EEB84 /* KeyJawnKeyboard */,
 				EA6DC54EB5C8ABF2BCAB440C /* Packages */,
 				5C348A9867C54DD9765F499B /* Tests */,
+				84FDAD7891497578203FF372 /* UITests */,
 				B6F9E3CE713D092F9DF0D5CB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -285,6 +308,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0E4E1897990EBD0D75A999D8 /* KeyJawnUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 77FC151590805AE890AEF32E /* Build configuration list for PBXNativeTarget "KeyJawnUITests" */;
+			buildPhases = (
+				81E425E8AC51FAB31E07BA60 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2C116E5DC6F3751BC425A5DB /* PBXTargetDependency */,
+			);
+			name = KeyJawnUITests;
+			packageProductDependencies = (
+			);
+			productName = KeyJawnUITests;
+			productReference = 2B762F3DAF0B75F1359515C7 /* KeyJawnUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		8524D9D4D7AA4286DF9B7EDC /* KeyJawnKitTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 358BE103B2FA779246962531 /* Build configuration list for PBXNativeTarget "KeyJawnKitTests" */;
@@ -363,6 +404,11 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					0E4E1897990EBD0D75A999D8 = {
+						DevelopmentTeam = 5624SD289G;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 8DE24E0AF7D60F6E8E2BA73E;
+					};
 					8524D9D4D7AA4286DF9B7EDC = {
 						DevelopmentTeam = 5624SD289G;
 						ProvisioningStyle = Automatic;
@@ -399,6 +445,7 @@
 				8DE24E0AF7D60F6E8E2BA73E /* KeyJawn */,
 				D49A0F8A52046B2B5DB06FC5 /* KeyJawnKeyboard */,
 				8524D9D4D7AA4286DF9B7EDC /* KeyJawnKitTests */,
+				0E4E1897990EBD0D75A999D8 /* KeyJawnUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -425,6 +472,7 @@
 				C2CB34B81FFC8B56D356D8AF /* HostConfigTests.swift in Sources */,
 				EAD2BFA42A42418E10696035 /* KeyboardLayersTests.swift in Sources */,
 				5A51BC905F126948A48544C7 /* KeyboardPrefsTests.swift in Sources */,
+				A58E56EF6474C8DBC8512A2F /* KeyboardStressTests.swift in Sources */,
 				12AE43CD002393743BACEB75 /* KeyboardThemeContrastTests.swift in Sources */,
 				15533E56B3ECB76AAEE83116 /* OnboardingTests.swift in Sources */,
 				C01DB065ADBBD129FDFA832F /* SlashCommandTests.swift in Sources */,
@@ -442,6 +490,14 @@
 				348C2A63B6E68B94EE380311 /* InputViewAudioFeedback.swift in Sources */,
 				30FBF6554FC7A6F5548299C1 /* KeyboardViewController.swift in Sources */,
 				1C5FD6A31F1A4AFF704FFF74 /* SharedSSHKeyStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		81E425E8AC51FAB31E07BA60 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B986125E4F44A5EC63F660C4 /* LaunchFlowTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -469,6 +525,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		2C116E5DC6F3751BC425A5DB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8DE24E0AF7D60F6E8E2BA73E /* KeyJawn */;
+			targetProxy = 87E90F807D474A3484B00E20 /* PBXContainerItemProxy */;
+		};
 		73EE9FD7C88FD0DB3551B66B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D49A0F8A52046B2B5DB06FC5 /* KeyJawnKeyboard */;
@@ -482,6 +543,27 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		299A41D8E4D0CABC0564DEC1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 5624SD289G;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.uitests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = KeyJawn;
+			};
+			name = Debug;
+		};
 		2AFA74702DA362ABD727849D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -556,6 +638,27 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		62A24207A2AB3AB64BEE96AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 5624SD289G;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.keyjawn.uitests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = KeyJawn;
 			};
 			name = Release;
 		};
@@ -759,6 +862,15 @@
 			buildConfigurations = (
 				86A1354EE8BCEB722FEE8C75 /* Debug */,
 				A7E30AAC87AF32856812B94F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		77FC151590805AE890AEF32E /* Build configuration list for PBXNativeTarget "KeyJawnUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				299A41D8E4D0CABC0564DEC1 /* Debug */,
+				62A24207A2AB3AB64BEE96AD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

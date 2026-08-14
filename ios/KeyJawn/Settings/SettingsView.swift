@@ -26,6 +26,7 @@ struct SettingsView: View {
                     Button(OnboardingCopy.reopenTitle) {
                         showOnboarding = true
                     }
+                    .accessibilityIdentifier("settings.setupKeyboard")
                 } header: {
                     Text("Setup")
                 } footer: {
