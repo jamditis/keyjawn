@@ -29,7 +29,8 @@ xcodebuild archive \
     -destination "generic/platform=iOS" \
     -archivePath "$ARCHIVE_PATH" \
     -allowProvisioningUpdates \
-    CODE_SIGN_STYLE=Automatic \
+    -configuration Release \
+    CODE_SIGN_STYLE=Manual \
     DEVELOPMENT_TEAM=5624SD289G \
     | xcpretty 2>/dev/null || true
 
@@ -42,7 +43,8 @@ if [ ! -d "$ARCHIVE_PATH" ]; then
         -destination "generic/platform=iOS" \
         -archivePath "$ARCHIVE_PATH" \
         -allowProvisioningUpdates \
-        CODE_SIGN_STYLE=Automatic \
+        -configuration Release \
+        CODE_SIGN_STYLE=Manual \
         DEVELOPMENT_TEAM=5624SD289G
 fi
 
