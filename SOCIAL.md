@@ -60,7 +60,7 @@ The target user: anyone running Claude Code, Gemini CLI, Codex CLI, OpenCode, or
 ### Recent changes
 <!-- Add entries here as things ship. Newest first. -->
 
-- iOS SSH extra row: `/` opens the slash panel, system Return and Send submit CR, long-press Send inserts a newline without submitting, Clip and SCP open the real panels, and clipboard pins live in the App Group so the app and keyboard share them.
+- iOS SSH extra row: `/` opens the slash panel, system Return and Send submit CR, long-press Send inserts a newline without submitting, Agent/Confirm presets switch the row, Clip and SCP open the real panels, and clipboard pins live in the App Group so the app and keyboard share them.
 - Android typing and voice overhaul: keys fire on press instead of release (with rollover), backspace escalates to word deletion and supports swipe-to-delete, auto-capitalize at sentence starts, haptics on the number row.
 - Android voice input is now continuous — dictate a whole prompt in natural sentences instead of one tap per phrase. Live transcription appears in the field as you speak, hold the mic for push-to-talk, and cancel discards instead of committing. Optional spoken punctuation ("new line", "open paren").
 - Google Play internal testing set up (7 testers). Production launch pending.

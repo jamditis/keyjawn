@@ -24,6 +24,7 @@ public final class KeyboardPrefs: @unchecked Sendable {
         static let terminalArrows = "keyjawn.terminalArrows"
         static let migrated = "keyjawn.prefs.migrated.v2"
         static let onboardingCompleted = "keyjawn.onboarding.completed"
+        static let extraRowPreset = "keyjawn.extraRowPreset"
     }
 
     /// Storage supplied by a test. When nil the suite is looked up per access below.
@@ -107,6 +108,13 @@ public final class KeyboardPrefs: @unchecked Sendable {
     public var hasCompletedOnboarding: Bool {
         get { bool(Key.onboardingCompleted, default: false) }
         set { defaults.set(newValue, forKey: Key.onboardingCompleted) }
+    }
+
+    /// Which extra-row preset both the SSH accessory and the extension show.
+    /// Unset is Agent, matching today's default ten-key row.
+    public var extraRowPreset: ExtraRowPreset {
+        get { ExtraRowPreset.decode(defaults.string(forKey: Key.extraRowPreset)) }
+        set { defaults.set(newValue.rawValue, forKey: Key.extraRowPreset) }
     }
 
     // MARK: - Helpers

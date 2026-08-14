@@ -55,6 +55,12 @@ public enum ExtraRowSlot: Int, CaseIterable, Sendable {
     case clipboard
     case upload
     case send
+    case letterY
+    case letterN
+    case letterA
+    case digit1
+    case digit2
+    case digit3
 }
 
 public struct ExtraRowKey: Sendable {
@@ -80,6 +86,12 @@ public struct ExtraRowKey: Sendable {
         case .clipboard:  return "Clipboard history"
         case .upload:     return "Upload image over SFTP"
         case .send:       return "Send"
+        case .letterY:    return "y"
+        case .letterN:    return "n"
+        case .letterA:    return "a"
+        case .digit1:     return "1"
+        case .digit2:     return "2"
+        case .digit3:     return "3"
         }
     }
 

@@ -12,6 +12,7 @@ struct SettingsView: View {
     @State private var theme = KeyboardPrefs.shared.theme
     @State private var hapticsEnabled = KeyboardPrefs.shared.hapticsEnabled
     @State private var terminalArrowKeys = KeyboardPrefs.shared.terminalArrowKeys
+    @State private var extraRowPreset = KeyboardPrefs.shared.extraRowPreset
 
     var body: some View {
         NavigationStack {
@@ -47,6 +48,14 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Picker("Preset", selection: $extraRowPreset) {
+                        ForEach(ExtraRowPreset.allCases, id: \.self) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
+                    .onChange(of: extraRowPreset) { _, newValue in
+                        KeyboardPrefs.shared.extraRowPreset = newValue
+                    }
                     Toggle("Terminal arrow keys", isOn: $terminalArrowKeys)
                         .onChange(of: terminalArrowKeys) { _, newValue in
                             KeyboardPrefs.shared.terminalArrowKeys = newValue
@@ -54,7 +63,9 @@ struct SettingsView: View {
                 } header: {
                     Text("Extra row")
                 } footer: {
-                    Text(terminalArrowKeys
+                    Text(extraRowPreset == .confirm
+                         ? "Confirm types y, n, a, 1, 2, 3 and can submit. Agent is the default ten-key row."
+                         : terminalArrowKeys
                          ? "Arrows send escape codes, so up and down reach shell history in a terminal app."
                          : "Left and right move the text cursor. Up and down have no effect with this off.")
                         .font(.caption)

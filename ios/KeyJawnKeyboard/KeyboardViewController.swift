@@ -43,6 +43,8 @@ public final class KeyboardViewController: UIInputViewController {
             applyTheme()
         }
         KeyboardHaptics.refresh()
+        extraRow.setKeys(KeyboardPrefs.shared.extraRowPreset.keys)
+        extraRow.applyTheme(theme)
     }
 
     public override func viewWillLayoutSubviews() {

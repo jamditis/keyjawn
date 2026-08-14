@@ -49,6 +49,7 @@
 		C2F8D707F7F9F58DA50E2A7F /* NIOPosix in Frameworks */ = {isa = PBXBuildFile; productRef = 2C94B23FBDB89626C8A0294C /* NIOPosix */; };
 		C5D73FD296E1B9A8CD97626C /* SSHKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DE62DD6DE973B1FB26C0314 /* SSHKeyStore.swift */; };
 		CA738FCA57272508A304C827 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = DBC5B9DCB9FBC1D3E054CE8F /* SwiftTerm */; };
+		CCDB3D09BF10D8B0C6C4B9BD /* ExtraRowPresetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54003BE0AD4A0942B2C7D0F1 /* ExtraRowPresetTests.swift */; };
 		D4959C7C420241BE04B8CD59 /* Citadel in Frameworks */ = {isa = PBXBuildFile; productRef = 060BD31A2DD85CF9C0F6FE6F /* Citadel */; };
 		D833730B6D5B5B7CD1D39B17 /* TerminalInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F295D7985B88063D1F195088 /* TerminalInputView.swift */; };
 		DE63F87E7794F4FF03DA7A43 /* ANSISequenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE81ADA79A468E5CF872E5B1 /* ANSISequenceTests.swift */; };
@@ -113,6 +114,7 @@
 		396D44A07DE95A000C7627D0 /* KeyboardPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardPrefsTests.swift; sourceTree = "<group>"; };
 		3CE214E0B998D01BC698998B /* KeyboardMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardMetricsTests.swift; sourceTree = "<group>"; };
 		524D3943A19BA98402D9549F /* SlashScreenshotRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlashScreenshotRenderTests.swift; sourceTree = "<group>"; };
+		54003BE0AD4A0942B2C7D0F1 /* ExtraRowPresetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtraRowPresetTests.swift; sourceTree = "<group>"; };
 		62CD2B5A99C09A3BD18B1B2C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		64762D93ADF3F2AB82F1A548 /* TerminalInputMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalInputMappingTests.swift; sourceTree = "<group>"; };
 		665662BFA6DECCD61154BEE8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -208,6 +210,7 @@
 				DE81ADA79A468E5CF872E5B1 /* ANSISequenceTests.swift */,
 				38264316C6A0140F8FEB1667 /* ClipboardHistoryTests.swift */,
 				D02EAAA4D51DA2E825C9B5BA /* CtrlStateTests.swift */,
+				54003BE0AD4A0942B2C7D0F1 /* ExtraRowPresetTests.swift */,
 				9B940C548C192782A1073E16 /* HostConfigTests.swift */,
 				2D7B5B0254BBE72FA1A9ADA0 /* KeyboardInsertPathTests.swift */,
 				98604D5BA08246970836FD92 /* KeyboardLayersTests.swift */,
@@ -494,6 +497,7 @@
 				68B2C30E8CD52FC6DE13253C /* AltKeyMappingsTests.swift in Sources */,
 				3E7E682B7731F46E6D232280 /* ClipboardHistoryTests.swift in Sources */,
 				5D3FA20C7AADA0E3754284D5 /* CtrlStateTests.swift in Sources */,
+				CCDB3D09BF10D8B0C6C4B9BD /* ExtraRowPresetTests.swift in Sources */,
 				C2CB34B81FFC8B56D356D8AF /* HostConfigTests.swift in Sources */,
 				DF7E0C0E55646C2A8443B118 /* KeyboardInsertPathTests.swift in Sources */,
 				EAD2BFA42A42418E10696035 /* KeyboardLayersTests.swift in Sources */,

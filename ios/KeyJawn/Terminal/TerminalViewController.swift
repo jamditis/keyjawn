@@ -49,6 +49,11 @@ final class TerminalViewController: UIViewController {
         wireSession()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        inputSink.applyExtraRowPreset()
+    }
+
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         // Tear the SSH session down only when the terminal is actually going away
