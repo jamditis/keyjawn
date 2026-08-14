@@ -46,7 +46,7 @@ The target user: anyone running Claude Code, Gemini CLI, Codex CLI, OpenCode, or
 - Standalone app with built-in SSH terminal (SwiftTerm + SwiftNIO SSH via Citadel)
 - Companion keyboard extension adds terminal keys to any app
 - Currently in **TestFlight beta**: https://testflight.apple.com/join/8vMqguKK (50 spots)
-- **App Store review in progress** — submitted, currently under review
+- **App Store:** v1.0 was rejected (3.2.2). Listing copy and slash-command screenshot were unbranded; build 8 uploaded. Not resubmitted until that build is processed.
 
 ---
 
@@ -55,7 +55,7 @@ The target user: anyone running Claude Code, Gemini CLI, Codex CLI, OpenCode, or
 <!-- Update this section whenever a new version ships -->
 
 **Android:** v1.3.0
-**iOS:** v1.0 (build in review)
+**iOS:** v1.0 (build 8 uploaded; previous 1.0 listing rejected)
 
 ### Recent changes
 <!-- Add entries here as things ship. Newest first. -->
@@ -63,7 +63,7 @@ The target user: anyone running Claude Code, Gemini CLI, Codex CLI, OpenCode, or
 - Android typing and voice overhaul: keys fire on press instead of release (with rollover), backspace escalates to word deletion and supports swipe-to-delete, auto-capitalize at sentence starts, haptics on the number row.
 - Android voice input is now continuous — dictate a whole prompt in natural sentences instead of one tap per phrase. Live transcription appears in the field as you speak, hold the mic for push-to-talk, and cancel discards instead of committing. Optional spoken punctuation ("new line", "open paren").
 - Google Play internal testing set up (7 testers). Production launch pending.
-- iOS App Store submission in review.
+- iOS App Store 1.0 rejected for 3.2.2; listing screenshot and description unbranded, build 8 uploaded.
 - Stripe + R2 purchase/delivery pipeline live.
 
 ---
