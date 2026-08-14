@@ -1,8 +1,14 @@
 import UIKit
 
-/// Stores recent clipboard items in UserDefaults.
-/// Works in both the main app and the keyboard extension (each has its own sandbox).
-/// Items are added manually when the user taps the Clip button — no background monitoring.
+/// Stores recent clipboard items in the `group.com.keyjawn` App Group suite.
+///
+/// The app and the keyboard extension are separate processes. `UserDefaults.standard`
+/// is a per-process sandbox, so pins written in one never appeared in the other —
+/// the same class of bug `KeyboardPrefs` already fixed. Items are added when the
+/// user taps Clip; there is no background monitoring.
+///
+/// A keyboard extension can only open the shared suite with Full Access. Without
+/// it the suite lookup falls back to the extension sandbox and pins stay local.
 @MainActor
 public final class ClipboardHistory {
     public static let shared = ClipboardHistory()
@@ -11,10 +17,17 @@ public final class ClipboardHistory {
     private let maxPinned = 10
     private let historyKey = "keyjawn.clipboard.history"
     private let pinnedKey  = "keyjawn.clipboard.pinned"
-    private let defaults: UserDefaults
+    private let injectedDefaults: UserDefaults?
 
-    public init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    /// - Parameter defaults: backing store. Defaults to the shared App Group
+    ///   suite, resolved per access. Injectable so tests can use a scratch suite.
+    public init(defaults: UserDefaults? = nil) {
+        self.injectedDefaults = defaults
+    }
+
+    private var defaults: UserDefaults {
+        if let injectedDefaults { return injectedDefaults }
+        return UserDefaults(suiteName: AppGroupConfig.suiteName) ?? .standard
     }
 
     // MARK: - Recent items

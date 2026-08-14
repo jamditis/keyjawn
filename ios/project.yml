@@ -32,6 +32,7 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: KeyJawn
+      - path: Shared
     dependencies:
       - package: KeyJawnKit
         product: KeyJawnKit
@@ -113,6 +114,7 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: KeyJawnKeyboard
+      - path: Shared
     dependencies:
       - package: KeyJawnKit
         product: KeyJawnKit
