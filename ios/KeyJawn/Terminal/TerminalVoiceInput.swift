@@ -15,19 +15,21 @@ final class TerminalVoiceInput {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private let engine = AVAudioEngine()
+    private var generation = 0
+    private var awaitingFinal = false
 
     var isListening: Bool { session.isListening }
 
     func toggle() {
         if session.isListening {
-            finish(commit: true)
+            stopListening(commit: true)
         } else {
             start()
         }
     }
 
     func cancel() {
-        finish(commit: false)
+        stopListening(commit: false)
     }
 
     private func start() {
@@ -52,10 +54,19 @@ final class TerminalVoiceInput {
     }
 
     private func beginRecording() {
-        finish(commit: false)
+        stopListening(commit: false)
         recognizer = SFSpeechRecognizer()
         guard let recognizer, recognizer.isAvailable else {
             onError?("Speech recognition is not available")
+            return
+        }
+
+        do {
+            let audio = AVAudioSession.sharedInstance()
+            try audio.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try audio.setActive(true)
+        } catch {
+            onError?("Could not start the microphone")
             return
         }
 
@@ -63,19 +74,22 @@ final class TerminalVoiceInput {
         request.shouldReportPartialResults = true
         self.request = request
 
+        generation += 1
+        let started = generation
         session.start()
+        awaitingFinal = false
         onListeningChange?(true)
 
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor in
-                guard let self else { return }
+                guard let self, self.generation == started else { return }
                 if let result {
                     self.session.updatePartial(result.bestTranscription.formattedString)
                     if result.isFinal {
-                        self.finish(commit: true)
+                        self.emitCommit()
                     }
-                } else if error != nil, self.session.isListening {
-                    self.finish(commit: true)
+                } else if error != nil, self.awaitingFinal {
+                    self.emitCommit()
                 }
             }
         }
@@ -91,22 +105,39 @@ final class TerminalVoiceInput {
             try engine.start()
         } catch {
             onError?("Could not start the microphone")
-            finish(commit: false)
+            stopListening(commit: false)
         }
     }
 
-    private func finish(commit: Bool) {
-        engine.stop()
+    private func stopListening(commit: Bool) {
+        if engine.isRunning {
+            engine.stop()
+        }
         engine.inputNode.removeTap(onBus: 0)
         request?.endAudio()
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+
+        if commit, session.isListening {
+            awaitingFinal = true
+            onListeningChange?(false)
+            return
+        }
+
+        generation += 1
+        awaitingFinal = false
         task?.cancel()
         task = nil
         request = nil
+        session.cancel()
+        onListeningChange?(false)
+    }
 
-        if commit, let text = session.commit() {
+    private func emitCommit() {
+        awaitingFinal = false
+        task = nil
+        request = nil
+        if let text = session.commit() {
             onCommit?(text)
-        } else {
-            session.cancel()
         }
         onListeningChange?(false)
     }

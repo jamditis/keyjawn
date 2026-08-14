@@ -56,6 +56,7 @@ final class TerminalViewController: UIViewController {
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
+        inputSink.cancelVoice()
         // Tear the SSH session down only when the terminal is actually going away
         // (a navigation pop or a modal dismissal), not when it is merely hidden.
         // HostTerminalView is a pushed destination inside the Hosts tab of a

@@ -242,6 +242,7 @@ public final class ExtraRowView: UIView {
     @objc private func sendTapped() {
         KeyboardHaptics.keyPress()
         fire(.send, ctrlActive: false)
+        ctrl.consume()
     }
 
     @objc private func sendLongPressed(_ gr: UILongPressGestureRecognizer) {

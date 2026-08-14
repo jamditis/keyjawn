@@ -71,6 +71,10 @@ final class TerminalInputView: UITextView {
         extraRow.applyTheme(KeyboardPrefs.shared.theme)
     }
 
+    func cancelVoice() {
+        voice.cancel()
+    }
+
     // MARK: UIKeyInput — intercept before text hits the text view
 
     override func insertText(_ text: String) {
