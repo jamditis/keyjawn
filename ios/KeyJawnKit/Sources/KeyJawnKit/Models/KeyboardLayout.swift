@@ -79,6 +79,10 @@ public struct ExtraRowKey: Sendable {
         }
     }
 
+    /// Stable XCUITest identifier. VoiceOver still uses `accessibilityLabel`;
+    /// queries must not use the visible glyph (`^C`, `▲`).
+    public var accessibilityIdentifier: String { "extra.\(slot)" }
+
     public static let defaults: [ExtraRowKey] = [
         ExtraRowKey(slot: .ctrlC,      label: "^C",  output: .ctrlC),
         ExtraRowKey(slot: .tab,        label: "Tab", output: .tab),

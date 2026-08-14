@@ -252,6 +252,7 @@ final class ExtraRowButton: UIButton {
         titleLabel?.font = .monospacedSystemFont(ofSize: 13, weight: .semibold)
         setTitle(key.label, for: .normal)
         accessibilityLabel = key.accessibilityLabel
+        accessibilityIdentifier = key.accessibilityIdentifier
         layer.cornerRadius = 6
         layer.masksToBounds = false
         layer.shadowOpacity = 0

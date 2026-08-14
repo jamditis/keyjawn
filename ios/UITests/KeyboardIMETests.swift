@@ -127,8 +127,8 @@ final class KeyboardIMETests: XCTestCase {
         switchToKeyJawn(in: notes)
 
         XCTAssertTrue(
-            notes.buttons["^C"].waitForExistence(timeout: 4) || notes.keys["^C"].waitForExistence(timeout: 2),
-            "KeyJawn extra-row ^C must be visible before letter taps"
+            extraRowIsVisible(in: notes, wait: 4),
+            "KeyJawn extra-row Control must be visible before letter taps"
         )
         tapKey(in: notes, "h")
         tapKey(in: notes, "i")
@@ -140,10 +140,35 @@ final class KeyboardIMETests: XCTestCase {
         notes.terminate()
     }
 
+    /// ExtraRowButton exposes identifier `extra.ctrlC` and the spoken Control-C
+    /// label, not the visible `^C` title. XCUIElement queries match those.
+    private static let extraRowCtrlCId = "extra.ctrlC"
+    private static let extraRowCtrlCLabel =
+        "Control C. Double tap and hold to lock the Control modifier."
+
+    private func extraRowIsVisible(in app: XCUIApplication, wait: TimeInterval = 0) -> Bool {
+        let deadline = Date().addingTimeInterval(wait)
+        repeat {
+            if extraRowElement(in: app).exists { return true }
+            if wait > 0 { RunLoop.current.run(until: Date().addingTimeInterval(0.2)) }
+        } while Date() < deadline
+        return extraRowElement(in: app).exists
+    }
+
+    private func extraRowElement(in app: XCUIApplication) -> XCUIElement {
+        let byId = app.buttons[Self.extraRowCtrlCId]
+        if byId.exists { return byId }
+        let keyById = app.keys[Self.extraRowCtrlCId]
+        if keyById.exists { return keyById }
+        let byLabel = app.buttons[Self.extraRowCtrlCLabel]
+        if byLabel.exists { return byLabel }
+        return app.keys[Self.extraRowCtrlCLabel]
+    }
+
     private func switchToKeyJawn(in app: XCUIApplication) {
         let globe = firstMatch(in: app, labels: ["Next Keyboard", "Globe", "Emoji"])
         for _ in 0..<6 {
-            if app.keys["^C"].exists || app.buttons["^C"].exists { return }
+            if extraRowIsVisible(in: app) { return }
             if globe.exists { globe.tap(); continue }
             if app.buttons["Next Keyboard"].exists { app.buttons["Next Keyboard"].tap(); continue }
             break
