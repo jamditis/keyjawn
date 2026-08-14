@@ -13,6 +13,10 @@ struct SettingsView: View {
     @State private var hapticsEnabled = KeyboardPrefs.shared.hapticsEnabled
     @State private var terminalArrowKeys = KeyboardPrefs.shared.terminalArrowKeys
     @State private var extraRowPreset = KeyboardPrefs.shared.extraRowPreset
+    @State private var customTrigger = ""
+    @State private var customDescription = ""
+    @State private var customError = ""
+    @State private var customCommands = SlashCommandStore.load(from: SlashCommandStore.appGroupDefaults())
 
     var body: some View {
         NavigationStack {
@@ -84,6 +88,52 @@ struct SettingsView: View {
                     Text("Appearance")
                 } footer: {
                     Text("Applies to the KeyJawn keyboard. The keyboard needs Full Access to read this setting: Settings → General → Keyboard → Keyboards → KeyJawn.")
+                        .font(.caption)
+                }
+
+                Section {
+                    ForEach(customCommands, id: \.id) { record in
+                        HStack {
+                            Text(record.trigger)
+                                .font(.body.monospaced())
+                            Spacer()
+                            Button("Delete") {
+                                SlashCommandStore.remove(id: record.id, from: SlashCommandStore.appGroupDefaults())
+                                customCommands = SlashCommandStore.load(from: SlashCommandStore.appGroupDefaults())
+                            }
+                            .foregroundStyle(.red)
+                        }
+                    }
+                    TextField("Trigger", text: $customTrigger)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    TextField("Description", text: $customDescription)
+                    Button("Add shortcut") {
+                        switch SlashCommandStore.add(
+                            trigger: customTrigger,
+                            description: customDescription,
+                            to: SlashCommandStore.appGroupDefaults()
+                        ) {
+                        case .success:
+                            customTrigger = ""
+                            customDescription = ""
+                            customError = ""
+                            customCommands = SlashCommandStore.load(from: SlashCommandStore.appGroupDefaults())
+                        case .failure(.duplicateTrigger):
+                            customError = "That shortcut already exists"
+                        case .failure(.invalidTrigger):
+                            customError = "Use a short /name with no spaces"
+                        }
+                    }
+                    if !customError.isEmpty {
+                        Text(customError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                } header: {
+                    Text("Custom shortcuts")
+                } footer: {
+                    Text("Shown in the slash panel. Inserts the trigger as plain text. Full Access is required for the keyboard extension to see them.")
                         .font(.caption)
                 }
 
