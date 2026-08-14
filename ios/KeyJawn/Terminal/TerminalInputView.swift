@@ -48,6 +48,7 @@ final class TerminalInputView: UITextView {
         smartInsertDeleteType    = .no
 
         extraRow.frame     = CGRect(x: 0, y: 0, width: 0, height: 52)
+        extraRow.setKeys(ExtraRowKey.terminalKeys)
         extraRow.delegate  = self
         // Same theme the keyboard extension uses, so the row looks like one component
         // wherever it appears rather than defaulting to dark here and themed there.

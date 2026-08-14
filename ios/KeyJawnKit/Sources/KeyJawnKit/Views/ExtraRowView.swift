@@ -81,16 +81,28 @@ public final class ExtraRowView: UIView {
             stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
         ])
 
-        for key in ExtraRowKey.defaults {
+        setKeys(ExtraRowKey.defaults)
+
+        ctrl.onChange = { [weak self] state in
+            self?.applyCtrlVisual(state)
+        }
+    }
+
+    /// Replace the row's keys. Used by the SSH accessory to add Send and by
+    /// remappable presets later. Rebuilds buttons; Ctrl visual state is reapplied.
+    public func setKeys(_ keys: [ExtraRowKey]) {
+        stack.arrangedSubviews.forEach {
+            stack.removeArrangedSubview($0)
+            $0.removeFromSuperview()
+        }
+        ctrlCButton = nil
+        for key in keys {
             let btn = ExtraRowButton(key: key, bgColor: keyBg, textColor: theme.extraRowKeyText)
             wire(btn)
             stack.addArrangedSubview(btn)
             if key.slot == .ctrlC { ctrlCButton = btn }
         }
-
-        ctrl.onChange = { [weak self] state in
-            self?.applyCtrlVisual(state)
-        }
+        applyCtrlVisual(ctrl.state)
     }
 
     /// Stop auto-repeat when the row leaves the hierarchy.
@@ -129,6 +141,12 @@ public final class ExtraRowView: UIView {
 
         case .upload:
             btn.addTarget(self, action: #selector(uploadTapped), for: .touchUpInside)
+
+        case .send:
+            btn.addTarget(self, action: #selector(sendTapped), for: .touchUpInside)
+            let lp = UILongPressGestureRecognizer(target: self, action: #selector(sendLongPressed(_:)))
+            lp.minimumPressDuration = 0.45
+            btn.addGestureRecognizer(lp)
 
         default:
             // Tab, slash, escape: single tap
@@ -192,6 +210,17 @@ public final class ExtraRowView: UIView {
     @objc private func uploadTapped() {
         KeyboardHaptics.keyPress()
         delegate?.extraRowDidTapUpload(self)
+    }
+
+    @objc private func sendTapped() {
+        KeyboardHaptics.keyPress()
+        fire(.send, ctrlActive: false)
+    }
+
+    @objc private func sendLongPressed(_ gr: UILongPressGestureRecognizer) {
+        guard gr.state == .began else { return }
+        KeyboardHaptics.keyPress()
+        fire(.newline, ctrlActive: false)
     }
 
     // MARK: - Helpers

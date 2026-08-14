@@ -16,6 +16,8 @@ public enum KeyOutput: Sendable, Equatable {
     case backspace
     case `return`
     case space
+    case send                   // submit in the SSH app; honest newline in the IME
+    case newline                // non-submit line break
 }
 
 // MARK: - Key definition
@@ -52,6 +54,7 @@ public enum ExtraRowSlot: Int, CaseIterable, Sendable {
     case escape
     case clipboard
     case upload
+    case send
 }
 
 public struct ExtraRowKey: Sendable {
@@ -76,6 +79,7 @@ public struct ExtraRowKey: Sendable {
         case .escape:     return "Escape"
         case .clipboard:  return "Clipboard history"
         case .upload:     return "Upload image over SFTP"
+        case .send:       return "Send"
         }
     }
 
@@ -94,6 +98,13 @@ public struct ExtraRowKey: Sendable {
         ExtraRowKey(slot: .escape,     label: "Esc", output: .escape),
         ExtraRowKey(slot: .clipboard,  label: "Clip",output: nil),
         ExtraRowKey(slot: .upload,     label: "SCP", output: nil),
+    ]
+
+    /// Terminal accessory: the default ten keys plus Send. The extension keeps
+    /// `defaults` until remappable presets can place Send without crowding
+    /// the phone IME row.
+    public static let terminalKeys: [ExtraRowKey] = defaults + [
+        ExtraRowKey(slot: .send, label: "Send", output: .send),
     ]
 
     public init(slot: ExtraRowSlot, label: String, output: KeyOutput?) {
@@ -124,6 +135,8 @@ public enum ANSISequence {
                                                       : [0x1b,0x5b,0x44]
         case .backspace:            return [0x7f]
         case .return:               return [0x0d]
+        case .send:                 return [0x0d]
+        case .newline:              return [0x0a]
         case .space:                return [0x20]
         case .character(let s):
             guard let scalar = s.unicodeScalars.first else { return nil }

@@ -33,6 +33,26 @@ final class TerminalInputMappingTests: XCTestCase {
     func testExtraRowReturnIsSubmitCR() {
         XCTAssertEqual(TerminalInputMapping.extraRow(.return, ctrlActive: false), .write([0x0d]))
     }
+
+    func testSendIsSubmitCRAndNewlineIsNot() {
+        XCTAssertEqual(TerminalInputMapping.extraRow(.send, ctrlActive: false), .write([0x0d]))
+        XCTAssertEqual(TerminalInputMapping.extraRow(.newline, ctrlActive: false), .write([0x0a]))
+        XCTAssertNotEqual(
+            TerminalInputMapping.extraRow(.send, ctrlActive: false),
+            TerminalInputMapping.extraRow(.newline, ctrlActive: false)
+        )
+    }
+
+    func testIMESendIsAnHonestNewline() {
+        XCTAssertEqual(
+            KeyboardDocumentInsert.action(for: .send, ctrlActive: false, terminalArrows: true),
+            .insert("\n")
+        )
+        XCTAssertEqual(
+            KeyboardDocumentInsert.action(for: .newline, ctrlActive: false, terminalArrows: true),
+            .insert("\n")
+        )
+    }
 }
 
 @MainActor
@@ -90,6 +110,38 @@ final class TerminalInputViewTests: XCTestCase {
         sink.extraRow.ctrl.toggle()
         sink.insertText("\n")
         XCTAssertFalse(sink.extraRow.ctrl.isActive, "submit must consume armed Ctrl")
+    }
+
+    func testSendKeyOnTerminalRowWritesCR() {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 430, height: 80))
+        let sink = TerminalInputView(frame: window.bounds)
+        var got: [[UInt8]] = []
+        sink.onRawInput = { got.append($0) }
+        window.addSubview(sink)
+        let extra = sink.extraRow
+        extra.frame = window.bounds
+        window.addSubview(extra)
+        window.makeKeyAndVisible()
+        extra.layoutIfNeeded()
+
+        tapExtra(extra, accessibility: "Send")
+        XCTAssertEqual(got, [TerminalInputMapping.submitBytes])
+        window.isHidden = true
+    }
+
+    func testSendLongPressIsWiredForNewline() {
+        let extra = ExtraRowView()
+        extra.setKeys(ExtraRowKey.terminalKeys)
+        extra.layoutIfNeeded()
+        let send = extra.subviews
+            .flatMap(\.subviews)
+            .compactMap { $0 as? UIButton }
+            .first { $0.accessibilityLabel == "Send" || $0.currentTitle == "Send" }
+        XCTAssertNotNil(send, "terminal row is missing Send")
+        XCTAssertTrue(
+            send?.gestureRecognizers?.contains { $0 is UILongPressGestureRecognizer } == true,
+            "Send must long-press to insert a newline without submitting"
+        )
     }
 
     func testExtraRowSlashOpensPanelAndCompactWritesTrigger() {

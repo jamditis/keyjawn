@@ -13,6 +13,8 @@ final class ANSISequenceTests: XCTestCase {
         XCTAssertEqual(ANSISequence.bytes(for: .tab), [0x09])
         XCTAssertEqual(ANSISequence.bytes(for: .backspace), [0x7f])
         XCTAssertEqual(ANSISequence.bytes(for: .return), [0x0d])
+        XCTAssertEqual(ANSISequence.bytes(for: .send), [0x0d])
+        XCTAssertEqual(ANSISequence.bytes(for: .newline), [0x0a])
         XCTAssertEqual(ANSISequence.bytes(for: .space), [0x20])
     }
 

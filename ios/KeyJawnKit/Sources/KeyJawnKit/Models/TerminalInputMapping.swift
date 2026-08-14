@@ -33,6 +33,8 @@ public enum TerminalInputMapping: Sendable {
     /// delegate methods because they are not `KeyOutput`s.
     public static func extraRow(_ output: KeyOutput, ctrlActive: Bool) -> ExtraRowAction {
         if output == .slash { return .openSlash }
+        if output == .send { return .write(submitBytes) }
+        if output == .newline { return .write(newlineBytes) }
         if let bytes = ANSISequence.bytes(for: output, ctrlActive: ctrlActive) {
             return .write(bytes)
         }
