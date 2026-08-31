@@ -51,9 +51,12 @@ final class KeyboardInsertPathTests: XCTestCase {
         )
     }
 
-    func testArmedCtrlSurvivesAMultiCharacterAlternate() {
+    func testArmedCtrlSurvivesAnUnmappedAlternate() {
         XCTAssertTrue(
             KeyboardDocumentInsert.consumesCtrl(for: .character("c"), ctrlActive: true)
+        )
+        XCTAssertFalse(
+            KeyboardDocumentInsert.consumesCtrl(for: .character("é"), ctrlActive: true)
         )
         XCTAssertFalse(
             KeyboardDocumentInsert.consumesCtrl(for: .character(".."), ctrlActive: true)
@@ -122,6 +125,89 @@ final class KeyboardInsertPathTests: XCTestCase {
         window.isHidden = true
     }
 
+    func testQwertyUsesDenseRowsWithoutShrinkingPortraitTouchTargets() {
+        let pad = QwertyKeyboardView(frame: CGRect(x: 0, y: 0, width: 660, height: 300))
+        assertDenseLayout(pad)
+        tapQwerty(pad, title: "shift")
+        assertDenseLayout(pad)
+        tapQwerty(pad, title: "123")
+        assertDenseLayout(pad)
+        tapQwerty(pad, title: "#+=")
+        assertDenseLayout(pad)
+
+        let phone = QwertyKeyboardView(frame: CGRect(x: 0, y: 0, width: 390, height: 220))
+        assertDenseLayout(phone)
+    }
+
+    func testLetterKeysMatchTheDeviceFlickCapability() throws {
+        let qwerty = QwertyKeyboardView(frame: CGRect(x: 0, y: 0, width: 660, height: 300))
+        let recorder = QwertyRecorder()
+        qwerty.delegate = recorder
+        qwerty.layoutIfNeeded()
+
+        let qKey = try XCTUnwrap(
+            qwerty.subviews.compactMap { $0 as? UIButton }.first { $0.currentTitle == "q" }
+        )
+        let downwardFlick = qKey.gestureRecognizers?
+            .compactMap { $0 as? UISwipeGestureRecognizer }
+            .first { $0.direction == .down }
+        let visibleLabels = qKey.subviews.compactMap { ($0 as? UILabel)?.text }
+
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            XCTAssertNotNil(downwardFlick)
+            XCTAssertEqual(downwardFlick?.cancelsTouchesInView, true)
+            XCTAssertTrue(visibleLabels.contains("1"))
+            XCTAssertEqual(qKey.accessibilityHint, "Swipe down for 1")
+            let action = try XCTUnwrap(qKey.accessibilityCustomActions?.first)
+            XCTAssertEqual(action.name, "Insert 1")
+            XCTAssertTrue(action.actionHandler?(action) == true)
+            XCTAssertEqual(recorder.inserted, ["1"])
+
+            for theme in KeyboardTheme.allCases {
+                qwerty.applyTheme(theme)
+                let rebuiltQ = try XCTUnwrap(
+                    qwerty.subviews.compactMap { $0 as? UIButton }.first { $0.currentTitle == "q" }
+                )
+                let flicks = rebuiltQ.gestureRecognizers?
+                    .compactMap { $0 as? UISwipeGestureRecognizer }
+                    .filter { $0.direction == .down }
+                let labels = rebuiltQ.subviews.compactMap { ($0 as? UILabel)?.text }
+                XCTAssertEqual(flicks?.count, 1)
+                XCTAssertEqual(labels.filter { $0 == "1" }.count, 1)
+            }
+        } else {
+            XCTAssertNil(downwardFlick)
+            XCTAssertFalse(visibleLabels.contains("1"))
+            XCTAssertNil(qKey.accessibilityHint)
+        }
+    }
+
+    func testCtrlStateHasSpokenAndNonColorIndicators() throws {
+        let extra = ExtraRowView(frame: CGRect(x: 0, y: 0, width: 640, height: 62))
+        extra.layoutIfNeeded()
+        let button = try XCTUnwrap(
+            extra.subviews
+                .flatMap(\.subviews)
+                .compactMap { $0 as? UIButton }
+                .first { $0.accessibilityIdentifier == "extra.ctrlC" }
+        )
+
+        XCTAssertEqual(button.accessibilityValue, "Off")
+        XCTAssertEqual(button.currentTitle, "^C")
+
+        extra.ctrl.toggle()
+        XCTAssertEqual(button.accessibilityValue, "Armed for next key")
+        XCTAssertEqual(button.currentTitle, "^C·")
+
+        extra.ctrl.toggle()
+        XCTAssertEqual(button.accessibilityValue, "Locked")
+        XCTAssertEqual(button.currentTitle, "^C∞")
+
+        extra.ctrl.toggle()
+        XCTAssertEqual(button.accessibilityValue, "Off")
+        XCTAssertEqual(button.currentTitle, "^C")
+    }
+
     func testSlashPanelSelectsCompactTrigger() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 400))
         let panel = SlashCommandPanel(theme: .dark)
@@ -163,8 +249,10 @@ final class KeyboardInsertPathTests: XCTestCase {
         let button = extra.subviews
             .flatMap(\.subviews)
             .compactMap { $0 as? UIButton }
-            .first { $0.accessibilityLabel?.contains(accessibility) == true
-                || $0.currentTitle == accessibility }
+            .first {
+                $0.accessibilityLabel?.contains(accessibility) == true
+                    || $0.currentTitle == accessibility
+            }
         XCTAssertNotNil(button, "missing extra-row control \(accessibility)")
         button?.sendActions(for: .touchUpInside)
     }
@@ -180,10 +268,37 @@ final class KeyboardInsertPathTests: XCTestCase {
     private func sendBackspace(_ qwerty: QwertyKeyboardView) {
         let button = qwerty.subviews
             .compactMap { $0 as? UIButton }
-            .first { $0.accessibilityLabel?.localizedCaseInsensitiveContains("delete") == true
-                || $0.accessibilityLabel?.localizedCaseInsensitiveContains("backspace") == true }
+            .first {
+                $0.accessibilityLabel?.localizedCaseInsensitiveContains("delete") == true
+                    || $0.accessibilityLabel?.localizedCaseInsensitiveContains("backspace") == true
+            }
         XCTAssertNotNil(button, "missing backspace")
         button?.sendActions(for: .touchUpInside)
+    }
+
+    private func assertDenseLayout(
+        _ qwerty: QwertyKeyboardView,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        qwerty.layoutIfNeeded()
+        let frames = qwerty.subviews.compactMap { ($0 as? UIButton)?.frame }
+        let rowMinYs = Array(Set(frames.map(\.minY))).sorted()
+        let rowMaxYs = rowMinYs.map { minY in
+            frames.filter { $0.minY == minY }.map(\.maxY).max() ?? minY
+        }
+        let verticalGaps = zip(rowMaxYs, rowMinYs.dropFirst()).map { currentMaxY, nextMinY in
+            nextMinY - currentMaxY
+        }
+
+        XCTAssertEqual(rowMinYs.count, 4, file: file, line: line)
+        for gap in verticalGaps {
+            XCTAssertEqual(gap, 7, accuracy: 0.01, file: file, line: line)
+        }
+        XCTAssertGreaterThanOrEqual(frames.map(\.height).min() ?? 0, 44, file: file, line: line)
+        for frame in frames {
+            XCTAssertTrue(qwerty.bounds.contains(frame), "key outside QWERTY bounds", file: file, line: line)
+        }
     }
 }
 

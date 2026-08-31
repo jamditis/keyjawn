@@ -99,10 +99,21 @@ def create_app():
 
 def list_builds(bundle_id: str):
     s, _ = _session()
+    app_response = s.get(f"{BASE}/apps", params={
+        "filter[bundleId]": bundle_id,
+        "limit": 1,
+    })
+    app_response.raise_for_status()
+    apps = app_response.json().get("data", [])
+    if not apps:
+        print(f"No app found for {bundle_id}.")
+        return
+
+    app_id = apps[0]["id"]
     r = s.get(f"{BASE}/builds", params={
-        "filter[app.bundleId]": bundle_id,
+        "filter[app]": app_id,
         "sort": "-uploadedDate",
-        "limit": 10,
+        "limit": 200,
     })
     r.raise_for_status()
     builds = r.json().get("data", [])

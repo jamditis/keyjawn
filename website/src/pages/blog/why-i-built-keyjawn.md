@@ -6,6 +6,8 @@ date: 2026-02-15
 author: Joe Amditis
 ---
 
+> Platform note: This February 2026 post describes KeyJawn for Android. The iOS beta has different limits. It includes a keyboard extension and a built-in remote SSH terminal. Commands in that terminal run on the configured server, not on the phone. As of August 28, 2026, the public beta invitation is not accepting new testers. A revised App Store submission has not been sent.
+
 More people use the terminal now than at any point in the last decade, and most of them aren't sysadmins.
 
 Claude Code, OpenClaw, Gemini CLI, Codex -- these tools live in a shell. If you want to use them, you need a terminal. And a growing number of people are accessing that terminal from their phones, SSHing into a Raspberry Pi or a Mac Mini from the couch, a waiting room, or the train.
@@ -20,7 +22,7 @@ The existing options fall into two categories, and none of them were designed fo
 
 **SSH clients** like [Termius](https://termius.com/), [ConnectBot](https://connectbot.org/), and [JuiceSSH](https://juicessh.com/) include their own terminal key toolbars. They work well inside their own apps, but the keys only exist inside those apps. If you use Cockpit in a browser, or Termux, or any other terminal tool, those toolbars don't help you. Termux has its own configurable [extra keys row](https://wiki.termux.com/wiki/Touch_Keyboard), which is useful if Termux is your only terminal app -- but it doesn't carry over to other apps either.
 
-KeyJawn is a system keyboard. It replaces Gboard, not your SSH client. You install it, enable it in Android settings, and the terminal keys work in every app. But the real difference is what it was built for: talking to AI agents via the CLI, where most of your input is natural language and the tools you use have slash commands, not vim keybindings.
+KeyJawn is an Android system keyboard. It replaces Gboard, not your SSH client. You install it, enable it in Android settings, and use it in apps that accept third-party keyboards. Terminal-key handling depends on the receiving app. The real difference is what it was built for: talking to AI agents through the CLI, where most input is natural language and the tools use slash commands, not vim keybindings.
 
 ## The actual problem
 
@@ -44,7 +46,7 @@ The keyboard has a dedicated terminal row above the QWERTY layout: `Esc`, `Tab`,
 
 **SCP image upload.** I SSH into Raspberry Pis from my phone constantly. When I need to share a screenshot with Claude Code -- an error message, a UI bug, a terminal output -- the normal process is: save the image, open a file manager, find an SCP client, configure the connection, transfer the file, switch back to the terminal, type the path. KeyJawn does it in one tap. Pick the photo, it SCPs to your server, and the remote file path gets typed at your cursor.
 
-**A system keyboard that works everywhere.** Termius has terminal keys, but they're inside the Termius app. Browser extensions add key rows, but they float above the page and break when you switch apps or the browser redraws. Hacker's Keyboard is a system keyboard, but it's a full desktop layout crammed onto a phone screen. KeyJawn installs as an Android input method -- the terminal keys are part of the keyboard itself. They work in Termux, in Cockpit through Chrome, in JuiceSSH, in any app. You set it once and forget about it.
+**An Android system keyboard.** Terminal keys in terminal apps are often part of that app. KeyJawn installs as an Android input method, so its terminal row travels with the keyboard. The receiving app still decides how to handle each key event, and browser terminals can differ from native terminal apps.
 
 **Customizable for how you actually work.** I built this for my own workflow: SSHing into a Pi from a couch to run Claude Code sessions. The default key layout reflects that -- the keys I reach for most are the ones I put in the terminal row. Slash command sets are configurable per tool (Claude Code, OpenClaw, Gemini CLI). Autocorrect toggles per app so you can leave it off for terminals and on for Slack. SSH hosts are saved so you can switch between machines without retyping credentials. The point is to fit the keyboard to your workflow instead of working around the keyboard.
 
@@ -66,6 +68,6 @@ The code is MIT-licensed and [on GitHub](https://github.com/jamditis/keyjawn). B
 
 ## Try it
 
-[Download the APK](https://github.com/jamditis/keyjawn/releases) and see if it fits your workflow. If something doesn't work, [file an issue](https://github.com/jamditis/keyjawn/issues). PRs are open.
+[Download the Android APK](https://github.com/jamditis/keyjawn/releases) and see if it fits your workflow. If something doesn't work, [file an issue](https://github.com/jamditis/keyjawn/issues). PRs are open.
 
 Your phone keyboard shouldn't be the reason you can't use a terminal.

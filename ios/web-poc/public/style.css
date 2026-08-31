@@ -222,3 +222,12 @@ html, body {
   color: var(--sub-text);
   font-size: 0.85rem;
 }
+/* This page is a retired internal prototype, not the current iOS product. */
+.prototype-notice {
+  margin: 0;
+  padding: 8px 12px;
+  background: #6cf2a8;
+  color: #111;
+  font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;
+  text-align: center;
+}

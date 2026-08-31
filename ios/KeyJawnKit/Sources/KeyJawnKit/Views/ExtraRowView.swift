@@ -35,6 +35,7 @@ public final class ExtraRowView: UIView {
     // MARK: Private
 
     private let stack = UIStackView()
+    private var stackLeading: NSLayoutConstraint!
     private var ctrlCButton: ExtraRowButton?
     private var micButton: ExtraRowButton?
     private var repeatTimer: Timer?
@@ -77,8 +78,9 @@ public final class ExtraRowView: UIView {
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
 
+        stackLeading = stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
+            stackLeading,
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6),
             stack.topAnchor.constraint(equalTo: topAnchor, constant: 6),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
@@ -89,6 +91,12 @@ public final class ExtraRowView: UIView {
         ctrl.onChange = { [weak self] state in
             self?.applyCtrlVisual(state)
         }
+    }
+
+    /// Keep interactive keys clear of the iPad system assistant controls.
+    /// The controller supplies zero for phones and compact split views.
+    public func setAssistantLeadingInset(_ inset: CGFloat) {
+        stackLeading.constant = 6 + max(0, inset)
     }
 
     /// Replace the row's keys. Used by the SSH accessory to add Send and by
@@ -264,15 +272,21 @@ public final class ExtraRowView: UIView {
         UIView.animate(withDuration: 0.15) { [self] in
             switch state {
             case .off:
+                btn.setTitle(btn.key.label, for: .normal)
+                btn.accessibilityValue = "Off"
                 btn.backgroundColor = keyBg
                 btn.layer.shadowOpacity = 0
             case .armed:
+                btn.setTitle("\(btn.key.label)·", for: .normal)
+                btn.accessibilityValue = "Armed for next key"
                 btn.backgroundColor = armed
                 btn.layer.shadowColor = armed.withAlphaComponent(0.5).cgColor
                 btn.layer.shadowOpacity = 1
                 btn.layer.shadowRadius = 8
                 btn.layer.shadowOffset = .zero
             case .locked:
+                btn.setTitle("\(btn.key.label)∞", for: .normal)
+                btn.accessibilityValue = "Locked"
                 btn.backgroundColor = locked
                 btn.layer.shadowColor = locked.withAlphaComponent(0.5).cgColor
                 btn.layer.shadowOpacity = 1

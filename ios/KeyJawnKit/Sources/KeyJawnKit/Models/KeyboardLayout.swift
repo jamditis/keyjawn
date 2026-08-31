@@ -40,8 +40,8 @@ public struct Key: Sendable {
 //
 // Ctrl+C is first because it's by far the most-used key during LLM sessions
 // (interrupt generation). The full Ctrl modifier lives on long-press of Ctrl+C.
-// Esc replaces Mic — the system keyboard already has a built-in dictation mic,
-// and Esc is absent from the iOS keyboard despite being critical in terminal work.
+// The extension row uses Esc instead of Mic. The built-in SSH terminal adds its
+// own Mic and Send actions because microphone access is available only in the app.
 
 public enum ExtraRowSlot: Int, CaseIterable, Sendable {
     case ctrlC = 0
@@ -85,7 +85,7 @@ public struct ExtraRowKey: Sendable {
         case .slash:      return "Slash commands"
         case .escape:     return "Escape"
         case .clipboard:  return "Clipboard history"
-        case .upload:     return "Upload image over SFTP"
+        case .upload:     return "Upload copied image to remote SSH host"
         case .send:       return "Send"
         case .letterY:    return "y"
         case .letterN:    return "n"
@@ -156,9 +156,13 @@ public enum ANSISequence {
         case .newline:              return [0x0a]
         case .space:                return [0x20]
         case .character(let s):
-            guard let scalar = s.unicodeScalars.first else { return nil }
-            let byte = UInt8(scalar.value & 0xFF)
-            return ctrlActive ? [byte & 0x1f] : [byte]
+            guard !s.isEmpty else { return nil }
+            guard ctrlActive else { return Array(s.utf8) }
+            guard s.unicodeScalars.count == 1,
+                let scalar = s.unicodeScalars.first,
+                scalar.isASCII
+            else { return nil }
+            return [UInt8(scalar.value) & 0x1f]
         case .slash:                return nil  // handled by slash command popup
         }
     }

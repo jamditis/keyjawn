@@ -69,6 +69,10 @@ public enum KeyboardTheme: String, CaseIterable, Sendable {
         }
     }
 
+    /// Smaller secondary glyph shown on iPad letter keys. The alpha is
+    /// composited over `keyBg`; contrast tests enforce the rendered result.
+    public var flickKeyText: UIColor { keyText.withAlphaComponent(0.65) }
+
     public var armed: UIColor {
         switch self {
         case .dark, .light, .oled:

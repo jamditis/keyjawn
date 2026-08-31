@@ -1,5 +1,10 @@
 # Two-milestone release handoff
 
+> **Status:** Historical handoff. Do not use this file as current build,
+> distribution, merge, or approval state. See [`../../CLAUDE.md`](../../CLAUDE.md),
+> [`../../CHANGELOG.md`](../../CHANGELOG.md), and
+> [`../../tasks/todo.md`](../../tasks/todo.md).
+
 Last updated from landofjawn on 2026-07-25.
 
 No pull request has been merged and no release has been built or deployed. Joe

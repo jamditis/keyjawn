@@ -5,7 +5,7 @@ import Foundation
 /// `TerminalInputView.insertText` and the extra-row Send key both call through
 /// here so a test of this type is a test of the shipped submit path, not a copy
 /// of it. A lone Return is CR (`0x0d`) because that is what a PTY treats as
-/// submit. A dedicated newline helper writes LF (`0x0a`) so a multiline prompt
+/// submit. The newline mapping writes LF (`0x0a`) so a multiline prompt
 /// can gain a line without submitting.
 public enum TerminalInputMapping: Sendable {
     public static let submitBytes: [UInt8] = [0x0d]

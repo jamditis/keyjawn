@@ -1,6 +1,6 @@
+import KeyJawnKit
 import SwiftUI
 import UIKit
-import KeyJawnKit
 
 /// First-launch keyboard setup. Skippable. Reopened from Settings.
 ///
@@ -15,15 +15,36 @@ struct OnboardingView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
                 let current = OnboardingCopy.pages[page]
+                HStack(spacing: 12) {
+                    AppPromptMark()
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("KeyJawn")
+                            .font(.title2.bold().monospaced())
+                            .foregroundStyle(AppTheme.text)
+                        Text("Terminal keys for work on the move")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    ForEach(OnboardingCopy.pages.indices, id: \.self) { index in
+                        Capsule()
+                            .fill(index <= page ? AppTheme.mint : AppTheme.border)
+                            .frame(height: 4)
+                    }
+                }
+                .accessibilityHidden(true)
+
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         Text(current.title)
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                            .font(.title.bold())
+                            .foregroundStyle(AppTheme.text)
                         Text(current.body)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.secondaryText)
                         if page == 1 {
                             Button(OnboardingCopy.openSettingsTitle) {
                                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -31,9 +52,17 @@ struct OnboardingView: View {
                                 }
                             }
                             .buttonStyle(.bordered)
+                            .tint(AppTheme.mint)
                         }
                     }
+                    .padding(24)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppTheme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(AppTheme.border, lineWidth: 1)
+                    }
                 }
                 HStack {
                     Button(OnboardingCopy.skipTitle) {
@@ -51,6 +80,7 @@ struct OnboardingView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.mint)
                     .accessibilityIdentifier(
                         page == OnboardingCopy.pages.count - 1
                             ? "onboarding.done"
@@ -58,7 +88,8 @@ struct OnboardingView: View {
                     )
                 }
             }
-            .padding()
+            .padding(24)
+            .background(AppTheme.background.ignoresSafeArea())
             .navigationTitle("Set up")
             .navigationBarTitleDisplayMode(.inline)
         }

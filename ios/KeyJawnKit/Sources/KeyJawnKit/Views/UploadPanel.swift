@@ -27,13 +27,22 @@ public final class UploadPanel: UIView {
     public enum EmptyReason {
         case noHostsConfigured
         case fullAccessRequired
+        case keyAuthenticationRequired
+        case hostKeyVerificationRequired
 
-        var message: String {
+        public var message: String {
             switch self {
             case .noHostsConfigured:
-                return "No hosts configured. Add one in the main app."
+                return "No remote SSH hosts configured. Add an SSH host before upload."
             case .fullAccessRequired:
-                return "Turn on Full Access to reach your hosts: Settings → General → Keyboard → Keyboards → KeyJawn."
+                return
+                    "Turn on Full Access to reach remote SSH hosts: Settings → General → Keyboard → Keyboards → KeyJawn."
+            case .keyAuthenticationRequired:
+                return
+                    "Copied-image upload requires a host that uses SSH key authentication. Configure one before upload."
+            case .hostKeyVerificationRequired:
+                return
+                    "Open the SSH-key host in KeyJawn once to verify its SSH host key before upload."
             }
         }
     }
@@ -45,6 +54,15 @@ public final class UploadPanel: UIView {
     /// The host rows dim while disabled to show they are not tappable yet.
     public var isUploadEnabled: Bool = true {
         didSet { tableView.alpha = isUploadEnabled ? 1.0 : 0.5 }
+    }
+
+    /// Cancel is available while choosing a host, but not after the remote
+    /// write starts because a network close cannot prove that no bytes landed.
+    public var isDismissEnabled: Bool = true {
+        didSet {
+            cancelButton.isEnabled = isDismissEnabled
+            cancelButton.alpha = isDismissEnabled ? 1.0 : 0.5
+        }
     }
 
     public init(theme: KeyboardTheme = .dark) {
@@ -66,7 +84,7 @@ public final class UploadPanel: UIView {
         toolbar.translatesAutoresizingMaskIntoConstraints = false
         addSubview(toolbar)
 
-        titleLabel.text = "SCP upload"
+        titleLabel.text = "Upload copied image"
         titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
         titleLabel.textColor = theme.panelText
         titleLabel.translatesAutoresizingMaskIntoConstraints = false

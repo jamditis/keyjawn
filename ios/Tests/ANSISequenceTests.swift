@@ -47,6 +47,11 @@ final class ANSISequenceTests: XCTestCase {
         XCTAssertEqual(ANSISequence.bytes(for: .character("x")), [0x78])
     }
 
+    func testNonASCIICharacterUsesUTF8AndRejectsControlMasking() {
+        XCTAssertEqual(ANSISequence.bytes(for: .character("é")), Array("é".utf8))
+        XCTAssertNil(ANSISequence.bytes(for: .character("é"), ctrlActive: true))
+    }
+
     func testSlashHasNoBytesBecauseThePanelHandlesIt() {
         XCTAssertNil(ANSISequence.bytes(for: .slash))
         XCTAssertNil(ANSISequence.text(for: .slash))

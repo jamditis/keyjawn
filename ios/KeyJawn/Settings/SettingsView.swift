@@ -1,5 +1,5 @@
-import SwiftUI
 import KeyJawnKit
+import SwiftUI
 
 struct SettingsView: View {
 
@@ -21,6 +21,21 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    HStack(spacing: 12) {
+                        AppPromptMark(compact: true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("KeyJawn")
+                                .font(.headline.monospaced())
+                            Text("Terminal keyboard and remote SSH")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("settings.brand")
+                }
+
                 Section("SSH") {
                     NavigationLink("SSH keys") {
                         SSHKeysView()
@@ -143,6 +158,7 @@ struct SettingsView: View {
                     Link("Manual", destination: URL(string: "https://keyjawn.amditis.tech/manual")!)
                 }
             }
+            .appFormBackground()
             .navigationTitle("Settings")
         }
     }

@@ -1,5 +1,5 @@
-import XCTest
 import UIKit
+import XCTest
 @testable import KeyJawnKit
 
 /// Legibility as a test rather than as a thing someone notices on a device.
@@ -20,6 +20,13 @@ final class KeyboardThemeContrastTests: XCTestCase {
     func testKeyLabelsAreLegibleOnKeyFaces() {
         for theme in KeyboardTheme.allCases {
             assertContrast(theme.keyText, on: theme.keyBg, theme: theme, label: "keyText on keyBg")
+        }
+    }
+
+    func testFlickLabelsAreLegibleOnKeyFaces() {
+        for theme in KeyboardTheme.allCases {
+            let rendered = composite(theme.flickKeyText, over: theme.keyBg)
+            assertContrast(rendered, on: theme.keyBg, theme: theme, label: "flickKeyText on keyBg")
         }
     }
 
@@ -110,6 +117,25 @@ final class KeyboardThemeContrastTests: XCTestCase {
         let lighter = max(la, lb)
         let darker = min(la, lb)
         return (lighter + 0.05) / (darker + 0.05)
+    }
+
+    private func composite(_ foreground: UIColor, over background: UIColor) -> UIColor {
+        var fr: CGFloat = 0
+        var fg: CGFloat = 0
+        var fb: CGFloat = 0
+        var fa: CGFloat = 0
+        var br: CGFloat = 0
+        var bg: CGFloat = 0
+        var bb: CGFloat = 0
+        var ba: CGFloat = 0
+        XCTAssertTrue(foreground.getRed(&fr, green: &fg, blue: &fb, alpha: &fa))
+        XCTAssertTrue(background.getRed(&br, green: &bg, blue: &bb, alpha: &ba))
+        return UIColor(
+            red: fr * fa + br * (1 - fa),
+            green: fg * fa + bg * (1 - fa),
+            blue: fb * fa + bb * (1 - fa),
+            alpha: 1
+        )
     }
 
     private func relativeLuminance(_ color: UIColor) -> Double {

@@ -3,7 +3,7 @@
 
 <div class="phone-mockup">
   <svg viewBox="0 0 260 560" fill="none" xmlns="http://www.w3.org/2000/svg" class="phone-frame" id="phone-svg">
-    <!-- Phone body - Samsung Ultra style: sharp corners, thin bezels -->
+    <!-- Generic phone frame -->
     <rect x="2" y="2" width="256" height="556" rx="16" stroke="#3a3a4a" stroke-width="2.5" fill="#0a0a0f" />
     <!-- Side button (power) -->
     <rect x="258" y="140" width="3" height="30" rx="1" fill="#2a2a3a" />
@@ -17,10 +17,10 @@
 
     <!-- Terminal session content -->
     <g id="terminal-area">
-      <text x="20" y="52" font-family="monospace" font-size="9" fill="#8888a0">jamditis@pi:~$</text>
-      <text x="20" y="66" font-family="monospace" font-size="9" fill="#6cf2a8">claude</text>
-      <text x="20" y="86" font-family="monospace" font-size="9" fill="#8888a0">Claude Code v1.2.0</text>
-      <text x="20" y="106" font-family="monospace" font-size="9" fill="#8888a0">Type your message...</text>
+      <text x="20" y="52" font-family="monospace" font-size="9" fill="#8888a0">remote SSH session</text>
+      <text x="20" y="66" font-family="monospace" font-size="9" fill="#6cf2a8">user@remote:~$</text>
+      <text x="20" y="86" font-family="monospace" font-size="9" fill="#8888a0">commands run on the server</text>
+      <text x="20" y="106" font-family="monospace" font-size="9" fill="#8888a0">KeyJawn shows returned output</text>
       <text x="20" y="126" font-family="monospace" font-size="9" fill="#d8d8e0" class="prompt-prefix">> </text>
     </g>
     <!-- Dynamic terminal lines rendered by script -->
@@ -156,7 +156,7 @@
       </g>
     </g>
 
-    <!-- Samsung-style navigation bar: three dots -->
+    <!-- Gesture navigation bar -->
     <g transform="translate(0, 536)">
       <line x1="100" y1="0" x2="160" y2="0" stroke="#2a2a3a" stroke-width="2" stroke-linecap="round" />
     </g>
@@ -200,7 +200,7 @@
   const LINE_START_Y = 126;
   const LINE_HEIGHT = 14;
 
-  const INITIAL_TEXT = 'chode --dangerously-skip-permissions';
+  const INITIAL_TEXT = "printf 'hello from remote'";
   let buffer = INITIAL_TEXT;
   let shifted = false;
   let cursorPos = INITIAL_TEXT.length;

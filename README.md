@@ -1,4 +1,4 @@
-# KeyJawn: Custom mobile keyboard for LLM CLI usage
+# KeyJawn: custom mobile keyboard for LLM CLI use
 
 ![KeyJawn branding graphic](https://i.imgur.com/c6z2Gl0.jpeg)
 
@@ -11,7 +11,8 @@
 [![GitHub release](https://img.shields.io/github/v/release/jamditis/keyjawn?color=6cf2a8&style=flat)](https://github.com/jamditis/keyjawn/releases)
 [![Site](https://img.shields.io/badge/site-keyjawn.amditis.tech-6cf2a8?style=flat)](https://keyjawn.amditis.tech)
 
-A custom keyboard for using LLM CLI agents (Claude Code, OpenClaw, etc.) from your phone. Android keyboard extension + iOS terminal app.
+A mobile keyboard for using LLM CLI agents from a phone. KeyJawn includes an
+Android keyboard and an iOS remote SSH terminal with a companion keyboard.
 
 ## Install
 
@@ -19,26 +20,64 @@ A custom keyboard for using LLM CLI agents (Claude Code, OpenClaw, etc.) from yo
 
 **Free version**: Download the lite APK from [GitHub releases](https://github.com/jamditis/keyjawn/releases). Includes voice input, clipboard history, slash commands, swipe gestures, and per-app autocorrect.
 
+KeyJawn Lite also has active internal and closed Google Play test tracks.
+Google Play production is not active.
+
 **Full version ($4)**: Buy on [the website](https://keyjawn.amditis.tech) via Stripe. After purchase, you'll get an email with a private download link (expires in 7 days). New versions are emailed automatically.
 
 After installing:
+
 1. Go to **Settings > System > Languages & input > On-screen keyboard**
 2. Enable **KeyJawn**
 3. Set KeyJawn as your default keyboard
 
-### iOS (beta)
+### iOS beta
 
-The iOS version is a standalone terminal app, not just a keyboard extension. It has a built-in SSH client (SwiftTerm + SwiftNIO SSH) so you can connect directly to your servers. A companion keyboard extension adds Esc, Tab, Ctrl, arrows, and slash commands to any app.
+The iOS app connects to remote SSH servers. Commands run on the configured server,
+and the app displays the returned output. It does not run a local shell or browse
+files on the iPhone or iPad. Copied-image upload writes the prepared image to a
+configured path on a remote host that uses SSH key authentication. The upload
+reads only the image that the user copied to the system pasteboard. It does not
+open Photos or Files.
 
-Currently in TestFlight beta. App Store launch coming soon.
+Normal hosts use plain SSH. A host that exposes SSH through a TLS-terminated TCP
+tunnel can enable **TLS tunnel** in its host settings. The app still verifies the
+SSH host key inside that TLS connection. Use a DNS hostname that matches the TLS
+certificate, or an IP address that matches an IP-address certificate entry.
+Self-signed certificates are not supported for TLS tunnels. Review the SSH
+fingerprint on first connection because plain `ssh-keyscan` cannot cross a TLS
+tunnel by itself.
+
+A companion keyboard extension provides QWERTY input, terminal-oriented controls,
+and text shortcuts in apps and text fields that support third-party keyboards.
+The extension inserts text or control sequences into the focused field. The
+receiving app decides how to interpret them. The built-in SSH terminal sends
+terminal bytes directly. Basic typing works without Allow Full Access. Full
+Access is optional. KeyJawn uses it only for copied-image upload and shared
+keyboard settings, user-created shortcuts, or clipboard history.
+
+iOS uses the system keyboard for passcodes and secure text fields, and for
+fields that use the `phonePad` or `namePhonePad` keyboard type. Apps can also
+block third-party keyboards.
+
+The public TestFlight invitation is not accepting new testers as of August 28,
+2026. Apple rejected App Store review build 2 under guideline 2.5.2. A fresh
+signed build 9 archive was created and verified from the corrected source on
+August 31, 2026. The exact archive was uploaded, and Apple processed build 9 as
+valid. Build 9 is selected for version 1.0, manual release is enabled, and the
+submission is waiting for review. The app is not approved and not publicly
+released.
 
 To use the keyboard extension in other apps after installing:
+
 1. Go to **Settings > General > Keyboard > Keyboards > Add new keyboard**
 2. Select **KeyJawn Keyboard**
 
-## Features
+## Android features
 
-### Free (lite APK)
+The features in this section are Android-only unless the text says otherwise.
+
+### Android free version
 
 - QWERTY keyboard with three layers (lowercase, uppercase, symbols)
 - Terminal key row: Esc, Tab, Ctrl (three-state toggle), arrow keys
@@ -53,7 +92,7 @@ To use the keyboard extension in other apps after installing:
 - Color-coded extra row keys for quick identification
 - Shift / caps lock with visual state indicator
 
-### Full version ($4 one-time purchase)
+### Android full version ($4 one-time purchase)
 
 Everything in free, plus:
 - SCP image upload to remote SSH servers
@@ -64,14 +103,15 @@ Everything in free, plus:
 - Clipboard pinning (persistent across sessions)
 - Tooltip toggle
 
-## Who it's for
+## Who it is for
 
-Anyone who SSHs into a server from their phone to use a CLI-based AI assistant. Built for and tested with:
+Anyone who uses a remote server from a phone to work with a CLI-based AI
+assistant. These integration examples are Android-only:
 - Claude Code via Cockpit web terminal
 - Direct SSH apps (Termux, JuiceSSH, ConnectBot)
 - Any LLM CLI that uses slash commands (OpenClaw, etc.)
 
-## Versions
+## Android versions
 
 | | Full | Lite |
 |---|---|---|
@@ -95,13 +135,20 @@ Anyone who SSHs into a server from their phone to use a CLI-based AI assistant. 
 
 # Release builds (requires signing config)
 ./gradlew assembleFullRelease bundleFullRelease
+./gradlew bundleLiteRelease
 
 # Tests
 ./gradlew testFullDebugUnitTest
 ./gradlew testLiteDebugUnitTest
+
+# Static checks
+./gradlew lintFullDebug lintLiteDebug
 ```
 
 Requires JDK 17+ and Android SDK 36. The Gradle wrapper provisions its pinned JDK 21 daemon toolchain.
+
+The current App Store screenshot inventory and validation rules are in
+[`ios/AppStore/Screenshots/README.md`](ios/AppStore/Screenshots/README.md).
 
 ### iOS
 
@@ -116,17 +163,23 @@ xcodebuild -project KeyJawn.xcodeproj -scheme KeyJawn \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -configuration Debug build
 
-# Archive for App Store (requires Apple Developer account + provisioning profiles)
-bash scripts/build.sh
+# Run unit tests
+xcodebuild test -project KeyJawn.xcodeproj -scheme KeyJawn \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-Requires Xcode 26+, Swift 6, iOS 17+ deployment target. Uses XcodeGen to manage the project file — edit `project.yml` instead of the `.xcodeproj` directly.
+Requires Xcode 26+, Swift 6, and an iOS 17+ deployment target. XcodeGen manages
+the project file. Edit `project.yml`, not the `.xcodeproj` directly. Archive,
+upload, metadata, reviewer reply, and resubmission actions require separate user
+approval.
 
 ## Links
 
 - [Website](https://keyjawn.amditis.tech)
 - [Privacy policy](https://keyjawn.amditis.tech/privacy)
 - [User manual](https://keyjawn.amditis.tech/manual)
+- [App Review evidence](docs/ios-app-review.md)
+- [Changelog](CHANGELOG.md)
 
 ## License
 

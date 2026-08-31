@@ -43,6 +43,7 @@ struct SSHKeysView: View {
                     .font(.caption)
             }
         }
+        .appFormBackground()
         .navigationTitle("SSH keys")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {

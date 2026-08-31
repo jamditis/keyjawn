@@ -1,5 +1,5 @@
-import SwiftUI
 import KeyJawnKit
+import SwiftUI
 
 struct PasswordPromptView: View {
     let host: HostConfig
@@ -15,6 +15,10 @@ struct PasswordPromptView: View {
                     LabeledContent("Host") { Text(host.hostname).foregroundStyle(.secondary) }
                     LabeledContent("User") { Text(host.username).foregroundStyle(.secondary) }
                     LabeledContent("Port") { Text("\(host.port)").foregroundStyle(.secondary) }
+                    LabeledContent("Transport") {
+                        Text(host.usesTLSTunnel ? "TLS tunnel" : "SSH")
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Section("Authentication") {
                     SecureField("Password", text: $password)
@@ -22,6 +26,7 @@ struct PasswordPromptView: View {
                         .autocorrectionDisabled()
                 }
             }
+            .appFormBackground()
             .navigationTitle("Connect to \(host.label)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

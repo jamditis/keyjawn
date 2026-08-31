@@ -1,40 +1,45 @@
 # KeyJawn
 
-> Custom Android keyboard for terminal and LLM CLI usage
+> Terminal keyboard tools for Android and iOS
 
-KeyJawn is a mobile keyboard that adds terminal keys (Esc, Tab, Ctrl, arrow keys), voice input, SCP image upload, and slash command shortcuts to a standard QWERTY layout. Built for people who SSH into servers from their phones to use AI CLI tools like Claude Code and OpenClaw.
+KeyJawn helps people work with remote terminals from a phone. Android and iOS have different features and distribution paths.
 
-## Versions
+## iOS beta
 
-- KeyJawn Full ($4 lifetime): Terminal keys, voice input, SCP upload, clipboard history, slash commands, swipe gestures, per-app autocorrect toggle. No subscriptions, no ads, no tracking.
-- KeyJawn Lite (free): Terminal keys, voice input, number row, alt character popups. No network permissions required.
+- The public TestFlight invitation is not accepting new testers as of August 28, 2026.
+- A revised App Store submission has not been sent.
+- The app includes a built-in remote SSH terminal. Commands run on the configured server, not on the phone.
+- The keyboard extension enters text and control sequences into the active app. The receiving app decides how to interpret them.
+- Basic keyboard input does not need Full Access.
+- Full Access is optional. KeyJawn uses it for copied-image upload, shared keyboard settings, user-created shortcuts, or clipboard history.
+- Image upload reads one copied image from the pasteboard, prepares it in memory, uploads it with SFTP to a host configured for SSH key authentication, and enters the remote path. Password authentication remains available for terminal connections.
+- The iOS app does not request Photos or Files access. The copied-image upload feature does not browse local files or list, read, or download remote files.
+- Voice input is available in the built-in terminal, not in the keyboard extension.
 
-## Key features
+## Android
 
-- Dedicated terminal key row: Esc, Tab, Ctrl (three-state toggle), arrow keys
-- Voice-to-text with streaming transcription
-- SCP image upload: pick a photo, upload to server, path typed at cursor
-- Slash command quick-insert for LLM CLI tools
-- Number row with long-press shifted symbols
-- Long-press alt characters (accented letters, punctuation variants)
-- Clipboard history (last 10 items)
-- Per-app autocorrect toggle (off by default for terminals)
-- Swipe gestures: left=delete word, right=space, up=symbols, down=letters
+- Android APK releases: https://github.com/jamditis/keyjawn/releases
+- KeyJawn Lite has active internal and closed Google Play test tracks. Google Play production is inactive.
+- The free APK includes terminal keys, voice input, clipboard history, built-in slash commands, swipe gestures, and per-app autocorrect.
+- The $4 Android full APK adds image upload, SSH host management, themes, clipboard pins, and custom command sets.
+- The Android purchase does not unlock an iOS product.
 
-## Requirements
+## Privacy boundary
 
-- Android 8.0+ (API 26)
-- Sideload via APK (not on Play Store)
+- KeyJawn has no developer analytics, ads, or tracking.
+- User-started SSH, SFTP, and speech features send only the data needed for the requested operation to the selected server or platform speech service.
+- SSH credentials stay in platform-protected device storage.
 
 ## Links
 
 - Homepage: https://keyjawn.amditis.tech
 - Features: https://keyjawn.amditis.tech/features
 - Manual: https://keyjawn.amditis.tech/manual
-- Pricing: https://keyjawn.amditis.tech/pricing
+- Pricing and availability: https://keyjawn.amditis.tech/pricing
+- Privacy: https://keyjawn.amditis.tech/privacy
 - Support: https://keyjawn.amditis.tech/support
-- GitHub: https://github.com/jamditis/keyjawn
-- Download: https://github.com/jamditis/keyjawn/releases
+- Changelog: https://keyjawn.amditis.tech/changelog
+- Source: https://github.com/jamditis/keyjawn
 - Blog: https://keyjawn.amditis.tech/blog/why-i-built-keyjawn
 
 ## License

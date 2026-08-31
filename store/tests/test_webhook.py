@@ -24,7 +24,7 @@ def test_webhook_creates_user_on_valid_event():
         "type": "checkout.session.completed",
         "data": {
             "object": {
-                "customer_details": {"email": "test@example.com"},
+                "customer_details": {"email": "Test@Example.com"},
                 "customer": "cus_test123",
                 "payment_intent": "pi_test123",
                 "amount_total": 400
@@ -33,7 +33,7 @@ def test_webhook_creates_user_on_valid_event():
     }
 
     with patch("routes.webhook.stripe.Webhook.construct_event", return_value=fake_event):
-        with patch("routes.webhook.send_download_email"):
+        with patch("routes.webhook.send_download_email") as send_download_email:
             resp = client.post(
                 "/webhook/stripe",
                 content=json.dumps(fake_event),
@@ -46,3 +46,45 @@ def test_webhook_creates_user_on_valid_event():
     conn.close()
     assert user is not None
     assert user["stripe_customer_id"] == "cus_test123"
+    send_download_email.assert_called_once_with("test@example.com")
+
+
+def test_webhook_does_not_duplicate_legacy_mixed_case_user():
+    from app import app
+    from db import get_db
+
+    conn = get_db()
+    conn.execute("INSERT INTO users (email) VALUES (?)", ("Buyer@Example.com",))
+    conn.commit()
+    conn.close()
+
+    fake_event = {
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "customer_details": {"email": "buyer@example.com"},
+                "customer": "cus_duplicate",
+                "payment_intent": "pi_duplicate",
+                "amount_total": 400,
+            }
+        },
+    }
+    client = TestClient(app)
+    with patch("routes.webhook.stripe.Webhook.construct_event", return_value=fake_event):
+        with patch("routes.webhook.send_download_email") as send_download_email:
+            response = client.post(
+                "/webhook/stripe",
+                content=json.dumps(fake_event),
+                headers={"stripe-signature": "fake_sig"},
+            )
+
+    assert response.status_code == 200
+    conn = get_db()
+    count = conn.execute(
+        "SELECT COUNT(*) FROM users WHERE email = ? COLLATE NOCASE",
+        ("buyer@example.com",),
+    ).fetchone()[0]
+    conn.close()
+
+    assert count == 1
+    send_download_email.assert_not_called()

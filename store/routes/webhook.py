@@ -2,7 +2,7 @@ import os
 import logging
 import stripe
 from fastapi import APIRouter, Request, HTTPException
-from db import get_db
+from db import get_db, normalize_email
 from email_sender import send_download_email
 
 log = logging.getLogger("keyjawn-store")
@@ -25,22 +25,28 @@ async def stripe_webhook(request: Request):
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
-        email = session["customer_details"]["email"]
+        email = normalize_email(session["customer_details"]["email"])
         customer_id = session.get("customer")
         payment_intent = session.get("payment_intent")
         amount = session.get("amount_total", 400)
 
         conn = get_db()
-        result = conn.execute("""
-            INSERT INTO users (email, stripe_customer_id, stripe_payment_intent, amount_cents)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(email) DO NOTHING
-        """, [email, customer_id, payment_intent, amount])
+        existing_user = conn.execute(
+            "SELECT id FROM users WHERE email = ? COLLATE NOCASE", (email,)
+        ).fetchone()
+        is_new_user = False
+        if not existing_user:
+            result = conn.execute("""
+                INSERT INTO users (email, stripe_customer_id, stripe_payment_intent, amount_cents)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(email) DO NOTHING
+            """, [email, customer_id, payment_intent, amount])
+            is_new_user = result.rowcount > 0
         conn.commit()
         conn.close()
 
         # Only send the welcome email if this is a new user (not a duplicate event)
-        if result.rowcount > 0:
+        if is_new_user:
             send_download_email(email)
         else:
             log.info("duplicate stripe event for %s — skipping download email", email)

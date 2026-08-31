@@ -1,5 +1,11 @@
 # KeyJawn iOS app design
 
+> **Status:** Superseded historical design. The shipped implementation and
+> current guideline 2.5.2 remediation have changed this plan. Do not use it for
+> current behavior, App Store metadata, or release actions. See
+> [`../ios-app-review.md`](../ios-app-review.md) and
+> [`../app-store-v1.0-metadata.md`](../app-store-v1.0-metadata.md).
+
 Hybrid iOS app: SSH terminal with built-in KeyJawn keyboard + system-wide keyboard extension, shipped as a single App Store download.
 
 ## Decisions

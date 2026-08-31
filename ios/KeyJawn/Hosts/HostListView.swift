@@ -1,5 +1,5 @@
-import SwiftUI
 import KeyJawnKit
+import SwiftUI
 
 struct HostListView: View {
     @EnvironmentObject private var hostStore: HostStore
@@ -15,6 +15,7 @@ struct HostListView: View {
                     list
                 }
             }
+            .background(AppTheme.background.ignoresSafeArea())
             .navigationTitle("Hosts")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -42,21 +43,31 @@ struct HostListView: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "server.rack")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
+            AppPromptMark()
             Text("No hosts yet")
                 .font(.title3)
                 .fontWeight(.semibold)
-            Text("Add an SSH host to start a terminal session.")
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+                .foregroundStyle(AppTheme.text)
+            Text(
+                "Connect to a remote SSH server. Commands run on that server. "
+                    + "KeyJawn cannot browse files on your iPhone or iPad."
+            )
+            .foregroundStyle(AppTheme.secondaryText)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 40)
             Button("Add host") {
                 showingAddHost = true
             }
             .buttonStyle(.borderedProminent)
         }
+        .padding(28)
+        .background(AppTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 1)
+        }
+        .padding(24)
     }
 
     private var list: some View {
@@ -88,6 +99,7 @@ struct HostListView: View {
                 hostStore.delete(at: indices)
             }
         }
+        .appFormBackground()
         .navigationDestination(for: HostConfig.self) { host in
             HostTerminalView(host: host)
         }

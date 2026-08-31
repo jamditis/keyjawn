@@ -52,12 +52,12 @@ public enum KeyboardDocumentInsert: Equatable, Sendable {
     }
 
     /// Armed Ctrl is one-shot only when a control mapping was actually used.
-    /// A multi-character QWERTY alternate (`..`) inserts unchanged and must
-    /// leave Ctrl armed for the next letter.
+    /// An alternate without an ASCII control mapping inserts unchanged and
+    /// must leave Ctrl armed for the next letter.
     public static func consumesCtrl(for output: KeyOutput, ctrlActive: Bool) -> Bool {
         guard ctrlActive else { return false }
-        if case .character(let text) = output, text.count != 1 {
-            return false
+        if case .character = output {
+            return ANSISequence.bytes(for: output, ctrlActive: true) != nil
         }
         switch action(for: output, ctrlActive: true, terminalArrows: true) {
         case .insert:

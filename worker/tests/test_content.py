@@ -1,5 +1,7 @@
 """Tests for the content generation module."""
 
+from pathlib import Path
+
 from worker.content import (
     ContentRequest,
     PLATFORM_LIMITS,
@@ -27,6 +29,44 @@ def test_build_prompt_original_post():
     assert "voice input for terminal commands" in prompt
     assert "demo" in prompt
     assert "KeyJawn" in prompt
+
+
+def test_build_prompt_names_ios_upload_and_input_boundaries():
+    req = ContentRequest(
+        pillar="demo",
+        platform="twitter",
+        topic="iOS keyboard and copied-image upload",
+    )
+
+    prompt = build_generation_prompt(req)
+
+    assert "configured key-authenticated remote host" in prompt
+    assert "receiving app decides how to interpret" in prompt
+    assert "user-created shortcuts" in prompt
+    assert "Never describe iOS extension controls as hardware key events" in prompt
+
+
+def test_build_prompt_records_waiting_for_review_without_claiming_approval():
+    req = ContentRequest(
+        pillar="release",
+        platform="twitter",
+        topic="iOS release state",
+    )
+
+    prompt = build_generation_prompt(req)
+
+    assert "fresh signed build 9 archive" in prompt
+    assert "needs a fresh archive" not in prompt
+    assert "uploaded" in prompt
+    assert "valid" in prompt
+    assert "selected for version 1.0" in prompt
+    assert "manual release" in prompt
+    assert "waiting for review" in prompt
+    assert "not approved" in prompt
+    assert "not publicly released" in prompt
+    assert "build 9 is not selected" not in prompt
+    assert "not uploaded" not in prompt
+    assert "did not archive" not in prompt
 
 
 def test_build_prompt_reply():
@@ -145,3 +185,25 @@ def test_build_prompt_includes_utm_url():
     prompt = build_generation_prompt(req)
     assert "utm_source=twitter" in prompt
     assert "utm_medium=social" in prompt
+
+
+def test_build_prompt_limits_google_play_claims():
+    req = ContentRequest(
+        pillar="release",
+        platform="twitter",
+        topic="Android availability",
+    )
+
+    prompt = build_generation_prompt(req)
+
+    assert "internal and closed Google Play test tracks" in prompt
+    assert "Google Play production is inactive" in prompt
+    assert "Never claim public Google Play availability" in prompt
+
+
+def test_generated_worker_packaging_outputs_are_ignored():
+    repository_root = Path(__file__).resolve().parents[2]
+    ignore_rules = (repository_root / ".gitignore").read_text().splitlines()
+
+    assert "worker/build/" in ignore_rules
+    assert "worker/*.egg-info/" in ignore_rules

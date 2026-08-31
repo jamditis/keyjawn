@@ -18,29 +18,16 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.keyjawn</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>keyjawn</string>
-			</array>
-		</dict>
-	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>KeychainAccessGroup</key>
 	<string>$(AppIdentifierPrefix)com.keyjawn.shared</string>
-	<key>LegacyKeychainAccessGroup</key>
-	<string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LegacyKeychainAccessGroup</key>
+	<string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Voice input for terminal prompts</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Upload images via SFTP to insert paths into prompts</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Voice-to-text for typing prompts to CLI agents</string>
 	<key>UILaunchScreen</key>

@@ -1,4 +1,6 @@
+import UIKit
 import XCTest
+@testable import KeyJawn
 @testable import KeyJawnKit
 
 final class OnboardingTests: XCTestCase {
@@ -50,6 +52,7 @@ final class OnboardingTests: XCTestCase {
     func testCopyCoversWhatTheAppIs() {
         let text = OnboardingCopy.allUserVisibleText.lowercased()
         XCTAssertTrue(text.contains("keyboard"), "must say it is a keyboard")
+        XCTAssertFalse(text.contains("phone keyboard"), "iPad copy must not call it phone-only")
         XCTAssertTrue(text.contains("esc"), "must name a terminal key")
         XCTAssertTrue(text.contains("plain text"), "must say slash inserts text")
     }
@@ -63,11 +66,26 @@ final class OnboardingTests: XCTestCase {
         XCTAssertTrue(OnboardingCopy.openSettingsTitle == "Open Settings")
     }
 
+    func testCopyExplainsTheOptionalFullAccessFeatures() {
+        let text = OnboardingCopy.allUserVisibleText.lowercased()
+        XCTAssertTrue(text.contains("network access"))
+        XCTAssertTrue(text.contains("remote image upload"))
+        XCTAssertTrue(text.contains("user-created shortcuts"))
+        XCTAssertTrue(text.contains("shared settings and clipboard history"))
+    }
+
     func testCopyCoversAddingAHostAndCopyingThePublicKey() {
         let text = OnboardingCopy.allUserVisibleText.lowercased()
         XCTAssertTrue(text.contains("hosts"))
         XCTAssertTrue(text.contains("public key"))
         XCTAssertTrue(text.contains("authorized_keys"))
+    }
+
+    func testCopyExplainsTheRemoteExecutionAndLocalFileBoundary() {
+        let text = OnboardingCopy.allUserVisibleText.lowercased()
+        XCTAssertTrue(text.contains("remote ssh server"))
+        XCTAssertTrue(text.contains("commands run on that server"))
+        XCTAssertTrue(text.contains("cannot browse files on your iphone or ipad"))
     }
 
     func testSkipAndDoneAreAvailable() {
@@ -89,5 +107,58 @@ final class OnboardingTests: XCTestCase {
         XCTAssertEqual(OnboardingCopy.pages[0], OnboardingCopy.whatItIs)
         XCTAssertEqual(OnboardingCopy.pages[1], OnboardingCopy.enableKeyboard)
         XCTAssertEqual(OnboardingCopy.pages[2], OnboardingCopy.addAHost)
+    }
+
+    // MARK: - Host app theme
+
+    func testHostAppThemeMatchesTheKeyJawnPalette() {
+        XCTAssertEqual(rgb(AppTheme.backgroundColor), RGB(red: 10, green: 10, blue: 15))
+        XCTAssertEqual(rgb(AppTheme.surfaceColor), RGB(red: 20, green: 20, blue: 28))
+        XCTAssertEqual(rgb(AppTheme.textColor), RGB(red: 228, green: 228, blue: 236))
+        XCTAssertEqual(rgb(AppTheme.mintColor), RGB(red: 108, green: 242, blue: 168))
+        XCTAssertEqual(rgb(AppTheme.warmColor), RGB(red: 242, green: 108, blue: 138))
+    }
+
+    func testHostAppTextAndActionsMeetTheContrastFloor() {
+        XCTAssertGreaterThanOrEqual(contrast(AppTheme.textColor, AppTheme.backgroundColor), 4.5)
+        XCTAssertGreaterThanOrEqual(contrast(AppTheme.textColor, AppTheme.surfaceColor), 4.5)
+        XCTAssertGreaterThanOrEqual(contrast(AppTheme.mintColor, AppTheme.backgroundColor), 4.5)
+        XCTAssertGreaterThanOrEqual(contrast(AppTheme.warmColor, AppTheme.backgroundColor), 4.5)
+    }
+
+    private struct RGB: Equatable {
+        let red: Int
+        let green: Int
+        let blue: Int
+    }
+
+    private func rgb(_ color: UIColor) -> RGB {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        XCTAssertTrue(color.getRed(&red, green: &green, blue: &blue, alpha: &alpha))
+        return RGB(
+            red: Int(round(red * 255)),
+            green: Int(round(green * 255)),
+            blue: Int(round(blue * 255))
+        )
+    }
+
+    private func contrast(_ foreground: UIColor, _ background: UIColor) -> Double {
+        let lighter = max(luminance(foreground), luminance(background))
+        let darker = min(luminance(foreground), luminance(background))
+        return (lighter + 0.05) / (darker + 0.05)
+    }
+
+    private func luminance(_ color: UIColor) -> Double {
+        let value = rgb(color)
+        func linear(_ channel: Int) -> Double {
+            let component = Double(channel) / 255
+            return component <= 0.03928
+                ? component / 12.92
+                : pow((component + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * linear(value.red) + 0.7152 * linear(value.green) + 0.0722 * linear(value.blue)
     }
 }

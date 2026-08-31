@@ -6,12 +6,57 @@ import FeatureCard from '../components/FeatureCard.astro';
 
 <Base
   title="Features -- KeyJawn"
-  description="Every feature in KeyJawn: terminal keys, voice input, SCP upload, slash commands, clipboard history, themes, and more."
+  description="KeyJawn features for Android and iOS, with clear platform limits for terminal keys, voice input, remote SSH, and image upload."
 >
   <section class="section">
     <div class="container">
       <h1 class="page-title">Features</h1>
-      <p class="page-intro">Everything the keyboard does. The free version includes terminal keys, voice input, clipboard history, slash commands, swipe gestures, per-app autocorrect, key press preview, and a configurable quick key. The full version ($4) adds SCP upload, multi-host SSH, keyboard themes, customizable extra row keys, a menu panel, clipboard pinning, and custom slash commands.</p>
+      <p class="page-intro">Android and iOS use different keyboard APIs. The sections below state which behavior belongs to each platform.</p>
+    </div>
+  </section>
+
+  <section class="section" id="ios">
+    <div class="container">
+      <h2 class="section-heading">iOS app and keyboard</h2>
+      <div class="more-grid">
+        <FeatureCard
+          title="remote-ssh-terminal"
+          icon=">"
+          description="The main app connects to a remote SSH server that you configure. Commands run on that server. KeyJawn displays returned output and cannot browse files on your iPhone or iPad."
+        />
+        <FeatureCard
+          title="ios-keyboard-extension"
+          icon="K"
+          description="The keyboard extension provides QWERTY input, a number row, terminal-oriented keys, slash shortcuts, clipboard history, themes, and extra-row presets. Terminal sequences depend on the receiving app."
+        />
+        <FeatureCard
+          title="copied-image-upload"
+          icon="^"
+          description="Copy one image, tap the SCP key to open Upload copied image, and select a host configured for SSH key authentication. KeyJawn prepares the image in memory, writes it by SFTP to the remote directory, and inserts the remote path. Password authentication remains available for terminal connections. The upload feature does not request Photos or Files access."
+        />
+        <FeatureCard
+          title="optional-full-access"
+          icon="+"
+          description="Basic typing and built-in shortcuts work without Full Access. Full Access is optional for network upload and for reading shared keyboard settings, user-created shortcuts, and clipboard history."
+        />
+        <FeatureCard
+          title="ios-voice-input"
+          icon="~"
+          description="Voice input is available in the built-in remote SSH terminal. The iOS keyboard extension does not use the microphone."
+        />
+        <FeatureCard
+          title="host-key-trust"
+          icon="#"
+          description="The first SSH connection asks you to review and save the server fingerprint. Later connections reject a changed host key."
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="android">
+    <div class="container">
+      <h2 class="section-heading">Android keyboard</h2>
+      <p class="page-intro">The detailed feature sections below describe the Android keyboard. The free APK includes terminal keys, voice input, clipboard history, slash commands, action swipes, per-app autocorrect, key press preview, and a configurable quick key. The $4 Android full APK adds SCP upload, multi-host SSH, themes, customizable extra-row keys, a menu panel, clipboard pinning, and custom slash commands.</p>
     </div>
   </section>
 
@@ -23,7 +68,7 @@ import FeatureCard from '../components/FeatureCard.astro';
         <p>A dedicated row above the QWERTY layout with the keys terminals need: <KeyCap label="Esc" />, <KeyCap label="Tab" />, <KeyCap label="Ctrl" />, and arrow keys <KeyCap label="<" /> <KeyCap label=">" />.</p>
         <p>Always visible. No toggling layers or long-pressing to find them. <KeyCap label="Ctrl" /> uses a three-state toggle: tap once to arm it for one keypress, long-press to lock it on, tap again to turn it off. Hold arrow keys to repeat.</p>
         <p>Each key in the row has a distinct background color so you can tell them apart at a glance. Ctrl changes color when armed or locked.</p>
-        <p>In the full version, the three left slots (Esc, Tab, Ctrl) are customizable. Long-press to swap them for Home, End, PgUp, PgDn, Insert, Delete, or text characters like <code>|</code>, <code>~</code>, <code>`</code>, <code>\</code>. Also configurable in Settings.</p>
+        <p>In the Android full APK, the three left slots (Esc, Tab, Ctrl) are customizable. Long-press to swap them for Home, End, PgUp, PgDn, Insert, Delete, or text characters like <code>|</code>, <code>~</code>, <code>`</code>, <code>\</code>. You can also change them in Settings.</p>
       </div>
       <div class="feature-visual">
         <div class="key-row-demo">
@@ -44,7 +89,7 @@ import FeatureCard from '../components/FeatureCard.astro';
         <h2>Voice input</h2>
         <p>Tap the mic in the extra row. A waveform animation shows audio level while you speak. Text appears at your cursor as the speech recognizer processes it -- streaming partial results, not waiting for you to finish.</p>
         <p>When 90% of what you type into an AI agent is natural language, speaking is faster than typing on a phone keyboard. Tap stop or the mic again to finish.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Requires microphone permission. Included in both free and full versions.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Requires microphone permission. Included in both Android APKs.</p>
       </div>
       <div class="feature-visual">
         <div class="voice-demo">
@@ -68,15 +113,15 @@ import FeatureCard from '../components/FeatureCard.astro';
   <section class="section feature-section" id="scp-upload">
     <div class="container feature-row">
       <div class="feature-content">
-        <h2>SCP upload</h2>
-        <p>Configure your SSH hosts in settings. Tap the upload button in the extra row. Pick a photo from your gallery. KeyJawn SCPs it to your server and types the remote file path at your cursor.</p>
+        <h2>Android SCP upload</h2>
+        <p>Configure your SSH hosts in Settings. Tap the upload button in the extra row, then select an image from your Android gallery. KeyJawn sends it to your server and types the remote file path at your cursor.</p>
         <p>Supports multiple SSH hosts with per-host upload directories. Switch between servers without reconfiguring. All credentials encrypted with AES-256 via AndroidX EncryptedSharedPreferences. Host key verification uses trust-on-first-use and rejects changed keys.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Android full APK only.</p>
       </div>
       <div class="feature-visual">
         <div class="scp-demo card">
           <code class="scp-flow">
-            <span class="text-muted"># you tap upload, pick a photo</span><br/>
+            <span class="text-muted"># select an image in Android</span><br/>
             <span class="text-accent">scp</span> photo_001.jpg pi@server:~/uploads/<br/>
             <span class="text-muted"># path typed at cursor:</span><br/>
             ~/uploads/photo_001.jpg<span class="cursor">_</span>
@@ -92,8 +137,8 @@ import FeatureCard from '../components/FeatureCard.astro';
       <div class="feature-content">
         <h2>Clipboard history and pinning</h2>
         <p>Tap the clipboard button in the extra row to see your recent clipboard history (up to 30 items). Tap any entry to paste it at your cursor.</p>
-        <p>The full version adds pinning -- pin up to 15 items that persist across sessions and stay at the top of the list. Pinned items are highlighted so you can tell them apart from regular history.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Clipboard history is free. Pinning is full version only.</p>
+        <p>The Android full APK adds pinning. You can pin up to 15 items that persist across sessions and stay at the top of the list. Pinned items are highlighted.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Clipboard history is in both Android APKs. Pinning is in the Android full APK.</p>
       </div>
       <div class="feature-visual">
         <div class="clipboard-demo">
@@ -111,13 +156,13 @@ import FeatureCard from '../components/FeatureCard.astro';
       <div class="feature-content">
         <h2>Slash commands</h2>
         <p>On the symbols layer, the <code>/</code> key opens a command picker instead of typing a literal slash. Select a command to insert it. Dismiss without selecting to type <code>/</code> normally.</p>
-        <p>Built-in sets cover Claude Code, OpenClaw, and Gemini CLI. Recently used commands float to the top. The full version lets you create custom command sets -- add commands for your own tools, group them by project, toggle sets on and off.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Built-in sets are free. Custom sets are full version only.</p>
+        <p>Built-in sets group common slash commands by tool. Recently used commands move to the top. The Android full APK lets you add commands, group them in custom sets, and turn sets on or off.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Built-in sets are in both Android APKs. Custom sets are in the Android full APK.</p>
       </div>
       <div class="feature-visual">
         <div class="slash-demo card">
           <div class="cmd-set-header">
-            <span class="cmd-set-name">claude-code</span>
+            <span class="cmd-set-name">command-set</span>
             <span class="cmd-set-badge">built-in</span>
           </div>
           <div class="slash-item">/help</div>
@@ -173,7 +218,7 @@ import FeatureCard from '../components/FeatureCard.astro';
         <h2>Keyboard themes</h2>
         <p>Four color themes: Dark (the default), Light for outdoor use, OLED black for true-black displays, and Terminal green for the classic look.</p>
         <p>Themes apply to every element -- keys, backgrounds, hints, accent colors, and the extra row. Pick one in the menu panel.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only. Free version uses the Dark theme.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Android full APK only. The Android free APK uses the Dark theme.</p>
       </div>
       <div class="feature-visual">
         <div class="theme-demo">
@@ -205,7 +250,7 @@ import FeatureCard from '../components/FeatureCard.astro';
         <h2>Menu panel</h2>
         <p>Tap the gear icon in the extra row to open an inline settings overlay. Switch themes, adjust bottom padding, toggle haptic feedback, toggle autocorrect, toggle tooltips, and trigger SCP upload -- all without leaving the keyboard.</p>
         <p>The panel overlays the keyboard rather than replacing it. Tap a setting to change it, or dismiss to go back to typing.</p>
-        <p class="text-muted" style="font-size: 0.85rem;">Full version only.</p>
+        <p class="text-muted" style="font-size: 0.85rem;">Android full APK only.</p>
       </div>
       <div class="feature-visual">
         <div class="menu-demo card">
@@ -291,12 +336,12 @@ import FeatureCard from '../components/FeatureCard.astro';
         <FeatureCard
           title="symbol-layers"
           icon="{"
-          description="Three keyboard layers: lowercase, uppercase, and symbols. The symbols layout follows Samsung-style grouping with a second page for less common characters. Swipe up to switch to symbols, swipe down to go back."
+          description="Three keyboard layers: lowercase, uppercase, and symbols. The symbols layout uses familiar punctuation groups and a second page for less common characters. Swipe up for symbols and down for letters."
         />
         <FeatureCard
           title="per-app-autocorrect"
           icon="A"
-          description="Autocorrect is off by default -- because autocorrect in a terminal is a disaster. Long-press spacebar to toggle it per app. Turn it on for Slack, leave it off for Termux. KeyJawn remembers your setting for each app."
+          description="Autocorrect is off by default because composing text can break terminal input. Long-press the spacebar to change it for the active Android app. KeyJawn remembers the setting for each app."
         />
         <FeatureCard
           title="quick-key"
@@ -321,7 +366,7 @@ import FeatureCard from '../components/FeatureCard.astro';
         <FeatureCard
           title="configurable-extra-row"
           icon=">"
-          description="Long-press ESC, Tab, or Ctrl to swap them for Home, End, PgUp, PgDn, Ins, Del, or custom text. Also configurable in Settings. Full version only."
+          description="In the Android full APK, long-press ESC, Tab, or Ctrl to replace it with Home, End, PgUp, PgDn, Ins, Del, or custom text. You can also change these keys in Settings."
         />
         <FeatureCard
           title="color-coded-keys"

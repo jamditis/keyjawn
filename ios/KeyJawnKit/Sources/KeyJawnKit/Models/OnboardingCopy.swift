@@ -25,11 +25,11 @@ public enum OnboardingCopy: Sendable {
     public static let whatItIs = Page(
         title: "A keyboard for CLI agents",
         body: """
-        KeyJawn is a phone keyboard with the extra keys a CLI agent session needs: Esc, Tab, Ctrl, arrows, and text shortcuts.
+        KeyJawn is a mobile keyboard with the extra keys a CLI agent session needs: Esc, Tab, Ctrl, arrows, and text shortcuts.
 
         Slash shortcuts insert plain text into the field that has focus. They are not links to other apps.
 
-        This app also has a built-in SSH terminal so those keys can reach a shell on iOS, where a keyboard extension cannot send them as real key events.
+        This app also has a built-in SSH terminal. It sends your input to a remote SSH server. Commands run on that server, not on your iPhone or iPad. KeyJawn displays the returned output and cannot browse files on your iPhone or iPad.
         """
     )
 
@@ -39,7 +39,7 @@ public enum OnboardingCopy: Sendable {
         1. Open Settings, then General, then Keyboard, then Keyboards.
         2. Tap Add new keyboard and choose KeyJawn Keyboard.
         3. Basic typing works without Full Access.
-        4. Grant Full Access only if you want themes, clipboard history, and image upload to read shared settings.
+        4. Grant Full Access only if you want KeyJawn Keyboard to use network access for remote image upload, use user-created shortcuts, or read shared settings and clipboard history.
 
         The keyboard cannot open that screen for you. Use Open Settings below, then follow the steps. Full Access is a system permission, not something KeyJawn can grant itself.
         """
@@ -48,7 +48,7 @@ public enum OnboardingCopy: Sendable {
     public static let addAHost = Page(
         title: "Add a host and copy your key",
         body: """
-        After this screen, use the Hosts tab to add an SSH server.
+        After this screen, use the Hosts tab to add a remote SSH server.
 
         Settings, then SSH keys, shows the public key to paste into authorized_keys on that server. The first connection asks you to pin the host key fingerprint.
         """

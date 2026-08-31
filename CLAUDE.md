@@ -4,10 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-KeyJawn is a custom keyboard for using LLM CLI agents from a phone. It provides terminal keys (Esc, Tab, Ctrl, arrows), voice-to-text, slash command shortcuts, and SCP image upload — all in a dedicated row above a standard QWERTY layout.
+KeyJawn provides terminal-oriented mobile input for remote CLI work. Android is
+a custom keyboard with voice input and optional SCP upload. iOS is a remote SSH
+terminal with a companion keyboard and copied-image SFTP upload.
 
-- **Android**: `InputMethodService`-based keyboard extension. Two flavors: lite (free, Google Play) and full ($4, Stripe/website).
-- **iOS**: Standalone SwiftUI app with a built-in SSH terminal (SwiftTerm + SwiftNIO SSH via Citadel) and a companion `UIInputViewController` keyboard extension. Currently in TestFlight beta; App Store launch pending.
+- **Android**: `InputMethodService`-based keyboard extension. Two flavors: lite
+  (free APK and limited Google Play testing) and full ($4, Stripe/website).
+- **iOS**: Standalone SwiftUI app with a remote SSH terminal (SwiftTerm + SwiftNIO SSH via Citadel) and a companion `UIInputViewController` keyboard extension. Apple rejected review build 2 under guideline 2.5.2. A fresh signed build 9 archive was created and verified from the corrected source on August 31, 2026. The exact archive was uploaded, and Apple processed build 9 as valid. Build 9 is selected for version 1.0, manual release is enabled, and the submission is waiting for review. The app is not approved and not publicly released.
 
 ## Build commands
 
@@ -114,8 +117,21 @@ xcodebuild -project KeyJawn.xcodeproj -scheme KeyJawn \
 xcodebuild test -project KeyJawn.xcodeproj -scheme KeyJawn \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 
-# Archive + export for TestFlight/App Store
-bash ios/scripts/build.sh
+# App and installed system-keyboard UI tests
+# Keep the Simulator software keyboard visible. Use Command-K if iPhone hides it.
+xcodebuild test -project KeyJawn.xcodeproj -scheme KeyJawn \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:KeyJawnUITests
+
+# Real SSH/SFTP checks are opt-in. See docs/ios-app-review.md for the required
+# KEYJAWN_LIVE_SSH_* variables and cleanup rules.
+xcodebuild test -project KeyJawn.xcodeproj -scheme KeyJawn \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:KeyJawnKitTests/SSHLiveIntegrationTests
+
+# Static analysis
+xcodebuild analyze -project KeyJawn.xcodeproj -scheme KeyJawn \
+  -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
 ```
 
 **Versioning:** `CURRENT_PROJECT_VERSION` and `MARKETING_VERSION` in `ios/project.yml`
@@ -129,111 +145,56 @@ duplicate upload.
 **Architecture:**
 - `KeyJawnKit/` — shared Swift package used by both the main app and the keyboard extension. Contains keyboard models (`KeyboardLayout`, `HostConfig`, `SlashCommand`, `CtrlState`) and UIKit views (`QwertyKeyboardView`, `ExtraRowView`, `SlashCommandPanel`).
 - `KeyJawn/` — main SwiftUI app. Host management (`HostListView`, `HostEditView`, `HostStore`), SSH terminal (`SSHSession` via Citadel/SwiftNIO SSH, `TerminalViewController` via SwiftTerm), settings (`SettingsView`, `SSHKeysView`), and `SSHKeyStore` (Keychain-backed Ed25519 identity key).
-- `KeyJawnKeyboard/` — `UIInputViewController` keyboard extension. Uses `QwertyKeyboardView` + `ExtraRowView` from KeyJawnKit. Reads host configs through `group.com.keyjawn` (`AppGroupHostStore`) and the SSH identity through the shared Keychain access group (`SharedSSHKeyStore`). SCP image upload via `CitadelSCPUploader` (Citadel/SwiftNIO SFTP).
+- `KeyJawnKeyboard/` — `UIInputViewController` keyboard extension. Uses `QwertyKeyboardView` + `ExtraRowView` from KeyJawnKit. Reads host configs through `group.com.keyjawn` (`AppGroupHostStore`) and the SSH identity through the shared Keychain access group (`SharedSSHKeyStore`). Copied-image upload accepts only key-authenticated hosts and uses `CitadelSCPUploader` to write to a configured remote path through SFTP. Password authentication remains available for terminal connections.
 
 **Key decisions:**
 - One Ed25519 identity key for the whole app (not per-host). Public key is shown in Settings → SSH keys for the user to copy to `authorized_keys`. Private key is stored once in Keychain under `com.keyjawn / ssh-identity-ed25519`, accessible `WhenUnlockedThisDeviceOnly`, using the shared access group `$(AppIdentifierPrefix)com.keyjawn.shared` so both the app and keyboard extension can read it.
 - Upgrades migrate the old app-specific Keychain item into the shared group and delete the former App Group file or `UserDefaults` mirror only after a byte-for-byte read-back succeeds. The app-specific access group remains first in both entitlements during this migration release and is passed explicitly to every legacy query or deletion; an unscoped Keychain deletion can also match the shared item.
-- Keyboard preferences (`KeyboardPrefs`) live in the `group.com.keyjawn` suite, not `UserDefaults.standard` — the app and the extension have separate standard suites, so anything written there never reaches the keyboard. The extension can only read the shared suite with Full Access; without it the keyboard falls back to defaults.
+- Keyboard preferences (`KeyboardPrefs`) live in the `group.com.keyjawn` suite, not `UserDefaults.standard` — the app and the extension have separate standard suites, so anything written there never reaches the keyboard. KeyJawn exposes its optional shared settings and clipboard features only with Full Access; basic input falls back to defaults without it.
 - Host key pinning via `NIOSSHPublicKey(openSSHPublicKey:)`. The main app owns a short-lived NIO probe that captures and displays an unpinned server's fingerprint, closes before authentication, then reconnects through Citadel only after the accepted key is saved. The keyboard extension refuses unpinned hosts.
 - Keyboard extension cannot use `present()`. Overlays (slash command panel) are added as `UIView` children of the extension root view.
 - Debug build uses automatic signing; Release build uses manual signing with App Store provisioning profiles (`KeyJawn AppStore`, `KeyJawn Keyboard AppStore`).
 - App Group `group.com.keyjawn` is registered in Apple Developer portal and enabled on both App IDs (`com.keyjawn` and `com.keyjawn.keyboard`). Provisioning profiles regenerated 2026-02-20.
 
-**App Store Connect:**
-- App ID: `com.keyjawn` / keyboard extension: `com.keyjawn.keyboard`
-- App Store Connect app numeric ID: `6759345867`
-- App Store version 1.0 ID: `071542f6-0cdb-43a5-b07c-7b74688e937b`
-- Build v2 ID: `7e8af1a4-eac8-4b57-8ae0-8a3bd2655c1f` — current build in review
-- Screenshots uploaded: `APP_IPHONE_67` (1290×2796) + `APP_IPAD_PRO_3GEN_129` (2048×2732) for en-US localization
-- Provisioning profiles managed via Apple Developer API (`ios/scripts/asc.py`)
-- App Store Connect API credentials in `pass` at `claude/services/appstore-connect-{issuer-id,key-id,api-key}`
+**App Store Connect status:**
 
-**App Store Connect API notes:**
-- `appStoreVersionSubmissions` is deprecated — use `reviewSubmissions` + `reviewSubmissionItems` instead
-- Submit flow: `POST /v1/reviewSubmissions` → `POST /v1/reviewSubmissionItems` → `PATCH /v1/reviewSubmissions/{id}` with `submitted: true`
-- Pricing set via `POST /v1/appPriceSchedules` with `baseTerritory: USA` and inline `appPrices` using `${local-id}` format (must use file-based script, not heredoc — shell strips `${}`)
-- App Privacy (data usage) labels must be published via web UI — no API endpoint exists for this
-- `usesNonExemptEncryption: false` must be set on each build via `PATCH /v1/builds/{id}` (SSH uses IETF-standard algorithms, exempt from EAR)
-- Screenshot upload flow: create set → reserve slot (`POST /v1/appScreenshots`) → PUT bytes to `uploadOperations[].url` → commit with MD5 checksum
+- App ID: `com.keyjawn`; keyboard extension: `com.keyjawn.keyboard`.
+- App Store Connect app ID: `6759345867`.
+- Review submission ID: `83b2805c-650c-4bf6-91ff-0c6339f36324`.
+- Apple sent a guideline 2.5.2 rejection on June 12, 2026. The message identifies
+  build 2 and an iPad Air 11-inch (M3). The checked-in source is build 9.
+- A fresh signed build 9 archive was created and verified from the corrected
+  source on August 31, 2026. The exact archive was uploaded, and Apple processed
+  build 9 as valid. Build 9 is selected for version 1.0, manual release is
+  enabled, and review submission `83b2805c-650c-4bf6-91ff-0c6339f36324` is
+  waiting for review. The reviewer response and test steps were included in the
+  review notes. The app is not approved and not publicly released.
+- The remote-execution, sandbox, and test evidence are in
+  `docs/ios-app-review.md`. The metadata template, submitted review-note basis,
+  and response copy are in `docs/app-store-v1.0-metadata.md`.
+- `CHANGELOG.md` records source changes separately from distribution state.
 
-**Submission status (2026-02-24):**
-- App Store review: appeal in progress, state unknown — Apple replied 2026-02-24 "we will continue the review and will notify if there are further issues"
-- Review submission ID: `83b2805c-650c-4bf6-91ff-0c6339f36324`
-- TestFlight external group: "KeyJawn Beta (external)" (ID `360a2954-431c-4d74-aa68-faaf86baa926`)
-- Public TestFlight link: `https://testflight.apple.com/join/8vMqguKK` (limit 50 testers)
-- Internal group: "KeyJawn Beta" (ID `55817758-6243-4d2b-b0f3-ffc95221cbdb`)
+**Release gates:**
 
-- **Submission `83b2805c` (v1.0) rejected 2026-02-20** for Guideline 3.2.2 — reviewer interpreted the slash command panel as a third-party app collection due to tool-branded category names (`claudeCode`, `aider`, `codex`) in the data model and a branded screenshot.
-  - Reply sent to Apple explaining `textDocumentProxy.insertText()` behavior (text autocomplete, not a storefront)
-  - `SlashCommand.Category` enum renamed: `claudeCode`→`session`, `aider`→`context`, `codex`→`files`
-  - Aider command set replaced with Gemini CLI commands (commits `56c11fd`, `b361c92`, `c495696`)
-  - `ios-claude-code.png` renamed to `ios-slash-commands.png` (commit `325f1c5`) — **PNG content still needs replacement** with an unbranded keyboard screenshot from Mac/Simulator
-  - App Store description audited — no third-party tool names found, no changes needed
-- **2026-02-24:** Apple replied "we will continue the review" — appeal accepted, re-review underway. Waiting on outcome before deciding whether to submit a new build.
+- Do not change the build number until the complete verification pass succeeds and
+  the user approves an unused number. Change both target values together.
+- Do not run `ios/scripts/build.sh`, archive, upload, send a reviewer reply, change
+  App Store Connect metadata, cancel a submission, or resubmit without separate
+  user approval at action time.
+- Website publication is a separate external action. A push to `main` that changes
+  `website/**` triggers `.github/workflows/deploy-site.yml` and publishes the site.
+  Get explicit approval before that push.
+- Build 9 has `usesNonExemptEncryption: false` after final archive inspection,
+  France exclusion, Apple documentation review, and App Store Connect read-back.
+  No French declaration is required. Keep the separate US BIS classification or
+  reporting duty open until qualified guidance resolves it.
+- App Privacy answers are managed in App Store Connect. Read-only inspection is
+  allowed for verification. Do not select Publish without explicit approval.
+- Do not store review credentials in the repository or logs.
 
-### Mac checklist (do this when you sit down at the MacBook)
-
-**Step 1: Pull latest**
-```bash
-cd /path/to/keyjawn
-git pull origin main
-```
-
-**Step 2: Take a new screenshot**
-1. Open Xcode, run the KeyJawn app on the iPhone 17 Pro simulator
-2. Open any text field (e.g. Notes), switch to KeyJawn Keyboard, tap the `/` key on the symbols layer to open the slash command panel
-3. Screenshot: panel open over the keyboard showing shortcuts (`/compact`, `/clear`, etc.) — **no Claude Code or other third-party tool branding visible in the terminal area**
-4. Save it as the replacement file:
-```bash
-cp ~/Desktop/screenshot.png website/public/screenshots/ios-screenshots/ios-slash-commands.png
-```
-5. Commit:
-```bash
-git add website/public/screenshots/ios-screenshots/ios-slash-commands.png
-git commit -m "replace slash commands screenshot with unbranded keyboard UI"
-```
-
-**Step 2b: Run the tests**
-
-```bash
-cd ios && xcodebuild test -project KeyJawn.xcodeproj -scheme KeyJawn \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
-```
-This is the first thing to run on the Mac — none of the iOS code has ever been
-compiled in a web session, so the suite is also the build check.
-
-**Step 3: Bump the build number**
-
-Open `ios/project.yml` and increment `CURRENT_PROJECT_VERSION` **on both targets**
-(`KeyJawn` and `KeyJawnKeyboard`) — they must match or App Store Connect rejects the
-upload. The Info.plists interpolate the setting, so this is the only edit needed.
-```bash
-git add ios/project.yml
-git commit -m "bump iOS build number for 3.2.2 resubmission"
-```
-
-**Step 4: Build and upload to TestFlight**
-```bash
-cd ios
-bash scripts/build.sh
-```
-Expected: archives, exports IPA, uploads to TestFlight. Build appears in App Store Connect → TestFlight within ~15 min with status "Processing".
-
-**Step 5: Push**
-```bash
-git push origin main
-```
-
-**Step 6: Decide on resubmission**
-
-Check App Store Connect → App Review for Apple's response to the appeal (submission `83b2805c`):
-- **Appeal approved** → submit the new build as an update when ready
-- **Appeal denied or no response after 7 days** → cancel the current submission, then submit the new build with this note in App Review Information → Notes:
-
-> The slash command panel is a text shortcut picker. Tapping any item inserts a plain text string (e.g. "/compact") into the active text field. No third-party apps are embedded, linked, or sold. Category labels in the code have been renamed from tool names to functional terms (Session, Context, Files) to remove any ambiguity.
-
-**Code style:** Swift 6 strict concurrency. Use `@MainActor` for UI classes. For Citadel types that lack `Sendable` conformance, add `@unchecked @retroactive Sendable` extensions (see `SSHSession.swift`). No emojis in source or UI.
+**Code style:** Swift 6 strict concurrency. Keep UI state on `@MainActor`. Keep NIO
+channel handlers on their owning event loop. Do not add unchecked `Sendable`
+conformance only to silence a compiler warning. No emojis in source or UI.
 
 ## Store service
 
@@ -348,16 +309,27 @@ Shortcut prompts stored at `~/.claude/commands/keyjawn-*.md` on houseofjawn. The
 - **CI publishing:** Gradle Play Publisher (GPP) 3.13.0 in `.github/workflows/build.yml`
   - `publish-play-store` job runs on version tags after the `release` job
   - Needs `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` GitHub secret (service account key JSON)
-  - `PLAY_TRACK` defaults to `internal` — change to `production` once verified
+  - `PLAY_TRACK` defaults to `internal`; a separate approved promotion updates
+    the active closed track
   - Only publishes `publishLiteReleaseBundle` — full flavor is never uploaded to Play
 - **Store listing metadata:** `app/src/lite/play/listings/en-US/` (managed by GPP)
 - **Asset generation:** `scripts/generate-store-assets.py` (Selenium + Chromium snap → icon, feature graphic, screenshots)
-- **Setup status (completed 2026-02-17):**
+- **Verified state on 2026-08-27:**
   - App created in Play Console
-  - First AAB uploaded to internal testing (v1.3.0)
+  - KeyJawn Lite 1.3.0 is active on internal testing and one closed testing track
+  - Open testing and production are inactive
+  - Google Play app signing is active
+  - 7 of the required 12 closed-test users are opted in; production access also
+    requires at least 14 days with 12 opted-in testers
   - Store listing, content rating, data safety, and all other forms complete
-  - 7 testers configured on internal track
-  - CI auto-publish ready (`publish-play-store` job) -- change track to `production` when ready
+  - Source version 1.4.0, version code 10, targets API 36. A local
+    disposable-key bundle verified that manifest but cannot be uploaded. The
+    Google Play build still reports an API-level action due August 31, 2026.
+  - Android unit suites pass 425 full-flavor and 421 lite-flavor tests. Both
+    lint variants complete without errors. Existing lint warnings and stale
+    baseline entries need a separate Android cleanup pass.
+  - A version tag uploads to internal testing. Promotion to closed testing or
+    production is a separate external action and needs explicit approval.
 
 ## Release checklist — SOCIAL.md
 

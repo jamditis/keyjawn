@@ -1,57 +1,60 @@
 ---
 import Base from '../layouts/Base.astro';
 import FAQ from '../components/FAQ.astro';
+
+const faqItems = [
+  {
+    question: 'How do I install KeyJawn?',
+    answer: 'Android APKs are available from GitHub releases. KeyJawn Lite also has limited Google Play test tracks, but Google Play production is not active. As of August 28, 2026, the public iOS beta invitation is not accepting new testers. A revised App Store submission has not been sent.',
+  },
+  {
+    question: 'Does the iOS app run commands or browse files on my device?',
+    answer: 'No. The built-in terminal sends input through SSH to a remote server that you configure. The server runs the commands and KeyJawn displays the returned output. KeyJawn has no local shell or local file browser.',
+  },
+  {
+    question: 'Does the iOS keyboard require Full Access?',
+    answer: 'Basic typing and built-in shortcuts work without Full Access. Full Access is optional for remote image upload and for reading shared keyboard settings, user-created shortcuts, and clipboard history. KeyJawn cannot grant this system permission.',
+  },
+  {
+    question: 'How does image upload work on iOS?',
+    answer: 'Copy one image, tap the SCP key to open Upload copied image, and select a host configured for SSH key authentication. KeyJawn prepares the image in memory, writes it by SFTP to the configured remote directory, and inserts the remote path. Password authentication remains available for terminal connections. The upload feature does not request Photos or Files access or browse local or remote files.',
+  },
+  {
+    question: 'Where do iOS terminal keys work?',
+    answer: 'Basic text and slash shortcuts work in normal text fields. The extension inserts control text through the field that has focus, so Esc, Ctrl, and arrow sequences depend on the receiving terminal app. The built-in SSH terminal sends terminal bytes directly.',
+  },
+  {
+    question: 'Why do some Android keys fail in a browser terminal?',
+    answer: 'Some browser terminals capture JavaScript keyboard events differently from Android input methods. Native Android terminal apps usually handle the terminal key events more reliably.',
+  },
+  {
+    question: 'How are SSH credentials stored?',
+    answer: 'Android full encrypts saved SSH data with AndroidX EncryptedSharedPreferences. On iOS, SSH identity data is stored in the Keychain and host settings are stored in the app container or shared App Group when the keyboard needs them.',
+  },
+  {
+    question: 'Is this open source?',
+    answer: 'Yes. KeyJawn uses the MIT license, and the source is available at github.com/jamditis/keyjawn.',
+  },
+];
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqItems.map(item => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer,
+    },
+  })),
+};
 ---
 
 <Base
   title="Support -- KeyJawn"
   description="FAQ, bug reporting, known limitations, and how to get help with KeyJawn."
-  jsonLd={{
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "How do I install KeyJawn?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Download the APK from GitHub releases, install it via ADB or by opening it on your phone, then enable it in Settings > System > Languages & input > On-screen keyboard." }
-      },
-      {
-        "@type": "Question",
-        "name": "Why don't keys work in my browser terminal?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Some web-based terminals use JavaScript to capture keyboard events. Android's commitText method doesn't trigger the same key events as physical keypresses. Native terminal apps like Termux and JuiceSSH handle key events correctly." }
-      },
-      {
-        "@type": "Question",
-        "name": "How do I set up SCP upload?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Open KeyJawn settings, add a host with hostname, port, username, password, and remote upload directory. Then tap the upload button in the extra row, pick a photo, and KeyJawn handles the rest." }
-      },
-      {
-        "@type": "Question",
-        "name": "Can I use this with Termux?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. KeyJawn works with any app that accepts keyboard input. Termux, JuiceSSH, ConnectBot, and any other terminal emulator will work." }
-      },
-      {
-        "@type": "Question",
-        "name": "Is my SSH password stored securely?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. SSH credentials are encrypted using AndroidX EncryptedSharedPreferences with AES-256 encryption. The keys are stored in the Android Keystore, which is hardware-backed on most modern devices." }
-      },
-      {
-        "@type": "Question",
-        "name": "Why is autocorrect off by default?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Autocorrect uses setComposingText, which breaks web-based terminals and many SSH clients. Long-press the spacebar to enable it per app." }
-      },
-      {
-        "@type": "Question",
-        "name": "Will there be an iOS version?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Not planned. iOS doesn't allow third-party keyboards to send key events (like Escape or Ctrl sequences) the way Android does." }
-      },
-      {
-        "@type": "Question",
-        "name": "Is this open source?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. MIT license. Full source at github.com/jamditis/keyjawn. Both the lite and full versions are built from the same codebase." }
-      }
-    ]
-  }}
+  jsonLd={faqJsonLd}
 >
   <section class="section">
     <div class="container">
@@ -65,40 +68,7 @@ import FAQ from '../components/FAQ.astro';
     <div class="container">
       <h2 class="section-heading">Frequently asked questions</h2>
       <div class="faq-wrapper">
-        <FAQ items={[
-          {
-            question: "How do I install KeyJawn?",
-            answer: "Download the APK from <a href='https://github.com/jamditis/keyjawn/releases'>GitHub releases</a>, install it via ADB or by opening it on your phone, then enable it in <strong>Settings > System > Languages & input > On-screen keyboard</strong>. Full walkthrough in the <a href='/manual#getting-started'>manual</a>."
-          },
-          {
-            question: "Why don't keys work in my browser terminal?",
-            answer: "Some web-based terminals (like Cockpit's shell or browser SSH clients) use JavaScript to capture keyboard events. Android's <code>commitText</code> method doesn't trigger the same key events as physical keypresses. This is a known Android limitation -- KeyJawn sends proper key events where possible, but some WebView-based terminals only respond to <code>commitText</code>. Terminal emulator apps like Termux and JuiceSSH handle key events correctly."
-          },
-          {
-            question: "How do I set up SCP upload?",
-            answer: "Open KeyJawn settings, add a host with hostname, port, username, password, and remote upload directory. Then tap the upload button in the extra row, pick a photo, and KeyJawn handles the rest. Details in the <a href='/manual#scp-upload'>SCP upload section</a> of the manual."
-          },
-          {
-            question: "Can I use this with Termux?",
-            answer: "Yes. KeyJawn works with any app that accepts keyboard input. Termux, JuiceSSH, ConnectBot, and any other terminal emulator will work. The terminal key row (Esc, Tab, Ctrl, arrows) is designed for exactly this."
-          },
-          {
-            question: "Is my SSH password stored securely?",
-            answer: "Yes. SSH credentials are encrypted using AndroidX <code>EncryptedSharedPreferences</code> with AES-256 encryption. The keys are stored in the Android Keystore, which is hardware-backed on most modern devices."
-          },
-          {
-            question: "Why is autocorrect off by default?",
-            answer: "Autocorrect uses <code>setComposingText</code>, which breaks web-based terminals and many SSH clients. In a shell, autocorrect turning <code>git</code> into <code>got</code> is worse than having no autocorrect at all. Long-press the spacebar to enable it per app -- turn it on for Slack, keep it off for Termux."
-          },
-          {
-            question: "Will there be an iOS version?",
-            answer: "Not planned. iOS doesn't allow third-party keyboards to send key events (like Escape or Ctrl sequences) the way Android does. The level of system integration KeyJawn needs isn't possible on iOS."
-          },
-          {
-            question: "Is this open source?",
-            answer: "Yes. MIT license. Full source at <a href='https://github.com/jamditis/keyjawn'>github.com/jamditis/keyjawn</a>. Both the lite and full versions are built from the same codebase."
-          }
-        ]} />
+        <FAQ items={faqItems} />
       </div>
     </div>
   </section>
@@ -110,7 +80,7 @@ import FAQ from '../components/FAQ.astro';
       <div class="bug-report">
         <p>Found a problem? File an issue on GitHub with the following info:</p>
         <ul>
-          <li>Your device model and Android version</li>
+          <li>Your device model, platform, and operating system version</li>
           <li>The app you were typing in (Termux, Chrome, Slack, etc.)</li>
           <li>What happened vs. what you expected</li>
           <li>Steps to reproduce, if possible</li>
@@ -128,20 +98,28 @@ import FAQ from '../components/FAQ.astro';
       <h2 class="section-heading">Known limitations</h2>
       <div class="limitations">
         <div class="limitation-item card">
-          <h3>No swipe-to-type</h3>
-          <p>Gesture typing (sliding your finger across keys to spell words) requires Google's proprietary gesture decoder library. KeyJawn doesn't include it because it's closed-source and would add significant APK size. Swipe gestures in KeyJawn are for actions (delete word, space, layer switch), not word input.</p>
+          <h3>No Android swipe-to-type</h3>
+          <p>The Android keyboard does not include a gesture decoder. Its swipe gestures run actions such as delete word, space, and layer changes. They do not enter words.</p>
         </div>
         <div class="limitation-item card">
-          <h3>Basic autocorrect only</h3>
-          <p>KeyJawn's autocorrect handles simple corrections but doesn't include word prediction, next-word suggestions, or a suggestions bar. This is intentional -- the keyboard is built for terminal use where autocorrect is usually harmful.</p>
+          <h3>Basic Android autocorrect only</h3>
+          <p>The Android keyboard handles simple corrections. It does not include word prediction, next-word suggestions, or a suggestions bar.</p>
         </div>
         <div class="limitation-item card">
-          <h3>SCP upload is full version only</h3>
-          <p>SCP upload requires the JSch library and network permissions. To keep the lite version permission-free, SCP is exclusive to the full version.</p>
+          <h3>Android SCP upload is full only</h3>
+          <p>Android gallery upload requires the JSch library and network permissions, so it is limited to the Android full APK.</p>
         </div>
         <div class="limitation-item card">
           <h3>WebView terminal compatibility</h3>
-          <p>Some browser-based terminals don't respond to Android key events the way native terminal apps do. If keys like Esc or Tab don't work in a web terminal, the issue is usually on the web app's side, not KeyJawn's. Native terminal apps (Termux, JuiceSSH) work reliably.</p>
+          <p>Some browser-based terminals do not handle Android key events like native terminal apps. Esc, Tab, and other terminal keys can behave differently in each receiving app.</p>
+        </div>
+        <div class="limitation-item card">
+          <h3>iOS extension key limits</h3>
+          <p>The iOS extension cannot send hardware key events. It inserts text and control sequences through the focused field. The receiving app decides whether to forward those sequences to a terminal.</p>
+        </div>
+        <div class="limitation-item card">
+          <h3>iOS copied-image upload only</h3>
+          <p>The iOS app and keyboard read one image that you copy first and upload it only to a host configured for SSH key authentication. They do not open Photos or Files, browse remote files, or download files from the server.</p>
         </div>
       </div>
     </div>

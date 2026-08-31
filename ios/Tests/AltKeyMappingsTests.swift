@@ -59,6 +59,29 @@ final class AltKeyMappingsTests: XCTestCase {
         XCTAssertEqual(AltKeyMappings.numberShifts["0"], ")")
     }
 
+    // MARK: - iPad-style downward flicks
+
+    func testLetterFlicksMatchTheStandardIPadLayout() {
+        XCTAssertEqual(AltKeyMappings.flick(for: "q"), "1")
+        XCTAssertEqual(AltKeyMappings.flick(for: "p"), "0")
+        XCTAssertEqual(AltKeyMappings.flick(for: "a"), "@")
+        XCTAssertEqual(AltKeyMappings.flick(for: "l"), ")")
+        XCTAssertEqual(AltKeyMappings.flick(for: "z"), "*")
+        XCTAssertEqual(AltKeyMappings.flick(for: "m"), "?")
+    }
+
+    func testUppercaseUsesTheSameFlickCharacters() {
+        XCTAssertEqual(AltKeyMappings.flick(for: "Q"), "1")
+        XCTAssertEqual(AltKeyMappings.flick(for: "A"), "@")
+        XCTAssertEqual(AltKeyMappings.flick(for: "M"), "?")
+    }
+
+    func testEveryLetterKeyHasOneFlickCharacter() {
+        for letter in "abcdefghijklmnopqrstuvwxyz" {
+            XCTAssertNotNil(AltKeyMappings.flick(for: String(letter)), "\(letter) has no flick character")
+        }
+    }
+
     // MARK: - Invariants
 
     func testNoAlternateIsEmptyOrDuplicated() {

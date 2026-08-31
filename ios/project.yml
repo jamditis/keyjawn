@@ -22,6 +22,9 @@ packages:
   SwiftNIOSSH:
     url: https://github.com/Joannis/swift-nio-ssh
     from: "0.3.0"
+  SwiftNIOTransportServices:
+    url: https://github.com/apple/swift-nio-transport-services.git
+    from: "1.26.0"
 
 targets:
 
@@ -40,10 +43,10 @@ targets:
       - package: Citadel
       - package: SwiftNIO
         product: NIOCore
-      - package: SwiftNIO
-        product: NIOPosix
       - package: SwiftNIOSSH
         product: NIOSSH
+      - package: SwiftNIOTransportServices
+        product: NIOTransportServices
       - target: KeyJawnKeyboard
         embed: true
     settings:
@@ -63,11 +66,10 @@ targets:
         # settings, so bumping CURRENT_PROJECT_VERSION as the release checklist
         # instructed produced a build that still identified as build 1, which the
         # store rejects as a duplicate.
-        CURRENT_PROJECT_VERSION: 8
+        CURRENT_PROJECT_VERSION: 9
         MARKETING_VERSION: "1.0.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
       configs:
         Release:
           CODE_SIGN_STYLE: Manual
@@ -101,11 +103,6 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         NSMicrophoneUsageDescription: "Voice input for terminal prompts"
         NSSpeechRecognitionUsageDescription: "Voice-to-text for typing prompts to CLI agents"
-        NSPhotoLibraryUsageDescription: "Upload images via SFTP to insert paths into prompts"
-        CFBundleURLTypes:
-          - CFBundleURLName: com.keyjawn
-            CFBundleURLSchemes:
-              - keyjawn
 
   KeyJawnKeyboard:
     type: app-extension
@@ -123,6 +120,8 @@ targets:
         product: NIOCore
       - package: SwiftNIOSSH
         product: NIOSSH
+      - package: SwiftNIOTransportServices
+        product: NIOTransportServices
     settings:
       base:
         SWIFT_VERSION: "6.0"
@@ -135,8 +134,9 @@ targets:
         # Must match the app target above. The extension had no version settings at
         # all and hardcoded them in its plist, so it could silently ship a version
         # that disagreed with the app's — an upload rejection at the last step.
-        CURRENT_PROJECT_VERSION: 8
+        CURRENT_PROJECT_VERSION: 9
         MARKETING_VERSION: "1.0.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
       configs:
         Release:
           CODE_SIGN_STYLE: Manual
@@ -152,7 +152,7 @@ targets:
         LegacyKeychainAccessGroup: "$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)"
         NSExtension:
           NSExtensionAttributes:
-            IsASCIICapable: false
+            IsASCIICapable: true
             PrefersRightToLeft: false
             PrimaryLanguage: en-US
             RequestsOpenAccess: true

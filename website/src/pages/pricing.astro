@@ -4,21 +4,22 @@ import PricingCard from '../components/PricingCard.astro';
 ---
 
 <Base
-  title="Pricing -- KeyJawn"
-  description="KeyJawn Lite is free. KeyJawn Full is $4, lifetime, no subscriptions, no ads, no tracking."
+  title="Pricing and availability -- KeyJawn"
+  description="Android has free and $4 full APKs. See the current iOS distribution status."
 >
   <section class="section">
     <div class="container">
-      <h1 class="page-title">Pricing</h1>
-      <p class="page-intro">Free download. One-time $4 upgrade. No subscriptions, no ads, no tracking -- in any version, ever.</p>
+      <h1 class="page-title">Pricing and availability</h1>
+      <p class="page-intro">Android and iOS use separate distribution models. The $4 purchase applies only to the Android full APK. KeyJawn Lite has limited Google Play test tracks, but Google Play production is not active.</p>
     </div>
   </section>
 
   <section class="section">
     <div class="container">
+      <h2 class="platform-heading">Android APKs</h2>
       <div class="pricing-grid">
         <PricingCard
-          title="Free"
+          title="Android free"
           price="$0"
           features={[
             'QWERTY keyboard (3 layers)',
@@ -41,7 +42,7 @@ import PricingCard from '../components/PricingCard.astro';
           ctaLink="https://github.com/jamditis/keyjawn/releases"
         />
         <PricingCard
-          title="Full unlock"
+          title="Android full"
           price="$4"
           highlighted={true}
           badge="lifetime purchase"
@@ -63,8 +64,19 @@ import PricingCard from '../components/PricingCard.astro';
         />
       </div>
 
-      <p class="sideload-note">Android: APK downloads. Install by opening the file on your device or via <code>adb install</code>. iOS: in beta on TestFlight.</p>
-      <p class="fine-print">* Both versions are <a href="https://github.com/jamditis/keyjawn">open source</a>. If you can build the full APK from source, it's yours — no purchase needed. The $4 is for people who'd rather not.</p>
+      <p class="sideload-note">Install an Android APK by opening the file on your device or by using <code>adb install</code>.</p>
+      <p class="fine-print">* The KeyJawn source is <a href="https://github.com/jamditis/keyjawn">open</a>. The $4 purchase provides a prepared Android full APK.</p>
+    </div>
+  </section>
+
+  <section class="section" id="ios">
+    <div class="container">
+      <div class="why-section">
+        <h2>iOS beta</h2>
+        <p>The iOS beta includes the keyboard extension and built-in remote SSH terminal. As of August 28, 2026, the public invitation is not accepting new testers. A revised App Store submission has not been sent.</p>
+        <p>The Android $4 purchase does not unlock or purchase the iOS beta.</p>
+        <a href="/changelog" class="btn btn-primary">View iOS status</a>
+      </div>
     </div>
   </section>
 
@@ -72,11 +84,10 @@ import PricingCard from '../components/PricingCard.astro';
   <section class="section" id="why-4">
     <div class="container">
       <div class="why-section">
-        <h2>Why $4</h2>
+        <h2>Why the Android full APK is $4</h2>
         <div class="why-content">
-          <p>This is a one-person project. $4 covers development costs and keeps updates coming. There are no recurring payments, no data collection, no advertising, and no investor pressure to add features that make the product worse.</p>
-          <p>The code is open source either way. The lite version is a full keyboard that works. The full version adds the features that power users want for terminal work.</p>
-          <p>The iOS version is now in beta on TestFlight. App Store pricing will be announced at launch.</p>
+          <p>This is a one-person project. $4 covers development costs and keeps updates coming. There are no recurring payments, developer analytics, or ads.</p>
+          <p>The Android code is open source either way. The free APK is a working keyboard. The full APK adds the Android features that need more permissions or configuration.</p>
         </div>
       </div>
     </div>
@@ -99,6 +110,11 @@ import PricingCard from '../components/PricingCard.astro';
     gap: var(--space-md);
     max-width: 800px;
     margin: 0 auto;
+  }
+
+  .platform-heading {
+    max-width: 800px;
+    margin: 0 auto var(--space-md);
   }
 
   .why-section {

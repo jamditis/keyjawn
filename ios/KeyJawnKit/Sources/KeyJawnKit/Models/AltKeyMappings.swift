@@ -40,7 +40,18 @@ public enum AltKeyMappings {
     // Shifted symbols for the number row (key = digit label).
     public static let numberShifts: [String: String] = [
         "1": "!", "2": "@", "3": "#", "4": "$", "5": "%",
-        "6": "^", "7": "&", "8": "*", "9": "(", "0": ")"
+        "6": "^", "7": "&", "8": "*", "9": "(", "0": ")",
+    ]
+
+    /// Secondary characters shown on letter keys and inserted by a downward
+    /// flick. This follows the familiar full-width iPad keyboard layout.
+    private static let flickTable: [String: String] = [
+        "q": "1", "w": "2", "e": "3", "r": "4", "t": "5",
+        "y": "6", "u": "7", "i": "8", "o": "9", "p": "0",
+        "a": "@", "s": "#", "d": "$", "f": "%", "g": "&",
+        "h": "-", "j": "+", "k": "(", "l": ")",
+        "z": "*", "x": "\"", "c": "'", "v": ":", "b": ";",
+        "n": "!", "m": "?",
     ]
 
     /// The alternates for a key label, or an empty array when it has none.
@@ -54,5 +65,11 @@ public enum AltKeyMappings {
             return found.map { $0.uppercased() }
         }
         return []
+    }
+
+    /// The character inserted by a downward flick, or nil when the key does
+    /// not offer one. Shifted letters use the same secondary character.
+    public static func flick(for label: String) -> String? {
+        flickTable[label] ?? flickTable[label.lowercased()]
     }
 }
