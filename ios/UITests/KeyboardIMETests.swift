@@ -215,7 +215,33 @@ final class KeyboardIMETests: XCTestCase {
         let installedKeyboard = settings.cells["com.keyjawn.keyboard"]
         guard installedKeyboard.waitForExistence(timeout: 3) else { return }
 
-        installedKeyboard.swipeLeft()
+        // A fast swipe can be ignored by the iPad Settings split view. Use
+        // the explicit edit control first and keep the swipe for older pages.
+        let keyboardNavigationBar = settings.navigationBars["Keyboards"]
+        let edit = keyboardNavigationBar.buttons["Edit"]
+        var deleteWasRevealed = false
+        if edit.waitForExistence(timeout: 3) {
+            edit.tap()
+            let removeKeyJawn = settings.buttons.matching(
+                NSPredicate(
+                    format: "label CONTAINS[c] %@ AND label CONTAINS[c] %@",
+                    "Remove",
+                    "KeyJawn"
+                )
+            ).firstMatch
+            if removeKeyJawn.waitForExistence(timeout: 3) {
+                removeKeyJawn.tap()
+                deleteWasRevealed = true
+            } else {
+                let done = keyboardNavigationBar.buttons["Done"]
+                XCTAssertTrue(done.waitForExistence(timeout: 2), "Exit keyboard edit mode")
+                done.tap()
+            }
+        }
+        if !deleteWasRevealed {
+            installedKeyboard.swipeLeft()
+        }
+
         let delete = settings.buttons["Delete"].firstMatch
         XCTAssertTrue(delete.waitForExistence(timeout: 3), "Delete installed keyboard button")
         delete.tap()
@@ -229,6 +255,10 @@ final class KeyboardIMETests: XCTestCase {
             .completed,
             "KeyJawn keyboard must return to its pre-test uninstalled state"
         )
+        let done = keyboardNavigationBar.buttons["Done"]
+        if done.waitForExistence(timeout: 2) {
+            done.tap()
+        }
     }
 
     private func typeHello(
