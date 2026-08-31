@@ -1,6 +1,7 @@
 import XCTest
-@testable import KeyJawnKit
+
 @testable import KeyJawn
+@testable import KeyJawnKit
 
 /// `HostConfig` is the wire format between the app and the keyboard extension: the app
 /// encodes it into the shared container and the extension decodes it there. A field
@@ -13,7 +14,7 @@ final class HostConfigTests: XCTestCase {
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKqG9GzSGc2k1eXNzrkfoE2ag8NtdHfV7fMuWq5GxY8a"
 
     private let sample = HostConfig(
-        label: "houseofjawn",
+        label: "remote",
         hostname: "example.internal",
         port: 2222,
         username: "jawn",
@@ -48,6 +49,34 @@ final class HostConfigTests: XCTestCase {
         XCTAssertEqual(host.authMethod, .key)
         XCTAssertNil(host.hostPublicKey)
         XCTAssertEqual(host.uploadPath, "/tmp")
+        XCTAssertFalse(host.usesTLSTunnel)
+    }
+
+    func testLegacyHostWithoutTLSTunnelDecodesAsPlainSSH() throws {
+        let data = try JSONEncoder().encode(sample)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        object.removeValue(forKey: "usesTLSTunnel")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(HostConfig.self, from: legacyData)
+
+        XCTAssertFalse(decoded.usesTLSTunnel)
+    }
+
+    func testTLSTunnelRoundTripsThroughJSON() throws {
+        let host = HostConfig(
+            label: "tls",
+            hostname: "review.example",
+            port: 10_000,
+            username: "reviewer",
+            usesTLSTunnel: true
+        )
+
+        let data = try JSONEncoder().encode(host)
+
+        XCTAssertEqual(try JSONDecoder().decode(HostConfig.self, from: data), host)
     }
 
     func testValidation() {
@@ -76,9 +105,31 @@ final class HostConfigTests: XCTestCase {
     func testScanCommandMatchesTheHostItIsBuiltFrom() {
         for port: UInt16 in [22, 22222, 2022, 1] {
             let host = HostConfig(label: "a", hostname: "h.internal", port: port, username: "u")
-            XCTAssertEqual(host.hostKeyScanCommand,
-                           HostConfig.hostKeyScanCommand(hostname: "h.internal", port: port))
+            XCTAssertEqual(
+                host.hostKeyScanCommand,
+                HostConfig.hostKeyScanCommand(hostname: "h.internal", port: port))
         }
+    }
+
+    func testTLSTunnelDoesNotOfferAPlainHostKeyScanCommand() {
+        XCTAssertNil(
+            HostConfig.hostKeyScanCommand(
+                hostname: "review.example",
+                port: 10_000,
+                usesTLSTunnel: true
+            )
+        )
+    }
+
+    func testPlainSSHOffersAHostKeyScanCommand() {
+        XCTAssertEqual(
+            HostConfig.hostKeyScanCommand(
+                hostname: "example.internal",
+                port: 2222,
+                usesTLSTunnel: false
+            ),
+            "ssh-keyscan -p 2222 -t ed25519 example.internal"
+        )
     }
 
     func testAuthMethodRawValuesAreStable() {
@@ -86,6 +137,51 @@ final class HostConfigTests: XCTestCase {
         // every host an existing install has saved.
         XCTAssertEqual(HostConfig.AuthMethod.key.rawValue, "key")
         XCTAssertEqual(HostConfig.AuthMethod.password.rawValue, "password")
+    }
+
+    func testCopiedImageUploadUsesOnlyReadyKeyAuthenticatedHosts() {
+        let passwordHost = HostConfig(
+            label: "password",
+            hostname: "password.internal",
+            username: "reviewer",
+            authMethod: .password
+        )
+        let unpinnedKeyHost = HostConfig(
+            label: "unpinned",
+            hostname: "unpinned.internal",
+            username: "reviewer",
+            authMethod: .key
+        )
+
+        XCTAssertEqual(
+            HostConfig.copiedImageUploadHosts(
+                from: [passwordHost, unpinnedKeyHost, sample]
+            ),
+            [sample]
+        )
+    }
+
+    func testCopiedImageUploadRejectsPasswordBeforeConnection() async {
+        let passwordHost = HostConfig(
+            label: "password",
+            hostname: "password.internal",
+            username: "reviewer",
+            authMethod: .password,
+            hostPublicKey: knownHostKey
+        )
+
+        do {
+            _ = try await CitadelSCPUploader.upload(
+                imageData: Data(),
+                to: passwordHost,
+                privateKeyData: Data([0])
+            )
+            XCTFail("Password authentication must be rejected before an upload starts")
+        } catch CitadelSCPUploader.UploadError.keyAuthenticationRequired {
+            // Expected: copied-image upload has no password credential to use.
+        } catch {
+            XCTFail("Expected keyAuthenticationRequired, got \(error)")
+        }
     }
 
     // MARK: - Host key trust

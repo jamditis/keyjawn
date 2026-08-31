@@ -1,6 +1,6 @@
-import SwiftUI
 import KeyJawnKit
 @preconcurrency import NIOSSH
+import SwiftUI
 
 /// Add or edit a host.
 ///
@@ -20,6 +20,7 @@ struct HostEditView: View {
     @State private var port: String
     @State private var username: String
     @State private var authMethod: HostConfig.AuthMethod
+    @State private var usesTLSTunnel: Bool
     @State private var hostPublicKey: String
     @State private var uploadPath: String
 
@@ -31,6 +32,7 @@ struct HostEditView: View {
         _port = State(initialValue: host.map { String($0.port) } ?? "22")
         _username = State(initialValue: host?.username ?? "")
         _authMethod = State(initialValue: host?.authMethod ?? .key)
+        _usesTLSTunnel = State(initialValue: host?.usesTLSTunnel ?? false)
         _hostPublicKey = State(initialValue: host?.hostPublicKey ?? "")
         _uploadPath = State(initialValue: host?.uploadPath ?? "/tmp")
     }
@@ -49,20 +51,18 @@ struct HostEditView: View {
 
     /// Built from what has been typed so far, so a non-default port shows up as `-p`
     /// in the instructions rather than sending the user to scan port 22.
-    private var scanCommand: String {
+    private var scanCommand: String? {
         let trimmedHost = hostname.trimmingCharacters(in: .whitespaces)
         return HostConfig.hostKeyScanCommand(
             hostname: trimmedHost.isEmpty ? "<hostname>" : trimmedHost,
-            port: parsedPort ?? 22
+            port: parsedPort ?? 22,
+            usesTLSTunnel: usesTLSTunnel
         )
     }
 
     private var isValid: Bool {
-        !label.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !hostname.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !username.trimmingCharacters(in: .whitespaces).isEmpty &&
-        parsedPort != nil &&
-        isHostKeyValid
+        !label.trimmingCharacters(in: .whitespaces).isEmpty && !hostname.trimmingCharacters(in: .whitespaces).isEmpty
+            && !username.trimmingCharacters(in: .whitespaces).isEmpty && parsedPort != nil && isHostKeyValid
     }
 
     var body: some View {
@@ -70,7 +70,7 @@ struct HostEditView: View {
             Form {
                 Section("Connection") {
                     LabeledContent("Label") {
-                        TextField("e.g. houseofjawn", text: $label)
+                        TextField("e.g. remote server", text: $label)
                             .multilineTextAlignment(.trailing)
                             .autocorrectionDisabled()
                     }
@@ -92,6 +92,14 @@ struct HostEditView: View {
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
                     }
+                    Toggle("TLS tunnel", isOn: $usesTLSTunnel)
+                    if usesTLSTunnel {
+                        Text(
+                            "TLS requires a hostname or IP address that matches the tunnel certificate."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section {
@@ -105,15 +113,29 @@ struct HostEditView: View {
                 } footer: {
                     let trimmed = hostPublicKey.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !trimmed.isEmpty && !isHostKeyValid {
-                        Text("Invalid key format. Paste the key type and key data from the output of: \(scanCommand)")
+                        if let scanCommand {
+                            Text(
+                                "Invalid key format. Paste the key type and key data from the output of: \(scanCommand)"
+                            )
                             .font(.caption)
                             .foregroundStyle(.red)
+                        } else {
+                            Text("Invalid key format. Paste an OpenSSH host key.")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    } else if let scanCommand {
+                        Text(
+                            "Leave blank to review and save the server fingerprint on first connection. "
+                                + "Or paste the key type and key data from the output of: \(scanCommand)"
+                        )
+                        .font(.caption)
                     } else {
                         Text(
                             "Leave blank to review and save the server fingerprint on first connection. "
-                            + "Or paste the key type and key data from the output of: \(scanCommand)"
+                                + "A plain ssh-keyscan command cannot connect through a TLS tunnel."
                         )
-                            .font(.caption)
+                        .font(.caption)
                     }
                 }
 
@@ -138,14 +160,20 @@ struct HostEditView: View {
                             .multilineTextAlignment(.trailing)
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
+                            .disabled(authMethod != .key)
                     }
                 } header: {
-                    Text("SCP upload")
+                    Text("Copied-image upload")
                 } footer: {
-                    Text("Remote directory where the keyboard extension uploads images via SFTP.")
-                        .font(.caption)
+                    Text(
+                        authMethod == .key
+                            ? "Remote directory where KeyJawn uploads copied images through SFTP."
+                            : "Copied-image upload requires SSH key authentication. Terminal connections can still use a password."
+                    )
+                    .font(.caption)
                 }
             }
+            .appFormBackground()
             .navigationTitle(existing == nil ? "Add host" : "Edit host")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -172,6 +200,7 @@ struct HostEditView: View {
             port: parsedPort ?? 22,
             username: username.trimmingCharacters(in: .whitespaces),
             authMethod: authMethod,
+            usesTLSTunnel: usesTLSTunnel,
             hostPublicKey: trimmedKey.isEmpty ? nil : trimmedKey,
             uploadPath: trimmedPath.isEmpty ? "/tmp" : trimmedPath
         )

@@ -1,5 +1,6 @@
 import UIKit
 import XCTest
+
 @testable import KeyJawnKit
 
 /// Renders the real extra row, number row, QWERTY, and slash panel onto a
@@ -21,7 +22,8 @@ final class SlashScreenshotRenderTests: XCTestCase {
         // Opt-in only. Ordinary local `xcodebuild test` must not rewrite the
         // tracked listing PNG.
         if let dest = ProcessInfo.processInfo.environment["SLASH_SCREENSHOT_PATH"],
-           !dest.isEmpty {
+            !dest.isEmpty
+        {
             try data.write(to: URL(fileURLWithPath: dest))
         }
     }
@@ -42,10 +44,10 @@ final class SlashScreenshotRenderTests: XCTestCase {
         prompt.font = .monospacedSystemFont(ofSize: 15, weight: .regular)
         prompt.textColor = UIColor(white: 0.78, alpha: 1)
         prompt.text = """
-        user@host:~$ ls
-        docs  src  README.md
-        user@host:~$
-        """
+            reviewer@remote-host:~$ printf 'remote-ok\n'
+            remote-ok
+            reviewer@remote-host:~$
+            """
         prompt.frame = CGRect(x: 16, y: 64, width: pointSize.width - 32, height: 200)
         root.addSubview(prompt)
 
@@ -65,7 +67,7 @@ final class SlashScreenshotRenderTests: XCTestCase {
         root.addSubview(qwerty)
 
         let panel = SlashCommandPanel(theme: theme)
-        // Cover the QWERTY so the panel — the 3.2.2 artifact — is the subject.
+        // Cover the QWERTY so the slash panel is the subject.
         panel.frame = CGRect(x: 8, y: extra.frame.minY - 280, width: pointSize.width - 16, height: 360)
         panel.layer.cornerRadius = 10
         panel.clipsToBounds = true

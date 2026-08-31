@@ -4,7 +4,7 @@ import ImageIO
 import UIKit
 import UniformTypeIdentifiers
 
-/// Prepares a pasteboard image for SCP upload without ever materializing the
+/// Prepares a pasteboard image for remote upload without ever materializing the
 /// full-resolution bitmap.
 ///
 /// A keyboard extension runs under a tight jetsam ceiling (roughly 48-70 MB), so

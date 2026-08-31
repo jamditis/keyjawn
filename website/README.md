@@ -1,43 +1,48 @@
-# Astro Starter Kit: Minimal
+# KeyJawn website
+
+This Astro site publishes `https://keyjawn.amditis.tech`.
+
+Use Node.js 22.19 or newer. The GitHub Pages workflow builds with Node.js 24.
+
+## Commands
+
+Run commands from `website/`:
 
 ```sh
-npm create astro@latest -- --template minimal
+npm ci
+npm run dev
+npm run check
+npm run build
+npm run preview
+npm audit --omit=dev
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+`npm run check` performs the production build. The build writes the static site to `dist/`.
+`npm audit --omit=dev` checks production dependencies for published advisories.
 
-## 🚀 Project Structure
+## Public routes
 
-Inside of your Astro project, you'll see the following folders and files:
+- `/` — platform overview and downloads
+- `/features` — Android and iOS feature differences
+- `/manual` — setup and usage
+- `/support` — FAQ and known limits
+- `/privacy` — Android and iOS privacy details
+- `/pricing` — Android pricing and iOS beta availability
+- `/changelog` — platform release status
+- `/about` — project information
+- `/thanks` — Android purchase confirmation
+- `/blog/why-i-built-keyjawn` — dated Android product history
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+## Release rules
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+- Describe Android and iOS separately when behavior differs.
+- State that the iOS terminal sends input to a remote SSH server. It does not run commands or browse files on the device.
+- State that iOS image upload reads one copied image from the pasteboard. It does not request Photos or Files access.
+- State that basic iOS keyboard typing works without Full Access.
+- Verify every TestFlight or store URL before publication.
+- Keep one source of FAQ data for visible answers and FAQ JSON-LD.
+- Use the shared SVG favicon and provide Open Graph image alt text.
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+App Store screenshots are release metadata. Do not place them in `public/`
+unless a website page uses them. The current inventory is in
+[`../ios/AppStore/Screenshots/README.md`](../ios/AppStore/Screenshots/README.md).

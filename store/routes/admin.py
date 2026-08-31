@@ -2,17 +2,15 @@ import os
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from auth import admin_token_matches
 from db import get_db
 
 router = APIRouter(prefix="/admin")
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates"))
 
-def get_admin_token():
-    return os.environ.get("ADMIN_TOKEN", "")
-
 def check_auth(request: Request):
     token = request.cookies.get("admin_token")
-    if token != get_admin_token():
+    if not admin_token_matches(token or ""):
         raise HTTPException(302, headers={"Location": "/admin/login"})
 
 @router.get("/login")
@@ -23,7 +21,7 @@ async def login_page(request: Request):
 async def login(request: Request):
     form = await request.form()
     token = form.get("token", "")
-    if token != get_admin_token():
+    if not admin_token_matches(str(token)):
         return templates.TemplateResponse(request, "admin/login.html", {"error": "Invalid token"}, status_code=401)
     response = RedirectResponse("/admin", status_code=303)
     response.set_cookie("admin_token", token, httponly=True, samesite="strict", secure=True)

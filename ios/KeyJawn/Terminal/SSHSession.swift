@@ -1,15 +1,14 @@
-import Foundation
 import Citadel
-import NIOCore
-import NIOPosix
-@preconcurrency import NIOSSH
+import Foundation
 import KeyJawnKit
+import NIOCore
+@preconcurrency import NIOSSH
 
-// Citadel doesn't yet declare Sendable conformances for these types,
-// but the underlying NIO Channel, AsyncThrowingStream, and auth delegate are thread-safe.
-extension TTYOutput: @unchecked @retroactive Sendable {}
-extension TTYStdinWriter: @unchecked @retroactive Sendable {}
-extension SSHAuthenticationMethod: @unchecked @retroactive Sendable {}
+/// Carries Citadel terminal values into child tasks without changing the
+/// third-party types' global concurrency contract. NIO owns their thread safety.
+private struct SendableSSHValue<Value>: @unchecked Sendable {
+    let value: Value
+}
 
 /// Manages a single interactive SSH session via Citadel/NIO.
 ///
@@ -97,6 +96,7 @@ final class SSHSession: ObservableObject {
                 self.pendingHostKey = presentedKey
             }
         }
+        let appleAuthentication = AppleNetworkSSHAuthentication(authenticationMethod)
 
         let pinnedHostKey: NIOSSHPublicKey?
         do {
@@ -109,11 +109,10 @@ final class SSHSession: ObservableObject {
 
         guard let pinnedHostKey else {
             sessionTask = Task.detached {
-                [host, authenticationMethod, captureHostKey, onStateChange] in
+                [host, captureHostKey, onStateChange] in
                 do {
                     try await probeFirstUseHostKey(
                         host: host,
-                        authenticationMethod: authenticationMethod,
                         captureHostKey: captureHostKey
                     )
                     onStateChange(.awaitingHostKey)
@@ -123,7 +122,9 @@ final class SSHSession: ObservableObject {
                     if Task.isCancelled {
                         onStateChange(.disconnected)
                     } else {
-                        onStateChange(.failed(error.localizedDescription))
+                        onStateChange(
+                            .failed(sessionUserFacingError(error).localizedDescription)
+                        )
                     }
                 }
             }
@@ -136,16 +137,22 @@ final class SSHSession: ObservableObject {
         inputContinuation = inputCont
         resizeContinuation = resizeCont
 
-        sessionTask = Task.detached { [host, authenticationMethod, inputStream, resizeStream, coalescer, onStateChange, validator] in
+        sessionTask = Task.detached {
+            [host, appleAuthentication, inputStream, resizeStream, coalescer, onStateChange, validator] in
+            var operationDeadline: AppleNetworkOperationDeadline?
             do {
-                let client = try await SSHClient.connect(
+                let connection = try await AppleNetworkSSHTransport.connect(
                     host: host.hostname,
                     port: Int(host.port),
-                    authenticationMethod: authenticationMethod,
-                    hostKeyValidator: validator,
-                    reconnect: .never
+                    useTLS: host.usesTLSTunnel,
+                    authentication: appleAuthentication,
+                    hostKeyValidator: validator
                 )
-                onStateChange(.connected)
+                let client = connection.client
+                defer { connection.channel.close(promise: nil) }
+                let channelCloser = AppleNetworkChannelCloser(
+                    channel: connection.channel
+                )
 
                 let ptyRequest = SSHChannelRequestEvent.PseudoTerminalRequest(
                     wantReply: true,
@@ -156,42 +163,60 @@ final class SSHSession: ObservableObject {
                     terminalPixelHeight: 0,
                     terminalModes: .init([:])
                 )
+                let ptyDeadline = AppleNetworkOperationDeadline(
+                    channel: connection.channel,
+                    timeout: .seconds(30)
+                )
+                operationDeadline = ptyDeadline
+                defer { ptyDeadline.cancel() }
 
-                try await client.withPTY(ptyRequest) { ttyOutput, stdinWriter in
-                    await withThrowingTaskGroup(of: Void.self) { group in
-                        // Pump SSH output → coalescer → main-actor terminal feed
-                        group.addTask {
-                            for try await chunk in ttyOutput {
-                                // Copy the readable bytes straight into the
-                                // coalescer's pending batch; it owns the single
-                                // main-actor hop and the array hand-off.
-                                switch chunk {
-                                case .stdout(let buf): coalescer.append(buf.readableBytesView)
-                                case .stderr(let buf): coalescer.append(buf.readableBytesView)
+                try await withTaskCancellationHandler {
+                    try await client.withPTY(ptyRequest) { ttyOutput, stdinWriter in
+                        // Citadel enters this closure only after the server creates the
+                        // PTY. Do not report connected before that setup succeeds.
+                        guard ptyDeadline.complete() else {
+                            throw AppleNetworkSSHTransportError.operationTimedOut
+                        }
+                        onStateChange(.connected)
+                        let output = SendableSSHValue(value: ttyOutput)
+                        let writer = SendableSSHValue(value: stdinWriter)
+                        await withThrowingTaskGroup(of: Void.self) { group in
+                            // Pump SSH output → coalescer → main-actor terminal feed
+                            group.addTask {
+                                for try await chunk in output.value {
+                                    // Copy the readable bytes straight into the
+                                    // coalescer's pending batch; it owns the single
+                                    // main-actor hop and the array hand-off.
+                                    switch chunk {
+                                    case .stdout(let buf): coalescer.append(buf.readableBytesView)
+                                    case .stderr(let buf): coalescer.append(buf.readableBytesView)
+                                    }
                                 }
                             }
-                        }
-                        // Pump keyboard input → SSH channel
-                        group.addTask {
-                            for await bytes in inputStream {
-                                var buf = ByteBufferAllocator().buffer(capacity: bytes.count)
-                                buf.writeBytes(bytes)
-                                try await stdinWriter.write(buf)
+                            // Pump keyboard input → SSH channel
+                            group.addTask {
+                                for await bytes in inputStream {
+                                    var buf = ByteBufferAllocator().buffer(capacity: bytes.count)
+                                    buf.writeBytes(bytes)
+                                    try await writer.value.write(buf)
+                                }
                             }
-                        }
-                        // Handle terminal resize requests
-                        group.addTask {
-                            for await (cols, rows) in resizeStream {
-                                try await stdinWriter.changeSize(
-                                    cols: cols, rows: rows,
-                                    pixelWidth: 0, pixelHeight: 0
-                                )
+                            // Handle terminal resize requests
+                            group.addTask {
+                                for await (cols, rows) in resizeStream {
+                                    try await writer.value.changeSize(
+                                        cols: cols, rows: rows,
+                                        pixelWidth: 0, pixelHeight: 0
+                                    )
+                                }
                             }
+                            // Stop when any stream closes
+                            _ = try? await group.next()
+                            group.cancelAll()
                         }
-                        // Stop when any stream closes
-                        _ = try? await group.next()
-                        group.cancelAll()
                     }
+                } onCancel: {
+                    channelCloser.close()
                 }
 
                 onStateChange(.disconnected)
@@ -200,13 +225,23 @@ final class SSHSession: ObservableObject {
             } catch {
                 if Task.isCancelled {
                     onStateChange(.disconnected)
+                } else if operationDeadline?.didTimeOut == true {
+                    onStateChange(
+                        .failed(
+                            AppleNetworkSSHTransportError.operationTimedOut
+                                .localizedDescription
+                        )
+                    )
                 } else if error is InvalidHostKey {
-                    onStateChange(.failed(
-                        "REMOTE HOST IDENTIFICATION HAS CHANGED for \(host.hostname). "
-                        + "Verify the server before replacing the saved host key."
-                    ))
+                    onStateChange(
+                        .failed(
+                            "REMOTE HOST IDENTIFICATION HAS CHANGED for \(host.hostname). "
+                                + "Verify the server before replacing the saved host key."
+                        ))
                 } else {
-                    onStateChange(.failed(error.localizedDescription))
+                    onStateChange(
+                        .failed(sessionUserFacingError(error).localizedDescription)
+                    )
                 }
             }
         }
@@ -226,9 +261,10 @@ final class SSHSession: ObservableObject {
     /// Starts a fresh, pinned connection after the caller has durably stored the key.
     func connectAfterTrust(to host: HostConfig) {
         guard let presentedKey = pendingHostKey,
-              let storedKey = host.hostPublicKey,
-              (try? presentedKey.matches(openSSHKey: storedKey)) == true,
-              let authenticationMethod = pendingAuthenticationMethod else {
+            let storedKey = host.hostPublicKey,
+            (try? presentedKey.matches(openSSHKey: storedKey)) == true,
+            let authenticationMethod = pendingAuthenticationMethod
+        else {
             rejectPendingHostKey(.invalidPresentedKey)
             return
         }
@@ -278,6 +314,13 @@ private func hostPublicKey(from host: HostConfig) throws -> NIOSSHPublicKey? {
 }
 
 private struct HostKeyParseError: Error {}
+
+private func sessionUserFacingError(_ error: Error) -> Error {
+    if error is HostKeyTrustError || error is InvalidHostKey {
+        return error
+    }
+    return AppleNetworkSSHTransport.userFacingError(error)
+}
 
 enum HostKeyTrustError: Error, LocalizedError, Sendable, Equatable {
     case trustRequired
@@ -350,10 +393,9 @@ final class TOFUHostKeyValidator: NIOSSHClientServerAuthenticationDelegate, @unc
 /// unauthenticated connection remains open while the user reviews the fingerprint.
 private func probeFirstUseHostKey(
     host: HostConfig,
-    authenticationMethod: SSHAuthenticationMethod,
     captureHostKey: @escaping TOFUHostKeyValidator.CaptureHostKey
 ) async throws {
-    let channelBox = HostKeyProbeChannelBox()
+    let channelBox = AppleNetworkChannelBox()
     let (presentedKeys, presentedKeyContinuation) =
         AsyncThrowingStream<PresentedHostKey, Error>.makeStream()
     let validator = TOFUHostKeyValidator(
@@ -376,31 +418,38 @@ private func probeFirstUseHostKey(
             channelBox.close()
         }
 
-        let bootstrap = ClientBootstrap(group: MultiThreadedEventLoopGroup.singleton)
+        let bootstrap = AppleNetworkSSHTransport.bootstrap(useTLS: host.usesTLSTunnel)
             .channelInitializer { channel in
                 channelBox.store(channel)
                 let configuration = SSHClientConfiguration(
                     // Host-key validation runs before user authentication. The probe
-                    // rejects and closes at that boundary, so this delegate is retained
-                    // for the later pinned connection but never offers a credential here.
-                    userAuthDelegate: authenticationMethod,
+                    // rejects and closes at that boundary. This delegate cannot expose
+                    // a password or private key even if the protocol asks for one.
+                    userAuthDelegate: NoCredentialSSHAuthenticationDelegate(),
                     serverAuthDelegate: validator
                 )
-                return channel.pipeline.addHandlers(
-                    NIOSSHHandler(
-                        role: .client(configuration),
-                        allocator: channel.allocator,
-                        inboundChildChannelInitializer: nil
-                    ),
-                    errorHandler
-                )
+                return channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandlers(
+                        NIOSSHHandler(
+                            role: .client(configuration),
+                            allocator: channel.allocator,
+                            inboundChildChannelInitializer: nil
+                        ),
+                        errorHandler
+                    )
+                }
             }
             .connectTimeout(.seconds(30))
 
-        _ = try await bootstrap.connect(
-            host: host.hostname,
-            port: Int(host.port)
-        ).get()
+        do {
+            _ = try await bootstrap.connect(
+                host: host.hostname,
+                port: Int(host.port)
+            ).get()
+        } catch {
+            try Task.checkCancellation()
+            throw AppleNetworkSSHTransport.connectionError(error)
+        }
 
         _ = try await nextPresentedHostKey(
             from: presentedKeys,
@@ -415,6 +464,18 @@ private func probeFirstUseHostKey(
     } onCancel: {
         presentedKeyContinuation.finish(throwing: CancellationError())
         channelBox.close()
+    }
+}
+
+/// Refuses every authentication method during the host-key-only probe.
+private final class NoCredentialSSHAuthenticationDelegate:
+    NIOSSHClientUserAuthenticationDelegate, @unchecked Sendable
+{
+    func nextAuthenticationType(
+        availableMethods: NIOSSHAvailableUserAuthenticationMethods,
+        nextChallengePromise: EventLoopPromise<NIOSSHUserAuthenticationOffer?>
+    ) {
+        nextChallengePromise.succeed(nil)
     }
 }
 
@@ -440,33 +501,6 @@ func nextPresentedHostKey(
             throw HostKeyTrustError.invalidPresentedKey
         }
         return presentedKey
-    }
-}
-
-/// Retains the probe channel across task cancellation and closes it at most once.
-private final class HostKeyProbeChannelBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var channel: Channel?
-    private var closeRequested = false
-
-    func store(_ channel: Channel) {
-        lock.lock()
-        if closeRequested {
-            lock.unlock()
-            channel.close(promise: nil)
-        } else {
-            self.channel = channel
-            lock.unlock()
-        }
-    }
-
-    func close() {
-        lock.lock()
-        closeRequested = true
-        let channel = channel
-        self.channel = nil
-        lock.unlock()
-        channel?.close(promise: nil)
     }
 }
 

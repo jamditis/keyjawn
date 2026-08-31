@@ -1,4 +1,10 @@
-# KeyJawn iOS Development Research
+# KeyJawn iOS development research
+
+> **Status:** Superseded historical research from February 2026. Do not use this
+> file for current iOS behavior, App Store status, metadata, or release actions.
+> See [`ios-app-review.md`](ios-app-review.md),
+> [`app-store-v1.0-metadata.md`](app-store-v1.0-metadata.md), and
+> [`../tasks/todo.md`](../tasks/todo.md).
 
 Comprehensive analysis of every viable (and non-viable) approach to bringing KeyJawn to iOS. Research conducted February 2026.
 

@@ -4,53 +4,74 @@ import Base from '../layouts/Base.astro';
 
 <Base
   title="Privacy policy -- KeyJawn"
-  description="KeyJawn privacy policy: no data collection, no analytics, no ads, no tracking."
+  description="KeyJawn privacy details for Android and iOS, including SSH, speech, clipboard, image upload, and optional keyboard access."
 >
   <section class="section">
     <div class="container privacy-layout">
       <h1 class="page-title">Privacy policy</h1>
-      <p class="effective-date">Effective date: February 15, 2026</p>
+      <p class="effective-date">Effective date: August 27, 2026</p>
 
       <div class="privacy-content">
         <section class="privacy-section">
           <h2>Summary</h2>
-          <p>KeyJawn does not collect, store, or transmit any personal data. There are no analytics, no ads, and no tracking. The app works entirely on your device.</p>
+          <p>The KeyJawn mobile apps do not send analytics, advertising data, keystrokes, or account data to the developer. There are no ads or tracking SDKs. Features that you start can send data to your configured SSH server or to the speech service provided by the operating system.</p>
         </section>
 
         <section class="privacy-section">
-          <h2>Data we do not collect</h2>
+          <h2>Data the mobile apps do not send to the developer</h2>
           <ul>
             <li>Keystrokes or text input</li>
             <li>Usage analytics or telemetry</li>
             <li>Device identifiers</li>
             <li>Location data</li>
-            <li>Contact or account information</li>
+            <li>Contacts or address-book data</li>
           </ul>
         </section>
 
         <section class="privacy-section">
+          <h2>Remote SSH terminal on iOS</h2>
+          <p>The iOS terminal sends the text and terminal input that you enter to a remote SSH server that you configure. That server runs commands and returns terminal output. KeyJawn displays that output.</p>
+          <p>KeyJawn does not run shell commands on your iPhone or iPad. It does not provide a local shell, local file browser, document picker, or file provider.</p>
+        </section>
+
+        <section class="privacy-section">
           <h2>Voice input</h2>
-          <p>Voice input uses Android's built-in <code>SpeechRecognizer</code> API. Audio is processed by Google's speech recognition service on your device or Google's servers, depending on your device settings. KeyJawn does not record, store, or transmit audio data itself.</p>
+          <p>On Android, voice input uses Android's <code>SpeechRecognizer</code>. Google or the speech service selected on the device can process the audio, based on device settings.</p>
+          <p>On iOS, voice input in the built-in SSH terminal uses Apple's speech recognition APIs. Apple can process audio according to the device's speech settings and Apple's terms. The iOS keyboard extension does not use the microphone.</p>
+          <p>KeyJawn does not keep an audio recording or send audio to a KeyJawn server.</p>
         </section>
 
         <section class="privacy-section">
           <h2>Clipboard history</h2>
-          <p>Clipboard history is stored in memory only. It is not written to disk, not persisted between sessions, and never transmitted anywhere.</p>
+          <p>On Android, KeyJawn listens for clipboard changes while its keyboard service runs. It keeps up to 30 unpinned items in memory. The Android full APK can store up to 15 pinned items in private app preferences.</p>
+          <p>On iOS, KeyJawn reads clipboard text when you open the clipboard panel. Recent text and pins are stored in the KeyJawn App Group preferences so the app and keyboard can share them. Up to 30 recent items and 10 pins can be stored. You can remove entries or clear the history from the panel.</p>
+          <p>Clipboard text is not sent to the developer. Text that you choose in the built-in SSH terminal is sent to your configured remote server as terminal input.</p>
         </section>
 
         <section class="privacy-section">
-          <h2>SCP upload</h2>
-          <p>SCP upload sends files directly from your device to your own SSH server using the JSch library. No third-party servers are involved. KeyJawn does not see, store, or process the file contents beyond transmitting them over SSH.</p>
+          <h2>Remote image upload</h2>
+          <p>On Android full, you can select an image and send it through SCP to your configured server.</p>
+          <p>On iOS, you copy one image before opening the upload panel. KeyJawn reads that copied image from the system pasteboard, prepares it in memory, and writes it through SFTP to the configured directory on a remote host that uses SSH key authentication. It then inserts the remote path. Password authentication remains available for terminal connections.</p>
+          <p>The iOS copied-image upload feature does not request Photos or Files access. It cannot browse local files or list, read, or download remote files.</p>
         </section>
 
         <section class="privacy-section">
-          <h2>SSH credentials</h2>
-          <p>SSH host credentials (hostname, username, port, key path) are encrypted using AES-256 via AndroidX <code>EncryptedSharedPreferences</code> and stored locally on your device. They never leave the device.</p>
+          <h2>SSH settings and credentials</h2>
+          <p>Android full stores saved SSH data with AndroidX <code>EncryptedSharedPreferences</code>.</p>
+          <p>On iOS, the SSH identity is stored in the Keychain. Host settings are stored in the app container and in the shared App Group when the keyboard needs them. Password authentication asks for the password when you connect; it is not part of the saved host record.</p>
+          <p>SSH data is used only to connect to the remote host that you select.</p>
         </section>
 
         <section class="privacy-section">
-          <h2>Purchases</h2>
-          <p>Purchases are handled by Stripe via the KeyJawn website. The free and full versions are separate APK files -- no in-app purchase or license check is needed. No payment information is accessed or stored by the app.</p>
+          <h2>Keyboard permission on iOS</h2>
+          <p>Basic typing and built-in shortcuts work without Full Access. Full Access is optional. The keyboard extension uses it for remote image upload and to read shared settings, user-created shortcuts, and clipboard history. KeyJawn cannot grant this system permission.</p>
+        </section>
+
+        <section class="privacy-section">
+          <h2>Purchases and beta distribution</h2>
+          <p>Stripe purchases on this website apply to the Android full APK. The KeyJawn store keeps the email address, Stripe customer reference, purchase record, download record, and support record needed to deliver and support the purchase. Stripe processes payment information. KeyJawn does not receive or store card details.</p>
+          <p>KeyJawn Lite has internal and closed Google Play test tracks. Google Play production is not active.</p>
+          <p>The iOS beta has used TestFlight. As of August 28, 2026, the public invitation is not accepting new testers. A revised App Store submission has not been sent. The Android purchase does not unlock the iOS beta.</p>
         </section>
 
         <section class="privacy-section">
@@ -58,26 +79,51 @@ import Base from '../layouts/Base.astro';
           <table class="permissions-table">
             <thead>
               <tr>
-                <th>Permission</th>
+                <th>Platform and access</th>
                 <th>Purpose</th>
                 <th>When used</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td><code>RECORD_AUDIO</code></td>
-                <td>Voice-to-text input</td>
+                <td>Android: <code>RECORD_AUDIO</code></td>
+                <td>Android voice input</td>
                 <td>Only when you tap the mic button</td>
               </tr>
               <tr>
-                <td><code>INTERNET</code></td>
-                <td>SCP file upload</td>
-                <td>Only during upload</td>
+                <td>Android full: <code>INTERNET</code></td>
+                <td>Remote image upload</td>
+                <td>When you start an upload</td>
               </tr>
               <tr>
-                <td><code>READ_MEDIA_IMAGES</code></td>
-                <td>Select photos for SCP upload</td>
-                <td>Only when you tap the upload button</td>
+                <td>Android full: <code>READ_MEDIA_IMAGES</code></td>
+                <td>Select an image for upload</td>
+                <td>When you select an image</td>
+              </tr>
+              <tr>
+                <td>iOS: microphone and speech recognition</td>
+                <td>Voice input in the built-in remote SSH terminal</td>
+                <td>Only after you tap the mic and approve the system prompts</td>
+              </tr>
+              <tr>
+                <td>iOS: keyboard Full Access</td>
+                <td>Optional remote upload, shared settings, user-created shortcuts, or clipboard history</td>
+                <td>Only if you turn it on in system Settings</td>
+              </tr>
+              <tr>
+                <td>iOS: network access</td>
+                <td>Remote SSH terminal and user-started SFTP upload</td>
+                <td>When you connect to or upload to a configured remote host</td>
+              </tr>
+              <tr>
+                <td>iOS: pasteboard</td>
+                <td>Clipboard panel and copied-image upload</td>
+                <td>When you open the clipboard or upload panel</td>
+              </tr>
+              <tr>
+                <td>iOS: Photos and Files</td>
+                <td>Not requested</td>
+                <td>Image upload reads one image that you copied to the pasteboard</td>
               </tr>
             </tbody>
           </table>

@@ -7,8 +7,8 @@ import KeyCap from '../components/KeyCap.astro';
 ---
 
 <Base
-  title="KeyJawn -- the keyboard for the CLI renaissance"
-  description="Terminal keys, voice input, and SCP upload on a keyboard built for AI-era CLI users. Android + iOS beta."
+  title="KeyJawn -- a terminal keyboard for Android and iOS"
+  description="Terminal keys on Android, plus an iOS keyboard and remote SSH terminal. See the current iOS distribution status."
   jsonLd={{
     "@context": "https://schema.org",
     "@graph": [
@@ -16,14 +16,14 @@ import KeyCap from '../components/KeyCap.astro';
         "@type": "WebSite",
         "name": "KeyJawn",
         "url": "https://keyjawn.amditis.tech",
-        "description": "Custom keyboard for terminal and LLM CLI usage — Android and iOS",
+        "description": "Terminal keyboard tools for Android and iOS",
       },
       {
         "@type": "SoftwareApplication",
         "name": "KeyJawn",
-        "operatingSystem": "Android, iOS",
+        "operatingSystem": "Android",
         "applicationCategory": "UtilitiesApplication",
-        "description": "Terminal keys, voice input, and SCP upload on an Android keyboard built for AI-era CLI users.",
+        "description": "Android keyboard with terminal keys, voice input, clipboard history, slash shortcuts, and optional SCP image upload.",
         "url": "https://keyjawn.amditis.tech",
         "downloadUrl": "https://github.com/jamditis/keyjawn/releases",
         "softwareVersion": "1.3.0",
@@ -42,6 +42,14 @@ import KeyCap from '../components/KeyCap.astro';
           },
         ],
       },
+      {
+        "@type": "SoftwareApplication",
+        "name": "KeyJawn for iOS",
+        "operatingSystem": "iOS, iPadOS",
+        "applicationCategory": "UtilitiesApplication",
+        "description": "iOS keyboard extension and built-in remote SSH terminal. Commands run on the configured remote server, not on the iPhone or iPad.",
+        "url": "https://keyjawn.amditis.tech",
+      },
     ],
   }}
 >
@@ -54,13 +62,15 @@ import KeyCap from '../components/KeyCap.astro';
           <span class="hero-prompt">&gt;</span> the keyboard for the CLI renaissance<span class="cursor">_</span>
         </h1>
         <p class="hero-sub">
-          Terminal keys, voice input, and SCP upload on a keyboard built for AI-era CLI users. Android + iOS beta.
+          Terminal keys on Android, plus an iOS keyboard and built-in remote SSH terminal. Commands in the iOS terminal run on your configured server, not on your iPhone or iPad.
         </p>
         <div class="hero-actions">
-          <a href="https://github.com/jamditis/keyjawn/releases" class="btn btn-primary">Download free APK</a>
-          <a href="https://buy.stripe.com/14AeVdafC3pi9Yl8nIdnW00" class="btn btn-secondary">Buy full version ($4)</a>
+          <a href="/changelog" class="btn btn-primary">View iOS status</a>
+          <a href="https://github.com/jamditis/keyjawn/releases" class="btn btn-secondary">Download Android APK</a>
+          <a href="https://buy.stripe.com/14AeVdafC3pi9Yl8nIdnW00" class="btn btn-secondary">Buy Android full ($4)</a>
         </div>
-        <p class="fine-print">* Both versions are <a href="https://github.com/jamditis/keyjawn">open source</a>. If you can build the full APK from source, it's yours — no purchase needed. The $4 is for people who'd rather not.</p>
+        <p class="fine-print">KeyJawn Lite also has limited Google Play test tracks. Google Play production is not active.</p>
+        <p class="fine-print">* The free and $4 full offers apply to the Android APK. As of August 28, 2026, the public iOS beta invitation is not accepting new testers. A revised App Store submission has not been sent.</p>
         <div class="hero-keys">
           <KeyCap label="Esc" />
           <KeyCap label="Tab" />
@@ -87,32 +97,32 @@ import KeyCap from '../components/KeyCap.astro';
         <FeatureCard
           title="terminal-keys"
           icon=">"
-          description="Esc, Tab, Ctrl, and arrow keys always visible in a dedicated row above the keyboard. No more hunting for terminal characters."
+          description="Android sends terminal key events. The iOS built-in SSH terminal sends terminal bytes directly; the iOS extension inserts text sequences for compatible terminal apps."
         />
         <FeatureCard
           title="voice-input"
           icon="~"
-          description="Tap the mic and speak naturally. Streaming transcription puts your words on screen as you say them. Built for talking to AI agents."
+          description="Android provides keyboard-level voice input. On iOS, voice input is available in the built-in remote SSH terminal, not in the keyboard extension."
         />
         <FeatureCard
           title="scp-upload"
           icon="^"
-          description="Pick a photo, SCP it to your server, and the remote path gets typed at your cursor. Share screenshots with Claude Code in one tap."
+          description="Android can pick an image. On iOS, copy an image first. KeyJawn sends it by SFTP to a host configured for SSH key authentication and inserts the remote path."
         />
         <FeatureCard
           title="slash-commands"
           icon="/"
-          description="Quick-insert for the slash command patterns that every LLM CLI uses. Hit slash, pick a command, keep moving."
+          description="Both keyboards provide slash shortcuts. The Android full APK also supports custom command sets."
         />
         <FeatureCard
           title="swipe-gestures"
           icon="="
-          description="Swipe left to delete a word, right for space, up for symbols, down for letters. Fast layer switching without button hunting."
+          description="Android supports action swipes for delete, space, and layer changes. The iOS keyboard does not claim Android swipe behavior."
         />
         <FeatureCard
           title="customizable-keys"
           icon=">"
-          description="Configurable extra row slots and quick key. Long-press to swap ESC, Tab, or Ctrl for other system keys or text characters. 24+ quick key options."
+          description="The Android full APK lets you change individual extra-row slots. The iOS keyboard provides selectable extra-row presets."
         />
         <FeatureCard
           title="number-row"
@@ -128,26 +138,16 @@ import KeyCap from '../components/KeyCap.astro';
     <div class="container">
       <h2 class="section-heading">Compatible with</h2>
       <div class="built-for">
-        <span class="built-for-item">Claude Code</span>
+        <span class="built-for-item">Remote SSH servers</span>
         <span class="built-for-sep">//</span>
-        <span class="built-for-item">Cockpit</span>
+        <span class="built-for-item">Terminal apps</span>
         <span class="built-for-sep">//</span>
-        <span class="built-for-item">Termux</span>
+        <span class="built-for-item">Text fields</span>
         <span class="built-for-sep">//</span>
-        <span class="built-for-item">OpenClaw</span>
-        <span class="built-for-sep">//</span>
-        <span class="built-for-item">JuiceSSH</span>
-        <span class="built-for-sep">//</span>
-        <span class="built-for-item">ConnectBot</span>
-        <span class="built-for-sep">//</span>
-        <span class="built-for-item">iSH</span>
-        <span class="built-for-sep">//</span>
-        <span class="built-for-item">Prompt</span>
-        <span class="built-for-sep">//</span>
-        <span class="built-for-item">Shelly</span>
+        <span class="built-for-item">CLI agents</span>
       </div>
       <p class="built-for-note">
-        Works with any app that accepts keyboard input. Designed for terminal sessions, SSH clients, and AI CLI tools. Android + iOS beta.
+        Android and iOS have different keyboard APIs. Basic text works in normal text fields. Terminal sequences in the iOS extension depend on the receiving app. The built-in iOS SSH terminal sends them directly to the remote server.
       </p>
     </div>
   </section>
@@ -161,18 +161,19 @@ import KeyCap from '../components/KeyCap.astro';
           <TerminalBlock command="adb install keyjawn-full.apk" output="Success" />
         </div>
         <div class="install-info">
-          <p>Free version includes terminal keys, voice input, clipboard history, slash commands, swipe gestures, and key press preview. $4 one-time purchase adds SCP upload, keyboard themes, customizable extra row keys, menu panel, clipboard pinning, and custom slash commands.</p>
+          <p>Android has free and $4 full APKs. The iOS beta includes a keyboard extension and a built-in remote SSH terminal. Basic iOS typing and built-in shortcuts work without Full Access. Full Access is optional for remote image upload, shared settings, user-created shortcuts, or clipboard history.</p>
           <div class="install-actions">
-            <a href="https://github.com/jamditis/keyjawn/releases" class="btn btn-primary">Download free APK</a>
-            <a href="https://buy.stripe.com/14AeVdafC3pi9Yl8nIdnW00" class="btn btn-secondary">Buy full version ($4)</a>
+            <a href="/changelog" class="btn btn-primary">View iOS status</a>
+            <a href="https://github.com/jamditis/keyjawn/releases" class="btn btn-secondary">Android APKs</a>
+            <a href="https://buy.stripe.com/14AeVdafC3pi9Yl8nIdnW00" class="btn btn-secondary">Android full ($4)</a>
           </div>
           <p class="text-muted" style="font-size: 0.9rem; margin-top: 0.75rem;">
             No subscriptions. No ads. No tracking. Not in any version, ever. <a href="/pricing">See what's included</a>.
           </p>
           <p class="text-muted" style="font-size: 0.9rem; margin-top: 0.5rem;">
-            iOS beta is live on TestFlight. App Store launch coming soon.
+            As of August 28, 2026, the public iOS beta invitation is not accepting new testers. A revised App Store submission has not been sent.
           </p>
-          <p class="fine-print">* Both versions are <a href="https://github.com/jamditis/keyjawn">open source</a>. If you can build the full APK from source, it's yours — no purchase needed. The $4 is for people who'd rather not.</p>
+          <p class="fine-print">* The KeyJawn source is open. The $4 purchase is for a prepared Android full APK and does not unlock the iOS beta.</p>
         </div>
       </div>
     </div>

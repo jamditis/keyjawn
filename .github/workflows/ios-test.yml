@@ -62,12 +62,62 @@ jobs:
             -project KeyJawn.xcodeproj \
             -scheme KeyJawn \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -skip-testing:KeyJawnUITests/KeyboardIMETests \
             -resultBundlePath "$GITHUB_WORKSPACE/TestResults.xcresult"
+
+      - name: Pick iPad simulator
+        id: ipad-sim
+        run: |
+          set -euo pipefail
+          LIST=$(xcrun simctl list devices available -j)
+          UDID=$(python3 -c '
+          import json
+          import re
+          import sys
+
+          devices_by_runtime = json.load(sys.stdin)["devices"]
+
+          def runtime_version(identifier):
+              match = re.search(r"iOS-(\d+(?:-\d+)*)$", identifier)
+              if not match:
+                  return ()
+              return tuple(int(part) for part in match.group(1).split("-"))
+
+          runtimes = sorted(
+              devices_by_runtime.items(),
+              key=lambda item: runtime_version(item[0]),
+              reverse=True,
+          )
+          for _, devices in runtimes:
+              for device in devices:
+                  if device.get("isAvailable") and device["name"].startswith("iPad"):
+                      print(device["udid"])
+                      raise SystemExit
+          ' <<< "$LIST")
+          if [ -z "$UDID" ]; then
+            echo "No available iPad simulator:"
+            printf '%s\n' "$LIST"
+            exit 1
+          fi
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Test iPad system keyboard
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project KeyJawn.xcodeproj \
+            -scheme KeyJawn \
+            -destination "platform=iOS Simulator,id=${{ steps.ipad-sim.outputs.udid }}" \
+            -only-testing:KeyJawnUITests/KeyboardIMETests \
+            -resultBundlePath "$GITHUB_WORKSPACE/IPadKeyboardResults.xcresult"
 
       - name: Upload xcresult
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: ios-test-xcresult
-          path: TestResults.xcresult
+          path: |
+            TestResults.xcresult
+            IPadKeyboardResults.xcresult
           if-no-files-found: ignore

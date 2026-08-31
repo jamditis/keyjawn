@@ -1,8 +1,8 @@
-import os
 import logging
 from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
+from auth import admin_token_matches
 from db import get_db
 from email_sender import send_update_email
 from telegram import send_telegram_alert
@@ -12,11 +12,10 @@ router = APIRouter()
 
 
 def require_admin(authorization: Optional[str] = Header(None)):
-    admin_token = os.environ.get("ADMIN_TOKEN", "")
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "Missing or invalid token")
     token = authorization.split(" ", 1)[1]
-    if token != admin_token:
+    if not admin_token_matches(token):
         raise HTTPException(401, "Invalid token")
 
 
@@ -62,11 +61,15 @@ async def notify_purchasers(version: str, authorization: Optional[str] = Header(
     failed = 0
     for user in users:
         try:
-            send_update_email(user["email"], version, changelog)
-            sent += 1
+            delivered = send_update_email(user["email"], version, changelog)
         except Exception as e:
             log.error(f"Failed to notify {user['email']}: {e}")
             failed += 1
+        else:
+            if delivered:
+                sent += 1
+            else:
+                failed += 1
 
     send_telegram_alert(f"KeyJawn v{version} update emails: {sent} sent, {failed} failed")
     return {"version": version, "sent": sent, "failed": failed}

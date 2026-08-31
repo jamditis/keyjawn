@@ -67,7 +67,7 @@ def _canspam_footer(email: str) -> str:
         </td></tr>"""
 
 
-def _send_email(to: str, subject: str, html: str):
+def _send_email(to: str, subject: str, html: str) -> bool:
     msg = MIMEMultipart("alternative")
     msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
     msg["To"] = to
@@ -80,8 +80,10 @@ def _send_email(to: str, subject: str, html: str):
             smtp.login(FROM_EMAIL, GMAIL_APP_PASSWORD)
             smtp.sendmail(FROM_EMAIL, [to, FROM_EMAIL], msg.as_string())
         log.info(f"Email sent to {to}")
+        return True
     except Exception as e:
         log.error(f"Failed to send email to {to}: {e}")
+        return False
 
 
 def _download_email_html(version: str, to_email: str) -> str:
@@ -241,7 +243,7 @@ def _update_email_html(version: str, changelog: str = "", to_email: str = "") ->
 
 def send_download_email(to_email: str):
     version = _get_latest_version()
-    _send_email(
+    return _send_email(
         to_email,
         f"KeyJawn v{version} -- your download link",
         _download_email_html(version, to_email),
@@ -250,7 +252,7 @@ def send_download_email(to_email: str):
 
 def send_update_email(to_email: str, version: str, changelog: str = ""):
     """Send an update notification to an existing purchaser."""
-    _send_email(
+    return _send_email(
         to_email,
         f"KeyJawn v{version} -- what's new",
         _update_email_html(version, changelog, to_email),
@@ -258,7 +260,7 @@ def send_update_email(to_email: str, version: str, changelog: str = ""):
 
 
 def send_ticket_confirmation(to_email: str, subject: str, ticket_id: int):
-    _send_email(
+    return _send_email(
         to_email,
         f"Re: {subject} [#{ticket_id}]",
         _ticket_email_html(ticket_id, to_email),

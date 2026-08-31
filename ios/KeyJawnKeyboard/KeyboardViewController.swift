@@ -1,5 +1,5 @@
-import UIKit
 import KeyJawnKit
+import UIKit
 
 public final class KeyboardViewController: UIInputViewController {
 
@@ -9,6 +9,7 @@ public final class KeyboardViewController: UIInputViewController {
     private var slashPanel: SlashCommandPanel?
     private var clipboardPanel: ClipboardPanel?
     private var uploadPanel: UploadPanel?
+    private var uploadTask: Task<Void, Never>?
 
     private var theme: KeyboardTheme = .dark
 
@@ -20,11 +21,13 @@ public final class KeyboardViewController: UIInputViewController {
     private var qwertyTop: NSLayoutConstraint!
     private var keyboardHeight: NSLayoutConstraint!
     private var appliedMetrics: KeyboardMetrics?
+    private var appliedAssistantLeadingInset: CGFloat?
 
     // MARK: - Lifecycle
 
     public override func viewDidLoad() {
         super.viewDidLoad()
+        view.accessibilityIdentifier = "keyjawn.systemKeyboard"
         theme = KeyboardPrefs.shared.theme
         view.backgroundColor = theme.keyboardBg
         setupExtraRow()
@@ -59,10 +62,18 @@ public final class KeyboardViewController: UIInputViewController {
     /// it cannot drive a layout loop.
     private func applyMetrics() {
         let metrics = KeyboardMetrics.current(for: traitCollection)
-        guard metrics != appliedMetrics else { return }
+        let assistantLeadingInset = KeyboardAssistantLayout.leadingInset(
+            for: view.bounds.width,
+            traits: traitCollection
+        )
+        guard metrics != appliedMetrics || assistantLeadingInset != appliedAssistantLeadingInset else {
+            return
+        }
         appliedMetrics = metrics
+        appliedAssistantLeadingInset = assistantLeadingInset
 
         extraRowHeight.constant = metrics.extraRow
+        extraRow.setAssistantLeadingInset(assistantLeadingInset)
         numberRowTop.constant = metrics.gap
         numberRowHeight.constant = metrics.numberRow
         qwertyTop.constant = metrics.gap
@@ -94,8 +105,9 @@ public final class KeyboardViewController: UIInputViewController {
         numberRow.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(numberRow)
 
-        numberRowTop = numberRow.topAnchor.constraint(equalTo: extraRow.bottomAnchor,
-                                                      constant: KeyboardMetrics.phonePortrait.gap)
+        numberRowTop = numberRow.topAnchor.constraint(
+            equalTo: extraRow.bottomAnchor,
+            constant: KeyboardMetrics.phonePortrait.gap)
         numberRowHeight = numberRow.heightAnchor.constraint(equalToConstant: KeyboardMetrics.phonePortrait.numberRow)
         NSLayoutConstraint.activate([
             numberRowTop,
@@ -112,8 +124,9 @@ public final class KeyboardViewController: UIInputViewController {
         qwerty.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(qwerty)
 
-        qwertyTop = qwerty.topAnchor.constraint(equalTo: numberRow.bottomAnchor,
-                                                constant: KeyboardMetrics.phonePortrait.gap)
+        qwertyTop = qwerty.topAnchor.constraint(
+            equalTo: numberRow.bottomAnchor,
+            constant: KeyboardMetrics.phonePortrait.gap)
         NSLayoutConstraint.activate([
             qwertyTop,
             qwerty.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -258,15 +271,34 @@ extension KeyboardViewController: ExtraRowDelegate {
         guard uploadPanel == nil else { return }
 
         let panel = UploadPanel(theme: theme)
-        panel.hosts = hasFullAccess ? AppGroupHostStore.shared.hosts : []
+        let allHosts = hasFullAccess ? AppGroupHostStore.shared.hosts : []
+        let hosts = HostConfig.copiedImageUploadHosts(from: allHosts)
+        panel.hosts = hosts
         // Without Full Access the shared container is closed to the extension, so the
         // host list reads back empty and SFTP has no network. Name that instead of
         // telling the user to add hosts they have already added.
-        panel.emptyReason = hasFullAccess ? .noHostsConfigured : .fullAccessRequired
+        if !hasFullAccess {
+            panel.emptyReason = .fullAccessRequired
+        } else if allHosts.isEmpty {
+            panel.emptyReason = .noHostsConfigured
+        } else if hosts.isEmpty && allHosts.contains(where: { $0.authMethod == .key }) {
+            panel.emptyReason = .hostKeyVerificationRequired
+        } else {
+            panel.emptyReason = .keyAuthenticationRequired
+        }
         panel.onDismiss = { [weak self] in self?.hideUploadPanel() }
 
         guard hasFullAccess else {
             panel.statusMessage = "Full Access is required to upload"
+            panel.isUploadEnabled = false
+            panel.onUpload = { _ in }
+            showPanel(panel)
+            uploadPanel = panel
+            return
+        }
+
+        guard !hosts.isEmpty else {
+            panel.statusMessage = panel.emptyReason.message
             panel.isUploadEnabled = false
             panel.onUpload = { _ in }
             showPanel(panel)
@@ -282,7 +314,8 @@ extension KeyboardViewController: ExtraRowDelegate {
             // hasImages true here means an image is present but exposes no
             // readable data representation, so say that instead of implying the
             // user copied nothing.
-            panel.statusMessage = UIPasteboard.general.hasImages
+            panel.statusMessage =
+                UIPasteboard.general.hasImages
                 ? "Couldn't read that image. Try copying it again."
                 : "Copy an image first, then tap SCP"
             panel.isUploadEnabled = false
@@ -295,7 +328,7 @@ extension KeyboardViewController: ExtraRowDelegate {
         // Show the panel immediately in a preparing state with upload gated off,
         // then downsample and JPEG-encode off the main actor. A host tap before
         // the data is ready is a no-op (UploadPanel.isUploadEnabled).
-        panel.statusMessage = "Preparing image..."
+        panel.statusMessage = "Preparing copied image for remote upload..."
         panel.isUploadEnabled = false
         panel.onUpload = { _ in }
         showPanel(panel)
@@ -312,7 +345,7 @@ extension KeyboardViewController: ExtraRowDelegate {
                 panel.statusMessage = "Couldn't read that image. Try copying it again."
                 return
             }
-            panel.statusMessage = "Select a host to upload"
+            panel.statusMessage = "Select a remote SSH host"
             panel.onUpload = { [weak self] host in
                 self?.performUpload(imageData: imageData, to: host)
             }
@@ -321,6 +354,8 @@ extension KeyboardViewController: ExtraRowDelegate {
     }
 
     private func hideUploadPanel() {
+        uploadTask?.cancel()
+        uploadTask = nil
         uploadPanel?.removeFromSuperview()
         uploadPanel = nil
     }
@@ -334,19 +369,33 @@ extension KeyboardViewController: ExtraRowDelegate {
         // A second tap while a transfer is in flight would start a second connection
         // from a memory-constrained extension; hold the list closed until this returns.
         uploadPanel?.isUploadEnabled = false
+        guard let panel = uploadPanel else { return }
+        panel.isDismissEnabled = false
 
-        Task { @MainActor in
+        uploadTask = Task { @MainActor [weak self, weak panel] in
+            guard let self, let panel else { return }
+            defer {
+                if self.uploadPanel === panel {
+                    self.uploadTask = nil
+                }
+            }
             do {
                 let path = try await CitadelSCPUploader.upload(
                     imageData: imageData,
                     to: host,
                     privateKeyData: keyData
                 )
+                guard !Task.isCancelled, self.uploadPanel === panel else { return }
+                self.uploadTask = nil
                 self.textDocumentProxy.insertText(path)
                 self.hideUploadPanel()
+            } catch is CancellationError {
+                return
             } catch {
-                self.uploadPanel?.statusMessage = "Upload failed: \(error.localizedDescription)"
-                self.uploadPanel?.isUploadEnabled = true
+                guard self.uploadPanel === panel else { return }
+                panel.statusMessage = "Upload failed: \(error.localizedDescription)"
+                panel.isUploadEnabled = true
+                panel.isDismissEnabled = true
             }
         }
     }
@@ -398,5 +447,3 @@ extension KeyboardViewController: QwertyKeyboardDelegate {
         advanceToNextInputMode()
     }
 }
-
-

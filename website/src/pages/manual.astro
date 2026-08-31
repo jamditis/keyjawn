@@ -6,7 +6,7 @@ import TerminalBlock from '../components/TerminalBlock.astro';
 
 <Base
   title="User manual -- KeyJawn"
-  description="Full documentation for KeyJawn: installation, typing, terminal keys, voice input, SCP upload, and every feature explained."
+  description="Setup and usage for the KeyJawn Android keyboard, iOS keyboard extension, and iOS remote SSH terminal."
 >
   <section class="section">
     <div class="container manual-layout">
@@ -16,6 +16,9 @@ import TerminalBlock from '../components/TerminalBlock.astro';
           <h3 class="toc-heading">Contents</h3>
           <ul class="toc-list">
             <li><a href="#getting-started">Getting started</a></li>
+            <li><a href="#ios-boundary">iOS remote SSH boundary</a></li>
+            <li><a href="#ios-keyboard">iOS keyboard and Full Access</a></li>
+            <li><a href="#ios-upload">iOS copied-image upload</a></li>
             <li><a href="#basic-typing">Basic typing</a></li>
             <li><a href="#shift-caps">Shift and caps lock</a></li>
             <li><a href="#terminal-keys">Terminal keys</a></li>
@@ -26,7 +29,7 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li><a href="#key-preview">Key preview</a></li>
             <li><a href="#voice-input">Voice input</a></li>
             <li><a href="#clipboard-history">Clipboard history</a></li>
-            <li><a href="#scp-upload">SCP upload</a></li>
+            <li><a href="#scp-upload">Android SCP upload</a></li>
             <li><a href="#slash-commands">Slash commands</a></li>
             <li><a href="#swipe-gestures">Swipe gestures</a></li>
             <li><a href="#themes">Themes</a></li>
@@ -60,16 +63,52 @@ import TerminalBlock from '../components/TerminalBlock.astro';
           </ol>
 
           <p>On some devices, you can switch keyboards by long-pressing the spacebar in any text field, or by tapping the keyboard icon in the navigation bar.</p>
+          <p>KeyJawn Lite also has internal and closed Google Play test tracks. Google Play production is not active.</p>
 
-          <h3>iOS (beta)</h3>
-          <p>The iOS version is a standalone app — not just a keyboard extension. It includes a built-in SSH terminal so you can connect directly to your servers without another app.</p>
+          <h3>iOS beta</h3>
+          <p>The iOS version includes a keyboard extension and a built-in remote SSH terminal.</p>
+          <p>As of August 28, 2026, the public beta invitation is not accepting new testers. A revised App Store submission has not been sent.</p>
           <ol>
-            <li>Install via TestFlight (beta) or the App Store when it launches.</li>
-            <li>Open KeyJawn, tap <strong>+</strong> to add an SSH host (hostname, port, username).</li>
-            <li>Tap the host to connect. A terminal opens with the KeyJawn keyboard attached.</li>
-            <li>To use the keyboard in other apps: go to <strong>Settings &gt; General &gt; Keyboard &gt; Keyboards &gt; Add new keyboard</strong>, then select <strong>KeyJawn Keyboard</strong>.</li>
+            <li>After you install an authorized beta or release, open KeyJawn and tap <strong>+</strong> to add an SSH host (hostname, port, username).</li>
+            <li>Set up the SSH public key in <strong>Settings &gt; SSH keys</strong>, or select password authentication for the host.</li>
+            <li>Tap the host. Review and save its fingerprint on the first connection. The remote terminal opens after the host is trusted and authentication succeeds.</li>
           </ol>
-          <p>The iOS keyboard extension covers Esc, Tab, Ctrl, arrows, and slash commands. SSH terminal features (voice input, host management) live in the main app.</p>
+          <p>This page does not claim that an App Store release is live.</p>
+        </section>
+
+        <section class="manual-section" id="ios-boundary">
+          <h2>iOS remote SSH boundary</h2>
+          <p>KeyJawn does not run shell commands on your iPhone or iPad. The built-in terminal sends input through SSH to the remote server that you configure. That server runs the commands, and KeyJawn displays the returned network output.</p>
+          <p>KeyJawn does not include a local shell, local file browser, document picker, or file provider. It cannot browse files on your iPhone or iPad.</p>
+        </section>
+
+        <section class="manual-section" id="ios-keyboard">
+          <h2>iOS keyboard and Full Access</h2>
+          <ol>
+            <li>Open <strong>Settings &gt; General &gt; Keyboard &gt; Keyboards</strong>.</li>
+            <li>Tap <strong>Add new keyboard</strong> and choose <strong>KeyJawn Keyboard</strong>.</li>
+            <li>Basic typing and built-in shortcuts work without Full Access.</li>
+            <li>Turn on Full Access only if you want the keyboard extension to upload a copied image or read shared settings, user-created shortcuts, and clipboard history.</li>
+          </ol>
+          <p>Full Access is optional. KeyJawn cannot grant it. The built-in remote SSH terminal in the main app does not need keyboard Full Access.</p>
+          <p>The extension inserts text through the field that has focus. Slash shortcuts insert plain text. Terminal sequences such as Esc or Ctrl+C depend on whether the receiving app forwards inserted control text to its terminal. The built-in SSH terminal sends terminal bytes directly.</p>
+        </section>
+
+        <section class="manual-section" id="ios-upload">
+          <h2>iOS copied-image upload</h2>
+          <ol>
+            <li>Copy one image in another app.</li>
+            <li>Open the KeyJawn keyboard or built-in remote SSH terminal.</li>
+            <li>Tap the <strong>SCP</strong> key to open <strong>Upload copied image</strong>.</li>
+            <li>Select a remote SSH host that uses SSH key authentication. Password hosts remain available for terminal connections but do not appear in this upload panel.</li>
+            <li>KeyJawn prepares the copied image in memory, writes it by SFTP to the configured remote directory, and inserts the remote path.</li>
+          </ol>
+          <p>The copied-image upload feature does not request Photos or Files access on iOS. It cannot browse your photo library or local files, or list, read, or download remote files. The keyboard extension needs Full Access for this network operation. Both the app and extension require SSH key authentication for the selected upload host.</p>
+        </section>
+
+        <section class="manual-section">
+          <h2>Android feature guide</h2>
+          <p>The remaining sections describe the Android keyboard unless a section says otherwise.</p>
         </section>
 
         <!-- Basic typing -->
@@ -99,7 +138,7 @@ import TerminalBlock from '../components/TerminalBlock.astro';
           <h2>Terminal keys</h2>
           <p>The extra row above the QWERTY layout contains:</p>
           <ul>
-            <li><KeyCap label="Esc" /> -- sends <code>KEYCODE_ESCAPE</code>. Use it to exit vim insert mode, cancel Claude Code operations, dismiss prompts.</li>
+            <li><KeyCap label="Esc" /> -- sends <code>KEYCODE_ESCAPE</code>. The receiving Android app decides how to handle it.</li>
             <li><KeyCap label="Tab" /> -- sends <code>KEYCODE_TAB</code>. Tab completion in shells, indentation in editors.</li>
             <li><KeyCap label="Ctrl" /> -- toggle modifier with three states:
               <ul>
@@ -114,7 +153,7 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li><strong>Mic</strong> -- tap to start/stop voice input.</li>
           </ul>
           <p>Each button has a distinct background color so you can find it at a glance without reading labels.</p>
-          <p>In the full version, the three left slots (Esc, Tab, Ctrl) are customizable. Long-press any of them to open a picker and swap it for a different key. See <a href="#key-mapping">key mapping</a> for details.</p>
+          <p>In the Android full APK, the three left slots (Esc, Tab, Ctrl) are customizable. Long-press any of them to open a picker and select a different key. See <a href="#key-mapping">key mapping</a> for details.</p>
         </section>
 
         <!-- Number row -->
@@ -158,7 +197,7 @@ import TerminalBlock from '../components/TerminalBlock.astro';
         <!-- Key mapping -->
         <section class="manual-section" id="key-mapping">
           <h2>Key mapping</h2>
-          <p>The full version lets you customize which keys appear in the extra row and what the quick key types. There are two ways to configure them:</p>
+          <p>The Android full APK lets you customize which keys appear in the extra row and what the quick key types. There are two ways to configure them:</p>
           <ul>
             <li><strong>Long-press the key</strong> -- long-press any of the three left extra row slots (Esc, Tab, Ctrl by default) or the quick key to open a picker and choose a replacement.</li>
             <li><strong>Settings</strong> -- open the menu (gear icon), tap Settings, and scroll to the key mapping section for all options in one place.</li>
@@ -189,20 +228,20 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li>Tap the stop button (or the mic button again) to finish.</li>
           </ol>
           <p>Voice input is useful when you're talking to an AI agent -- most of what you type is natural language anyway.</p>
-          <p class="text-muted">Full version only. Requires the <code>RECORD_AUDIO</code> permission.</p>
+          <p class="text-muted">Included in the Android free and full APKs. Requires the <code>RECORD_AUDIO</code> permission.</p>
         </section>
 
         <!-- Clipboard history -->
         <section class="manual-section" id="clipboard-history">
           <h2>Clipboard history</h2>
           <p>Tap the clipboard button in the extra row to open the clipboard history panel. It shows your recent copied text entries. Tap any entry to paste it at your cursor position.</p>
-          <p class="text-muted">Full version only.</p>
+          <p class="text-muted">Included in the Android free and full APKs. Clipboard pinning requires the Android full APK.</p>
         </section>
 
         <!-- SCP upload -->
         <section class="manual-section" id="scp-upload">
-          <h2>SCP upload</h2>
-          <p>SCP upload lets you send photos from your phone to a remote server and automatically type the remote path at your cursor.</p>
+          <h2>Android SCP upload</h2>
+          <p>Android SCP upload sends a selected image to a remote server and types the remote path at your cursor.</p>
           <h3>Setup</h3>
           <ol>
             <li>Open KeyJawn settings (gear icon, or find it in your app drawer).</li>
@@ -216,8 +255,8 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li>KeyJawn SCPs it to the configured server.</li>
             <li>The remote file path is typed at your cursor.</li>
           </ol>
-          <p>This is useful for sharing screenshots with Claude Code, OpenClaw, or other AI tools that accept file paths.</p>
-          <p class="text-muted">Full version only. Requires <code>INTERNET</code> and <code>READ_MEDIA_IMAGES</code> permissions.</p>
+          <p>This lets you share an Android image with a remote tool that accepts file paths.</p>
+          <p class="text-muted">Android full APK only. Requires <code>INTERNET</code> and <code>READ_MEDIA_IMAGES</code> permissions.</p>
         </section>
 
         <!-- Slash commands -->
@@ -229,7 +268,7 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li>Dismiss the popup (tap outside or press back) to type a literal <code>/</code> instead.</li>
           </ul>
           <p>The command list includes common LLM CLI patterns like <code>/help</code>, <code>/clear</code>, <code>/compact</code>, and others.</p>
-          <p class="text-muted">Full version only.</p>
+          <p class="text-muted">Built-in command sets are included in the Android free and full APKs. Custom sets require the Android full APK.</p>
         </section>
 
         <!-- Swipe gestures -->
@@ -242,7 +281,7 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li><strong>Swipe up</strong> -- switches to the symbols layer.</li>
             <li><strong>Swipe down</strong> -- switches to the letters layer.</li>
           </ul>
-          <p class="text-muted">Full version only.</p>
+          <p class="text-muted">Included in the Android free and full APKs.</p>
         </section>
 
         <!-- Themes -->
@@ -262,13 +301,13 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li>The new theme applies the next time the keyboard opens.</li>
           </ol>
           <p>Themes change every visible element: key backgrounds, text colors, hint labels, the extra row, number row, and accent colors for Ctrl and Shift states.</p>
-          <p class="text-muted">Full version only. Free users get the Dark theme.</p>
+          <p class="text-muted">Android full APK only. Android free users get the Dark theme.</p>
         </section>
 
         <!-- Custom commands -->
         <section class="manual-section" id="custom-commands">
           <h2>Custom commands</h2>
-          <p>In addition to the built-in slash command sets (Claude Code, OpenClaw, Gemini CLI, general), you can create your own command sets.</p>
+          <p>The Android full APK lets you create command sets in addition to the built-in sets.</p>
           <h3>Creating a command set</h3>
           <ol>
             <li>Open KeyJawn settings.</li>
@@ -289,7 +328,7 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li>Remove individual commands from custom sets by tapping the command.</li>
           </ul>
           <p>Custom commands appear in the slash command popup alongside the built-in ones. Only commands from enabled sets are shown.</p>
-          <p class="text-muted">Full version only.</p>
+          <p class="text-muted">Android full APK only.</p>
         </section>
 
         <!-- Autocorrect -->
@@ -302,8 +341,8 @@ import TerminalBlock from '../components/TerminalBlock.astro';
             <li>Autocorrect toggles on or off for the current app.</li>
             <li>When enabled, the spacebar label changes to indicate autocorrect is active.</li>
           </ol>
-          <p>KeyJawn remembers the autocorrect setting per app. So you can enable it for Slack but keep it off for Termux.</p>
-          <p class="text-muted">Full version only.</p>
+          <p>KeyJawn remembers the autocorrect setting for each Android app.</p>
+          <p class="text-muted">Included in the Android free and full APKs.</p>
         </section>
       </div>
     </div>

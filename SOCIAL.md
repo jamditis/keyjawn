@@ -1,142 +1,132 @@
-# KeyJawn — social context doc
+# KeyJawn social context
 
-This file is read by the Claude Code browser extension before each social media session.
-Keep it current. Update it when features ship, things break, or the story changes.
+This file is the active source for KeyJawn social posts. Update it when a
+feature ships or distribution state changes. Do not turn planned, source-only,
+or rejected work into a release claim.
 
----
+## Product
 
-## What KeyJawn is
+KeyJawn helps people work with terminal-based LLM tools from a phone.
 
-A custom mobile keyboard built specifically for developers who use LLM CLI agents from their phone.
+- Android provides a custom keyboard for terminal and agent workflows.
+- iOS provides a remote SSH terminal and a companion custom keyboard.
+- KeyJawn does not run a local shell or execute downloaded code on iPhone or
+  iPad. Commands execute on the remote SSH server that the user configures.
 
-**The key distinction from other mobile terminal keyboards:**
-Most mobile terminal keyboards (Hacker's Keyboard, etc.) are built for traditional terminal use — shell commands, SSH sessions, running htop, navigating vim. That's not the primary use case for KeyJawn. KeyJawn is built around the specific interaction pattern of working with LLM CLI agents: writing prompts, reviewing output, sending follow-ups, uploading context, managing slash commands. The workflow is less about typing `ls -la` and more about `/compact`, voice-dictating a long prompt, copying an agent's output to paste elsewhere, and sending a screenshot to your remote session.
-
-This shapes every feature decision:
-- The slash command panel exists because `/compact`, `/clear`, `/memory`, `/cost` are typed constantly in Claude Code and Gemini CLI sessions
-- Voice input is for dictating long prompts — not just quick commands
-- Clipboard history exists because you're constantly copying context between your agent and other apps
-- SCP upload is for sending screenshots and images into your agent's context from your phone
-- The one-shot Ctrl key handles the prompt → Ctrl+C → re-prompt cycle that characterizes agent debugging
-
-Traditional terminal keyboards assume you're running commands. KeyJawn assumes you're in a conversation with an agent.
-
-**The terminal keys are still there** — Esc, Tab, Ctrl, arrows — because LLM CLI tools live in terminals and you still need them. But they're not the point. The point is that the rest of the keyboard is designed around how you actually use Claude Code or Gemini CLI, not how you'd use bash in 2010.
-
-The target user: anyone running Claude Code, Gemini CLI, Codex CLI, OpenCode, or similar agents from their phone. SSH power users who also use AI tooling. Termux regulars who've moved beyond shell commands into agent workflows.
-
----
-
-## Versions
+## Distribution state
 
 ### Android
 
-**KeyJawn Lite** — free
-- Download: APK at https://keyjawn.amditis.tech (GitHub releases, not Google Play yet)
-- Includes: all terminal keys, voice input, clipboard history (30 items), slash commands, swipe gestures, per-app autocorrect, alt character long-press
-- No network permissions
-
-**KeyJawn Full** — $4 one-time purchase
-- Buy at https://keyjawn.amditis.tech (Stripe, email delivery)
-- Adds: SCP image upload, clipboard pinning, custom slash command sets, color themes (dark/light/OLED/terminal), menu panel
-- Requires INTERNET + READ_MEDIA_IMAGES + RECORD_AUDIO
+- KeyJawn Lite is free through the website and GitHub releases.
+- KeyJawn Full costs $4 as a one-time website purchase.
+- KeyJawn Lite has active internal and closed Google Play test tracks.
+- Google Play production is inactive. Do not call the app publicly available on
+  Google Play.
 
 ### iOS
 
-- Standalone app with built-in SSH terminal (SwiftTerm + SwiftNIO SSH via Citadel)
-- Companion keyboard extension adds terminal keys to any app
-- Currently in **TestFlight beta**: https://testflight.apple.com/join/8vMqguKK (50 spots)
-- **App Store:** v1.0 was rejected (3.2.2). Listing copy and slash-command screenshot were unbranded; build 8 uploaded. Not resubmitted until that build is processed.
+- The public TestFlight invitation is not accepting new testers as of August
+  28, 2026. Do not publish the invitation URL as an active download path.
+- Apple rejected App Store review build 2 under guideline 2.5.2.
+- A fresh signed build 9 archive was created and verified from the corrected
+  source on August 31, 2026. The exact archive was uploaded, and Apple processed
+  build 9 as valid. Build 9 is selected for version 1.0, manual release is
+  enabled, and the submission is waiting for review. The app is not approved
+  and not publicly released.
+- It is accurate to say that build 9 is waiting for review. Do not state or
+  imply App Store approval, public availability, or a launch date.
 
----
+## Platform features
 
-## Current version
+### Android-only features
 
-<!-- Update this section whenever a new version ships -->
+- A permanent Esc, Tab, Ctrl, and arrow-key row.
+- A three-state Ctrl key with one-shot and locked states.
+- Voice input from the keyboard.
+- A 30-item clipboard history. The full version adds pinning.
+- Slash-command shortcuts.
+- Swipe gestures, spacebar cursor movement, backspace acceleration, and
+  per-app autocorrect control.
+- An adaptive Enter key, double-space period insertion, automatic sentence
+  capitalization, and key-specific haptics.
+- Full-version SCP image upload, custom command sets, themes, and menu settings.
 
-**Android:** v1.3.0
-**iOS:** v1.0 (build 8 uploaded; previous 1.0 listing rejected)
+Do not describe these Android features as iOS keyboard features. In particular,
+the iOS microphone flow is in the main app, not the keyboard extension.
 
-### Recent changes
-<!-- Add entries here as things ship. Newest first. -->
+### iOS-only features
 
-- iOS SSH extra row: `/` opens the slash panel (including custom shortcuts), system Return and Send submit CR, long-press Send inserts a newline without submitting, Agent/Confirm presets switch the row, hardware Esc/Tab/arrows/Ctrl+C reach the PTY, mic dictation is main-app only, Clip and SCP open the real panels, and clipboard pins live in the App Group so the app and keyboard share them.
-- Android typing and voice overhaul: keys fire on press instead of release (with rollover), backspace escalates to word deletion and supports swipe-to-delete, auto-capitalize at sentence starts, haptics on the number row.
-- Android voice input is now continuous — dictate a whole prompt in natural sentences instead of one tap per phrase. Live transcription appears in the field as you speak, hold the mic for push-to-talk, and cancel discards instead of committing. Optional spoken punctuation ("new line", "open paren").
-- Google Play internal testing set up (7 testers). Production launch pending.
-- iOS App Store 1.0 rejected for 3.2.2; listing screenshot and description unbranded, build 8 uploaded.
-- Stripe + R2 purchase/delivery pipeline live.
+- A built-in SSH terminal connects to a host that the user configures.
+- Terminal input travels over SSH. The remote host executes commands and returns
+  output for display.
+- The app does not provide a local iOS shell, local command interpreter, device
+  file browser, document picker, or file provider.
+- Copied-image upload reads one image from the system pasteboard, prepares it in
+  memory, and writes a new file to a configured remote directory through SFTP.
+  The selected host must use SSH key authentication. The feature does not
+  browse local files or list, read, or download remote files.
+- The companion keyboard provides terminal-oriented controls and text shortcuts
+  in apps and text fields that support third-party keyboards. It inserts text or
+  control sequences into the focused field. The receiving app decides how to
+  interpret them. The built-in SSH terminal sends terminal bytes directly.
+- Basic typing and built-in text shortcuts work without Allow Full Access. Full
+  Access is optional for copied-image upload, shared keyboard settings,
+  user-created shortcuts, and clipboard history.
 
----
+iOS controls where a custom keyboard can appear. The system keyboard appears in
+passcode and secure text fields, and in fields that use the `phonePad` or
+`namePhonePad` keyboard type. Apps can also block third-party keyboards. Do not
+say “any app,” “every app,” “system-wide,” or “anywhere.”
 
-## Pain points KeyJawn solves
+## Product angle
 
-Use these for post ideas. Be specific, not generic. Frame them around agent workflows, not traditional terminal use.
+Traditional terminal keyboards focus on shell navigation. KeyJawn focuses on
+the repeated work of using terminal-based agents: writing prompts, inserting
+text shortcuts, reviewing output, moving copied context, and interrupting a
+running command.
 
-**Agent-specific pain points (highest priority for posts):**
-- You can't run Claude Code seriously from your phone on stock Android because there's no Esc, no Ctrl, no arrows. Every other keyboard makes you open a symbol panel to find them.
-- Typing `/compact` or `/clear` into Claude Code by hand, every single session, on a touchscreen, gets old fast. The slash command panel inserts them in one tap.
-- Dictating long prompts by voice is faster than typing them on a phone keyboard — but Android's voice input doesn't work inside SSH apps or Termux. KeyJawn's mic button works at the keyboard level, so it fires in any app.
-- You want to send a screenshot to your Claude session. On most phones that's: screenshot → open SCP app → find the file → upload → switch back. With Full, it's a button in the keyboard row.
-- Clipboard on Android doesn't remember what you copied three prompts ago. KeyJawn keeps 30 items in history. Full version lets you pin the ones you reuse constantly.
-- The prompt → Ctrl+C → re-prompt cycle is constant when working with agents. Stock keyboards make you switch modes to get Ctrl. KeyJawn's one-shot Ctrl: tap to arm, next key fires with Ctrl, automatically resets. No mode switching.
+Useful Android post topics include:
 
-**General terminal pain points (also valid but less distinctive):**
-- No Esc key on AOSP keyboards. Affects vim, less, any terminal tool.
-- Arrow keys require a layer switch on stock keyboards. Kills your flow when navigating command history.
-- Per-app autocorrect — you want it off in Termux, on in your notes app. Long-press spacebar handles this without going into Settings.
+- Insert a common slash command without typing it each time.
+- Use one-shot Ctrl for the prompt, interrupt, and re-prompt cycle.
+- Dictate a long prompt through the Android keyboard.
+- Move the cursor by holding and dragging the Android spacebar.
+- Upload an image from Android without leaving the current text workflow.
 
----
+Useful iOS post topics include:
 
-## What's in progress / coming soon
+- Explain the remote SSH boundary: input leaves the device, the server executes
+  the command, and output returns over the connection.
+- Show the built-in remote terminal.
+- Show terminal-oriented controls in a normal text field that supports third-party
+  keyboards, and explain that the receiving app decides how to interpret them.
+- Explain what works without Allow Full Access.
+- Explain copied-image upload without calling it a local file browser.
 
-<!-- Update this section as the backlog evolves -->
+## Writing rules
 
-- Google Play production launch (Lite) — track progressing from internal → production
-- iOS App Store launch pending review outcome
-- [ADD BACKLOG ITEMS HERE as they're planned or in flight]
-
----
-
-## Features to highlight (rotation)
-
-These are specific, post-worthy features. Rotate through them — don't repeat the same one twice in a row.
-
-1. Three-state Ctrl key — tap for one-shot (fires once, resets), long-press for sticky/locked. No mode switching.
-2. Voice input works in Termux and SSH apps — mic button in the keyboard row, not the system IME bar.
-3. Clipboard history 30 items deep, accessible from keyboard. Full version adds pinning.
-4. Slash command panel — type `/compact`, `/clear`, `/memory` etc. in one tap. Works in any app.
-5. Number row with long-press shifted symbols. No more switching layers to type `!` or `@`.
-6. Alt character long-press on QWERTY keys — accented letters, punctuation variants, etc.
-7. Per-app autocorrect toggle via long-press spacebar. Off in Termux, on in Signal.
-8. Arrow keys in the terminal row — scroll through command history without leaving the keyboard.
-9. SCP image upload to any SSH server, configured per-host. Tap to select and upload from Files.
-10. Color themes: dark, light, OLED black, terminal green. (Full version.)
-11. iOS: built-in SSH terminal so you don't need a separate app.
-12. iOS: keyboard extension brings terminal keys to every app on iPhone — Notes, Messages, anywhere.
-
----
-
-## Tone and voice notes
-
-These apply to any post written on behalf of KeyJawn.
-
-- Write like a developer who built something and is telling other developers about it.
-- Be specific. "Ctrl one-shot mode fires and resets in one tap" is better than "advanced Ctrl modifier."
-- No marketing language. No "excited to announce", "game-changer", "revolutionizing", "seamlessly".
-- No hyperbole. If something is useful, describe why it's useful. Don't call it amazing.
-- No hashtag walls. One or two at most, only if they add discovery value (#ClaudeCode #Termux). Never #dev #coding #mobiledev #keyboard #productivity #tech.
-- Keep posts under 240 characters when possible. Twitter is for short takes.
-- Don't start with "I" — Twitter/X's algo punishes it. Rearrange the sentence.
-- Don't start with "We" either — KeyJawn is a real small product, not a corporate "we".
-- Present tense, active voice.
-- No emojis unless they're functional (e.g., arrows → for navigation, not decoration).
-
----
+- Write as one developer talking to another.
+- Use short, direct sentences and active voice.
+- State the platform for every platform-specific feature.
+- Describe shipped behavior. Do not convert plans or source builds into launch
+  claims.
+- Do not say that KeyJawn executes code on iOS. The configured remote host
+  executes commands.
+- Do not say that the iOS app can browse Files, browse device storage, or select
+  an upload from Files.
+- Do not say that copied-image upload works with a password-authenticated host.
+- Do not describe iOS extension controls as hardware key events.
+- Do not say that the iOS keyboard appears in every app or field.
+- Do not say that Full Access is required for basic typing.
+- Do not use hype, fake emotion, rhetorical questions, competitor attacks, or
+  hashtag walls.
+- Keep posts below 240 characters when the idea fits. Use at most one relevant
+  hashtag.
+- Put a link at the end when it helps the reader.
 
 ## Links
 
 - Website: https://keyjawn.amditis.tech
 - GitHub: https://github.com/jamditis/keyjawn
-- iOS TestFlight: https://testflight.apple.com/join/8vMqguKK
+- iOS status: https://keyjawn.amditis.tech/changelog
 - Twitter: @keyjawn

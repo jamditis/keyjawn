@@ -23,7 +23,7 @@ public extension QwertyKeyboardDelegate {
 // MARK: - QwertyKeyboardView
 
 /// Full QWERTY keyboard view for use inside a keyboard extension.
-/// Manages three layers (lowercase, uppercase, symbols) and shift state.
+/// Manages four layers (lowercase, uppercase, and two symbol pages) and shift state.
 /// Does NOT include the extra row — compose that separately above this view.
 @MainActor
 public final class QwertyKeyboardView: UIView {
@@ -37,7 +37,7 @@ public final class QwertyKeyboardView: UIView {
 
     // MARK: Theme
 
-    public var theme: KeyboardTheme = .dark
+    public private(set) var theme: KeyboardTheme = .dark
 
     private var bg: UIColor      { theme.keyboardBg }
     private var keyBg: UIColor   { theme.keyBg }
@@ -47,7 +47,7 @@ public final class QwertyKeyboardView: UIView {
     // MARK: Layout constants
 
     private let spacingH: CGFloat   = 6
-    private let spacingV: CGFloat   = 11
+    private let spacingV: CGFloat   = 7
     private let sidePad: CGFloat    = 3
     private let topPad: CGFloat     = 8
     private let bottomPad: CGFloat  = 4
@@ -57,10 +57,10 @@ public final class QwertyKeyboardView: UIView {
     private var keyButtons: [QwertyKeyButton] = []
     // The theme the current buttons were built under. Each QwertyKeyButton captures
     // its theme at init for title and tint colours, so the in-place fast path is only
-    // valid while this matches the view's theme. It diverges when theme is set
-    // directly (the keyboard extension does qwerty.theme = ... rather than going
-    // through applyTheme), and the fast path must fall back to a full rebuild then.
+    // valid while this matches the view's theme. `applyTheme` changes the theme and
+    // makes the fast path fall back to a full rebuild.
     private var builtTheme: KeyboardTheme?
+    private var flicksEnabled: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
     // MARK: - Init
 
@@ -104,8 +104,9 @@ public final class QwertyKeyboardView: UIView {
            keyButtons.count == newKeys.count,
            zip(keyButtons, newKeys).allSatisfy({ $0.key.structuralKind == $1.structuralKind }) {
             for (btn, key) in zip(keyButtons, newKeys) {
-                btn.apply(key: key)
+                btn.apply(key: key, showsFlick: flicksEnabled)
                 btn.backgroundColor = bgColor(for: key)
+                configureFlickAccessibility(for: btn)
             }
             return
         }
@@ -114,14 +115,20 @@ public final class QwertyKeyboardView: UIView {
         keyButtons.forEach { $0.removeFromSuperview() }
         keyButtons.removeAll()
         for key in newKeys {
-            let btn = QwertyKeyButton(key: key, theme: theme)
+            let btn = QwertyKeyButton(key: key, theme: theme, showsFlick: flicksEnabled)
             btn.backgroundColor = bgColor(for: key)
             btn.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside)
             switch key {
-            case .character:
+            case .character(let label):
                 let lp = UILongPressGestureRecognizer(target: self, action: #selector(keyLongPressed(_:)))
                 lp.minimumPressDuration = 0.4
                 btn.addGestureRecognizer(lp)
+                if flicksEnabled, AltKeyMappings.flick(for: label) != nil {
+                    let flick = UISwipeGestureRecognizer(target: self, action: #selector(keyFlicked(_:)))
+                    flick.direction = .down
+                    flick.cancelsTouchesInView = true
+                    btn.addGestureRecognizer(flick)
+                }
             case .backspace:
                 // Holding backspace did nothing at all before this — every deletion
                 // cost a separate tap, which is punishing on a keyboard whose whole
@@ -134,6 +141,7 @@ public final class QwertyKeyboardView: UIView {
             default:
                 break
             }
+            configureFlickAccessibility(for: btn)
             addSubview(btn)
             keyButtons.append(btn)
         }
@@ -279,13 +287,7 @@ public final class QwertyKeyboardView: UIView {
         switch sender.key {
 
         case .character(let s):
-            delegate?.keyboard(self, insertText: s)
-            if shiftState == .once {
-                shiftState = .off
-                layer_     = .lowercase
-                rebuild()
-                setNeedsLayout()
-            }
+            insertCharacter(s)
 
         case .space:
             delegate?.keyboard(self, insertText: " ")
@@ -386,6 +388,52 @@ public final class QwertyKeyboardView: UIView {
 
     // MARK: - Long-press alt characters
 
+    private func insertCharacter(_ text: String) {
+        delegate?.keyboard(self, insertText: text)
+        if shiftState == .once {
+            shiftState = .off
+            layer_ = .lowercase
+            rebuild()
+            setNeedsLayout()
+        }
+    }
+
+    /// VoiceOver cannot perform the touch-only downward swipe. Give it the same
+    /// insertion path so shift consumption and delegate behavior stay identical.
+    private func configureFlickAccessibility(for button: QwertyKeyButton) {
+        guard flicksEnabled,
+            case .character(let label) = button.key,
+            let secondary = AltKeyMappings.flick(for: label)
+        else {
+            button.accessibilityCustomActions = nil
+            return
+        }
+
+        button.accessibilityCustomActions = [
+            UIAccessibilityCustomAction(name: "Insert \(secondary)") { [weak self, weak button] _ in
+                guard let self, let button,
+                    case .character(let currentLabel) = button.key,
+                    let currentSecondary = AltKeyMappings.flick(for: currentLabel)
+                else { return false }
+
+                KeyboardHaptics.keyPress()
+                self.insertCharacter(currentSecondary)
+                return true
+            }
+        ]
+    }
+
+    @objc private func keyFlicked(_ gr: UISwipeGestureRecognizer) {
+        guard gr.state == .ended,
+            let btn = gr.view as? QwertyKeyButton,
+            case .character(let label) = btn.key,
+            let secondary = AltKeyMappings.flick(for: label)
+        else { return }
+
+        KeyboardHaptics.keyPress()
+        insertCharacter(secondary)
+    }
+
     @objc private func keyLongPressed(_ gr: UILongPressGestureRecognizer) {
         guard gr.state == .began,
               let btn = gr.view as? QwertyKeyButton,
@@ -478,6 +526,7 @@ final class QwertyKeyButton: UIButton {
 
     private(set) var key: QwertyKey
     private let theme: KeyboardTheme
+    private let flickLabel = UILabel()
 
     // Resolve the three SF Symbols once per process rather than on every rebuild:
     // UIImage(systemName:) is a non-trivial lookup and these images never change.
@@ -485,12 +534,12 @@ final class QwertyKeyButton: UIButton {
     private static let shiftImage = UIImage(systemName: "shift")
     private static let globeImage = UIImage(systemName: "globe")
 
-    init(key: QwertyKey, theme: KeyboardTheme) {
+    init(key: QwertyKey, theme: KeyboardTheme, showsFlick: Bool) {
         self.key = key
         self.theme = theme
         super.init(frame: .zero)
         configureChrome()
-        apply(key: key)
+        apply(key: key, showsFlick: showsFlick)
     }
 
     required init?(coder: NSCoder) { fatalError("use init(key:theme:)") }
@@ -502,6 +551,12 @@ final class QwertyKeyButton: UIButton {
         let text = theme.keyText
         setTitleColor(text, for: .normal)
         setTitleColor(text.withAlphaComponent(0.4), for: .highlighted)
+        flickLabel.font = .systemFont(ofSize: 10, weight: .medium)
+        flickLabel.textAlignment = .right
+        flickLabel.textColor = theme.flickKeyText
+        flickLabel.isUserInteractionEnabled = false
+        flickLabel.isAccessibilityElement = false
+        addSubview(flickLabel)
         layer.cornerRadius    = 5
         layer.masksToBounds   = false
         layer.shadowColor     = UIColor.black.cgColor
@@ -514,10 +569,13 @@ final class QwertyKeyButton: UIButton {
     // a reused button, which QwertyKeyboardView does on a lowercase<->uppercase
     // toggle. Both the title and the image are cleared first so no stale glyph
     // survives even if a caller ever reuses a button across kinds.
-    func apply(key: QwertyKey) {
+    func apply(key: QwertyKey, showsFlick: Bool) {
         self.key = key
         setTitle(nil, for: .normal)
         setImage(nil, for: .normal)
+        flickLabel.text = nil
+        flickLabel.isHidden = true
+        accessibilityHint = nil
         // The image keys carry no title for VoiceOver to read, and "#+=" and "123"
         // are announced character by character. Name each one instead.
         accessibilityLabel = key.spokenName
@@ -526,6 +584,11 @@ final class QwertyKeyButton: UIButton {
         case .character(let s):
             titleLabel?.font = .systemFont(ofSize: 17, weight: .light)
             setTitle(s, for: .normal)
+            if showsFlick, let secondary = AltKeyMappings.flick(for: s) {
+                flickLabel.text = secondary
+                flickLabel.isHidden = false
+                accessibilityHint = "Swipe down for \(secondary)"
+            }
 
         case .space:
             titleLabel?.font = .systemFont(ofSize: 15, weight: .regular)
@@ -559,6 +622,11 @@ final class QwertyKeyButton: UIButton {
             titleLabel?.font = .systemFont(ofSize: 13, weight: .regular)
             setTitle("#+=", for: .normal)
         }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        flickLabel.frame = CGRect(x: bounds.width - 18, y: 2, width: 14, height: 12)
     }
 
     override var isHighlighted: Bool {

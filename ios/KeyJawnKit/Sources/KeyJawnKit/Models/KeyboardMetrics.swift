@@ -25,3 +25,23 @@ public struct KeyboardMetrics: Equatable, Sendable {
     }
 #endif
 }
+
+/// Horizontal space used by the iPad system assistant controls.
+///
+/// Some host apps place undo, redo, and paste over a third-party keyboard's
+/// leading edge. Full-width iPad layouts have enough room to reserve that area
+/// without shrinking terminal controls below usable touch targets. Compact
+/// split views and phones keep the complete row width.
+public enum KeyboardAssistantLayout {
+    /// Ten 44-point controls, nine 4-point gaps, 12 points of outer padding, and
+    /// the 152-point assistant reservation require at least 640 points.
+    public static let fullWidthPadMinimum: CGFloat = 640
+    public static let leadingInset: CGFloat = 152
+
+    #if canImport(UIKit)
+        public static func leadingInset(for width: CGFloat, traits: UITraitCollection) -> CGFloat {
+            guard traits.userInterfaceIdiom == .pad, width >= fullWidthPadMinimum else { return 0 }
+            return leadingInset
+        }
+    #endif
+}

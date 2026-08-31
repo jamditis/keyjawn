@@ -4,17 +4,28 @@ import Base from '../layouts/Base.astro';
 
 <Base
   title="Changelog -- KeyJawn"
-  description="Release history for KeyJawn. Every version, what changed, and download links."
+  description="Published Android releases and the current iOS distribution status for KeyJawn."
 >
   <section class="section">
     <div class="container">
       <h1 class="page-title">Changelog</h1>
-      <p class="page-intro">Release history. Each version links to the full release notes on GitHub.</p>
+      <p class="page-intro">Published Android releases and the current iOS distribution status.</p>
     </div>
   </section>
 
   <section class="section">
     <div class="container changelog">
+      <section class="platform-status" aria-labelledby="ios-status">
+        <h2 id="ios-status">iOS status</h2>
+        <p>As of August 28, 2026, the public TestFlight invitation is not accepting new testers. A revised App Store submission has not been sent.</p>
+      </section>
+
+      <h2 class="platform-heading">Android releases</h2>
+
+      <section class="platform-status" aria-labelledby="android-status">
+        <h2 id="android-status">Android distribution status</h2>
+        <p>KeyJawn Lite has active internal and closed Google Play test tracks. Open testing and production are inactive. Public Android APKs remain available through GitHub releases.</p>
+      </section>
 
       <article class="release" id="v1.3.0">
         <div class="release-header">
@@ -22,7 +33,7 @@ import Base from '../layouts/Base.astro';
           <time class="release-date" datetime="2026-02-17">February 17, 2026</time>
         </div>
         <ul class="release-changes">
-          <li><strong>Google Play Store publishing</strong> -- lite version now available on Google Play via internal testing. Store listing, content rating, and data safety forms complete.</li>
+          <li><strong>Google Play internal testing</strong> -- lite version 1.3.0 was uploaded to the internal test track. Store listing, content rating, and data safety forms complete.</li>
           <li><strong>CI release improvements</strong> -- lite AAB now included in GitHub release assets for easier distribution. Gradle Play Publisher downgraded to 3.13.0 for Gradle 8.13 compatibility.</li>
         </ul>
         <a href="https://github.com/jamditis/keyjawn/releases/tag/v1.3.0" class="release-link">Full release notes</a>
@@ -88,10 +99,10 @@ import Base from '../layouts/Base.astro';
         </div>
         <ul class="release-changes">
           <li><strong>Menu panel</strong> -- overlay with SCP upload, theme picker, settings access, and quick toggles for haptic feedback, autocorrect, and tooltips.</li>
-          <li><strong>Clipboard pinning</strong> -- pin frequently used items to persist across sessions. Up to 15 pins, 30 history items. Full version only.</li>
+          <li><strong>Clipboard pinning</strong> -- pin frequently used items to persist across sessions. Up to 15 pins, 30 history items. Android full APK only.</li>
           <li><strong>Inline panels</strong> -- clipboard and menu now render as overlays within the keyboard instead of floating popups.</li>
-          <li><strong>Tooltip system</strong> -- inline hints replace toast messages. Auto-dismiss after 1.5s. Configurable in full version.</li>
-          <li><strong>Free/full split</strong> -- voice input, clipboard history, slash commands, swipe gestures, and per-app autocorrect now free. Full version adds SCP, themes, pinning, custom commands.</li>
+          <li><strong>Tooltip system</strong> -- inline hints replace toast messages. Auto-dismiss after 1.5s. Configurable in the Android full APK.</li>
+          <li><strong>Free/full split</strong> -- voice input, clipboard history, slash commands, swipe gestures, and per-app autocorrect now free. The Android full APK adds SCP, themes, pinning, and custom commands.</li>
         </ul>
         <a href="https://github.com/jamditis/keyjawn/releases/tag/v1.0.0" class="release-link">Full release notes</a>
       </article>
@@ -113,6 +124,24 @@ import Base from '../layouts/Base.astro';
 
   .changelog {
     max-width: 720px;
+  }
+
+  .platform-status {
+    padding: 0 0 var(--space-lg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .platform-status h2,
+  .platform-heading {
+    font-size: 1.4rem;
+  }
+
+  .platform-status p {
+    line-height: 1.7;
+  }
+
+  .platform-heading {
+    margin: var(--space-lg) 0 0;
   }
 
   .release {

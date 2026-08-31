@@ -1,5 +1,6 @@
 import UIKit
 import XCTest
+
 @testable import KeyJawn
 @testable import KeyJawnKit
 
@@ -65,23 +66,6 @@ final class TerminalInputViewTests: XCTestCase {
         sink.insertText("\n")
         XCTAssertEqual(got, [TerminalInputMapping.submitBytes])
         XCTAssertEqual(got.first, [0x0d])
-    }
-
-    func testInsertNewlineWithoutSubmitIsNotSubmit() {
-        let sink = TerminalInputView()
-        var got: [[UInt8]] = []
-        sink.onRawInput = { got.append($0) }
-        sink.insertNewlineWithoutSubmit()
-        XCTAssertEqual(got, [TerminalInputMapping.newlineBytes])
-        XCTAssertNotEqual(got.first, TerminalInputMapping.submitBytes)
-    }
-
-    func testSubmitLineWritesCR() {
-        let sink = TerminalInputView()
-        var got: [[UInt8]] = []
-        sink.onRawInput = { got.append($0) }
-        sink.submitLine()
-        XCTAssertEqual(got, [[0x0d]])
     }
 
     func testTypedTextIsUTF8() {
@@ -160,9 +144,11 @@ final class TerminalInputViewTests: XCTestCase {
 
         tapExtra(extra, accessibility: "Slash commands")
 
-        guard let panel = window.subviews.reversed().first(where: {
-            $0.accessibilityIdentifier == "slash-command-panel"
-        }) as? SlashCommandPanel else {
+        guard
+            let panel = window.subviews.reversed().first(where: {
+                $0.accessibilityIdentifier == "slash-command-panel"
+            }) as? SlashCommandPanel
+        else {
             return XCTFail("slash panel did not appear over the terminal")
         }
 
@@ -212,7 +198,7 @@ final class TerminalInputViewTests: XCTestCase {
         window.isHidden = true
     }
 
-    func testSCPOpensUploadPanel() {
+    func testUploadButtonOpensUploadPanel() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
         let sink = TerminalInputView(frame: window.bounds)
         sink.uploadHosts = { [] }
@@ -224,10 +210,137 @@ final class TerminalInputViewTests: XCTestCase {
         window.addSubview(extra)
         extra.layoutIfNeeded()
 
-        tapExtra(extra, accessibility: "Upload image over SFTP")
+        tapExtra(extra, accessibility: "Upload copied image to remote SSH host")
         XCTAssertTrue(
             window.subviews.contains { $0.accessibilityIdentifier == "upload-panel" },
             "SCP must present UploadPanel, not a no-op"
+        )
+        window.isHidden = true
+    }
+
+    func testUploadPanelExcludesPasswordAuthenticatedHosts() {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+        let sink = TerminalInputView(frame: window.bounds)
+        let keyHost = HostConfig(
+            label: "key",
+            hostname: "key.internal",
+            username: "reviewer",
+            authMethod: .key,
+            hostPublicKey:
+                "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJfkNV4OS33ImTXvorZr72q4v5XhVEQKfvqsxOEJ/XaR"
+        )
+        let passwordHost = HostConfig(
+            label: "password",
+            hostname: "password.internal",
+            username: "reviewer",
+            authMethod: .password
+        )
+        sink.uploadHosts = { [keyHost, passwordHost] }
+        window.addSubview(sink)
+        window.makeKeyAndVisible()
+
+        let extra = sink.extraRow
+        extra.frame = CGRect(x: 0, y: 640, width: 390, height: 52)
+        window.addSubview(extra)
+        extra.layoutIfNeeded()
+
+        tapExtra(extra, accessibility: "Upload copied image to remote SSH host")
+        let panel = window.subviews.compactMap { $0 as? UploadPanel }.first
+        XCTAssertEqual(panel?.hosts, [keyHost])
+        window.isHidden = true
+    }
+
+    func testUploadPanelNamesTheCopiedImageAndRemoteHost() {
+        let panel = UploadPanel()
+        let labels = panel.subviews
+            .flatMap { [$0] + $0.subviews }
+            .compactMap { $0 as? UILabel }
+            .compactMap(\.text)
+
+        XCTAssertTrue(labels.contains("Upload copied image"))
+        XCTAssertTrue(
+            UploadPanel.EmptyReason.noHostsConfigured.message.contains("remote SSH host")
+        )
+        XCTAssertTrue(
+            UploadPanel.EmptyReason.keyAuthenticationRequired.message.contains(
+                "SSH key authentication"
+            )
+        )
+        XCTAssertTrue(
+            UploadPanel.EmptyReason.hostKeyVerificationRequired.message.contains(
+                "verify its SSH host key"
+            )
+        )
+        XCTAssertFalse(
+            UploadPanel.EmptyReason.noHostsConfigured.message.contains("main app")
+        )
+        XCTAssertFalse(
+            UploadPanel.EmptyReason.keyAuthenticationRequired.message.contains("main app")
+        )
+    }
+
+    func testUploadPanelCanDisableDismissDuringRemoteWrite() {
+        let panel = UploadPanel()
+        let cancel = panel.subviews
+            .flatMap { [$0] + $0.subviews }
+            .compactMap { $0 as? UIButton }
+            .first { $0.currentTitle == "Cancel" }
+
+        panel.isDismissEnabled = false
+
+        XCTAssertFalse(cancel?.isEnabled ?? true)
+    }
+
+    func testUploadExtraRowCannotDismissPanelDuringRemoteWrite() {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+        let sink = TerminalInputView(frame: window.bounds)
+        sink.uploadHosts = { [] }
+        window.addSubview(sink)
+        window.makeKeyAndVisible()
+
+        let extra = sink.extraRow
+        extra.frame = CGRect(x: 0, y: 640, width: 390, height: 52)
+        window.addSubview(extra)
+        extra.layoutIfNeeded()
+
+        tapExtra(extra, accessibility: "Upload copied image to remote SSH host")
+        let panel = window.subviews.compactMap { $0 as? UploadPanel }.first
+        XCTAssertNotNil(panel)
+        panel?.isDismissEnabled = false
+
+        tapExtra(extra, accessibility: "Upload copied image to remote SSH host")
+
+        XCTAssertTrue(
+            window.subviews.contains { $0 === panel },
+            "the extra-row upload key must not cancel an active remote write"
+        )
+        window.isHidden = true
+    }
+
+    func testUploadPanelNamesAnUnverifiedKeyHost() {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+        let sink = TerminalInputView(frame: window.bounds)
+        let unverifiedHost = HostConfig(
+            label: "remote",
+            hostname: "remote.internal",
+            username: "reviewer",
+            authMethod: .key
+        )
+        sink.uploadHosts = { [unverifiedHost] }
+        window.addSubview(sink)
+        window.makeKeyAndVisible()
+
+        let extra = sink.extraRow
+        extra.frame = CGRect(x: 0, y: 640, width: 390, height: 52)
+        window.addSubview(extra)
+        extra.layoutIfNeeded()
+
+        tapExtra(extra, accessibility: "Upload copied image to remote SSH host")
+
+        let panel = window.subviews.compactMap { $0 as? UploadPanel }.first
+        XCTAssertEqual(
+            panel?.emptyReason.message,
+            UploadPanel.EmptyReason.hostKeyVerificationRequired.message
         )
         window.isHidden = true
     }
@@ -236,8 +349,10 @@ final class TerminalInputViewTests: XCTestCase {
         let button = extra.subviews
             .flatMap(\.subviews)
             .compactMap { $0 as? UIButton }
-            .first { $0.accessibilityLabel?.contains(accessibility) == true
-                || $0.currentTitle == accessibility }
+            .first {
+                $0.accessibilityLabel?.contains(accessibility) == true
+                    || $0.currentTitle == accessibility
+            }
         XCTAssertNotNil(button, "missing extra-row control \(accessibility)")
         button?.sendActions(for: .touchUpInside)
     }

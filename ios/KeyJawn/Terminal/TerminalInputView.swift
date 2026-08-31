@@ -1,5 +1,5 @@
-import UIKit
 import KeyJawnKit
+import UIKit
 
 /// Transparent UITextView used as a keyboard sink on top of SwiftTerm's
 /// TerminalView. Intercepts insertText/deleteBackward to route raw bytes
@@ -16,13 +16,14 @@ final class TerminalInputView: UITextView {
     /// the accessory sees the same list as Settings. Tests inject a snapshot.
     var uploadHosts: () -> [HostConfig] = { HostStore().hosts }
 
-    /// Private key bytes for the in-app SCP upload. Defaults to the shared
+    /// Private key bytes for the in-app remote upload. Defaults to the shared
     /// identity. Tests inject a stub.
     var uploadPrivateKeyData: () -> Data? = { SSHKeyStore.shared.privateKey.rawRepresentation }
 
     private var slashPanel: SlashCommandPanel?
     private var clipboardPanel: ClipboardPanel?
     private var uploadPanel: UploadPanel?
+    private var uploadTask: Task<Void, Never>?
     private let voice = TerminalVoiceInput()
     private var lastHardwareEmit: (bytes: [UInt8], at: CFTimeInterval)?
 
@@ -37,21 +38,21 @@ final class TerminalInputView: UITextView {
     }
 
     private func setup() {
-        backgroundColor          = .clear
-        textColor                = .clear
-        tintColor                = .clear
-        autocorrectionType       = .no
-        autocapitalizationType   = .none
-        spellCheckingType        = .no
+        backgroundColor = .clear
+        textColor = .clear
+        tintColor = .clear
+        autocorrectionType = .no
+        autocapitalizationType = .none
+        spellCheckingType = .no
         // Smart substitution turns a typed "--flag" into an en dash and quotes into
         // curly ones, which reach the shell as characters it does not understand.
-        smartQuotesType          = .no
-        smartDashesType          = .no
-        smartInsertDeleteType    = .no
+        smartQuotesType = .no
+        smartDashesType = .no
+        smartInsertDeleteType = .no
 
-        extraRow.frame     = CGRect(x: 0, y: 0, width: 0, height: 52)
+        extraRow.frame = CGRect(x: 0, y: 0, width: 0, height: 52)
         extraRow.setKeys(KeyboardPrefs.shared.extraRowPreset.terminalKeys)
-        extraRow.delegate  = self
+        extraRow.delegate = self
         // Same theme the keyboard extension uses, so the row looks like one component
         // wherever it appears rather than defaulting to dark here and themed there.
         extraRow.applyTheme(KeyboardPrefs.shared.theme)
@@ -87,10 +88,11 @@ final class TerminalInputView: UITextView {
         // characters so a multi-character insertion (a paste, a dictation result) is
         // not silently collapsed into one control byte.
         if extraRow.ctrl.isActive,
-           text.count == 1,
-           text != "\n",
-           text != "\r",
-           let bytes = ANSISequence.bytes(for: .character(text), ctrlActive: true) {
+            text.count == 1,
+            text != "\n",
+            text != "\r",
+            let bytes = ANSISequence.bytes(for: .character(text), ctrlActive: true)
+        {
             onRawInput?(bytes)
             extraRow.ctrl.consume()
             return
@@ -105,18 +107,7 @@ final class TerminalInputView: UITextView {
     }
 
     override func deleteBackward() {
-        onRawInput?([0x7f]) // DEL
-    }
-
-    /// Inserts a non-submit newline (LF). Used by long-press Send so a
-    /// multiline prompt can gain a line without submitting to the agent.
-    func insertNewlineWithoutSubmit() {
-        onRawInput?(TerminalInputMapping.newlineBytes)
-    }
-
-    /// Writes the submit byte (CR) the same way a system Return does.
-    func submitLine() {
-        onRawInput?(TerminalInputMapping.submitBytes)
+        onRawInput?([0x7f])  // DEL
     }
 
     // MARK: Hardware keyboard
@@ -139,7 +130,8 @@ final class TerminalInputView: UITextView {
         var handled = false
         for press in presses {
             guard let key = press.key,
-                  let mapped = hardwareKey(from: key) else { continue }
+                let mapped = hardwareKey(from: key)
+            else { continue }
             let modifiers = hardwareModifiers(from: key)
             if emitHardware(mapped, modifiers: modifiers) {
                 handled = true
@@ -220,7 +212,8 @@ extension TerminalInputView: ExtraRowDelegate {
     }
 
     func extraRowDidTapUpload(_ view: ExtraRowView) {
-        if uploadPanel != nil {
+        if let uploadPanel {
+            guard uploadPanel.isDismissEnabled else { return }
             hideUploadPanel()
         } else {
             showUploadPanel()
@@ -318,13 +311,30 @@ extension TerminalInputView {
 
         let theme = KeyboardPrefs.shared.theme
         let panel = UploadPanel(theme: theme)
-        let hosts = uploadHosts()
+        let allHosts = uploadHosts()
+        let hosts = HostConfig.copiedImageUploadHosts(from: allHosts)
         panel.hosts = hosts
-        panel.emptyReason = .noHostsConfigured
+        if allHosts.isEmpty {
+            panel.emptyReason = .noHostsConfigured
+        } else if hosts.isEmpty && allHosts.contains(where: { $0.authMethod == .key }) {
+            panel.emptyReason = .hostKeyVerificationRequired
+        } else {
+            panel.emptyReason = .keyAuthenticationRequired
+        }
         panel.onDismiss = { [weak self] in self?.hideUploadPanel() }
 
+        guard !hosts.isEmpty else {
+            panel.statusMessage = panel.emptyReason.message
+            panel.isUploadEnabled = false
+            panel.onUpload = { _ in }
+            showOverlay(panel)
+            uploadPanel = panel
+            return
+        }
+
         guard let rawImageData = UIPasteboard.general.firstImageData else {
-            panel.statusMessage = UIPasteboard.general.hasImages
+            panel.statusMessage =
+                UIPasteboard.general.hasImages
                 ? "Couldn't read that image. Try copying it again."
                 : "Copy an image first, then tap SCP"
             panel.isUploadEnabled = false
@@ -334,7 +344,7 @@ extension TerminalInputView {
             return
         }
 
-        panel.statusMessage = "Preparing image..."
+        panel.statusMessage = "Preparing copied image for remote upload..."
         panel.isUploadEnabled = false
         panel.onUpload = { _ in }
         showOverlay(panel)
@@ -350,17 +360,17 @@ extension TerminalInputView {
                 panel.statusMessage = "Couldn't read that image. Try copying it again."
                 return
             }
-            panel.statusMessage = hosts.isEmpty
-                ? "No hosts configured. Add one in Settings."
-                : "Select a host to upload"
+            panel.statusMessage = "Select a remote SSH host"
             panel.onUpload = { [weak self] host in
                 self?.performUpload(imageData: imageData, to: host)
             }
-            panel.isUploadEnabled = !hosts.isEmpty
+            panel.isUploadEnabled = true
         }
     }
 
     private func hideUploadPanel() {
+        uploadTask?.cancel()
+        uploadTask = nil
         uploadPanel?.removeFromSuperview()
         uploadPanel = nil
     }
@@ -372,19 +382,33 @@ extension TerminalInputView {
         }
         uploadPanel?.statusMessage = "Uploading to \(host.label)..."
         uploadPanel?.isUploadEnabled = false
+        guard let panel = uploadPanel else { return }
+        panel.isDismissEnabled = false
 
-        Task { @MainActor in
+        uploadTask = Task { @MainActor [weak self, weak panel] in
+            guard let self, let panel else { return }
+            defer {
+                if self.uploadPanel === panel {
+                    self.uploadTask = nil
+                }
+            }
             do {
                 let path = try await CitadelSCPUploader.upload(
                     imageData: imageData,
                     to: host,
                     privateKeyData: keyData
                 )
+                guard !Task.isCancelled, self.uploadPanel === panel else { return }
+                self.uploadTask = nil
                 self.onRawInput?(Array(path.utf8))
                 self.hideUploadPanel()
+            } catch is CancellationError {
+                return
             } catch {
-                self.uploadPanel?.statusMessage = "Upload failed: \(error.localizedDescription)"
-                self.uploadPanel?.isUploadEnabled = true
+                guard self.uploadPanel === panel else { return }
+                panel.statusMessage = "Upload failed: \(error.localizedDescription)"
+                panel.isUploadEnabled = true
+                panel.isDismissEnabled = true
             }
         }
     }

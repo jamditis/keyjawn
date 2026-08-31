@@ -11,14 +11,22 @@ import KeyJawnKit
 @MainActor
 final class HostStore: ObservableObject {
 
+    enum PersistenceMode: Equatable {
+        case keychain, inMemory
+    }
+
     @Published private(set) var hosts: [HostConfig] = []
 
     private let service = "com.keyjawn"
     private let account = "keyjawn.hosts"
     private let legacyDefaultsKey = "keyjawn.hosts"
+    private let persistenceMode: PersistenceMode
 
-    init() {
-        load()
+    init(persistenceMode: PersistenceMode = .keychain) {
+        self.persistenceMode = persistenceMode
+        if persistenceMode == .keychain {
+            load()
+        }
     }
 
     // MARK: - Mutations
@@ -67,6 +75,7 @@ final class HostStore: ObservableObject {
 
     @discardableResult
     private func save() -> Bool {
+        guard persistenceMode == .keychain else { return true }
         guard let data = try? JSONEncoder().encode(hosts),
               keychainSave(data) else { return false }
         // Mirror to App Group so the keyboard extension can read host configs.

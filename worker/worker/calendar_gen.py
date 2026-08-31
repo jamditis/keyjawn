@@ -11,21 +11,21 @@ PILLARS = ["awareness", "demo", "engagement", "social_proof", "behind_scenes"]
 
 TOPICS = {
     "awareness": [
-        "Standard keyboards failing at CLI tasks",
-        "Autocorrect mangling shell commands",
-        "Missing Esc/Tab/Ctrl on mobile",
-        "The pain of arrow keys on touch keyboards",
-        "Mobile keyboards that actually behave like real keyboards (auto-cap, double-space period, haptic feedback)",
-        "SSH from iPhone: what it actually takes to do it right",
+        "Android: standard keyboards failing at CLI tasks",
+        "Android: autocorrect mangling shell commands",
+        "Android: missing Esc, Tab, and Ctrl on mobile",
+        "Android: the pain of arrow keys on touch keyboards",
+        "Android: auto-capitalization, double-space period, and key-specific haptics",
+        "iOS: terminal commands execute on a configured remote SSH server",
     ],
     "demo": [
-        "Voice input composing a Claude Code prompt",
-        "Terminal key row in action",
-        "SCP image upload mid-conversation",
-        "Slash command shortcuts demo",
-        "Spacebar cursor movement — hold and drag to reposition without lifting",
-        "Adaptive Enter key switching between Go/Send/Search/Done by context",
-        "iOS version in development — what we're building (SSH terminal + keyboard extension)",
+        "Android: voice input composing a CLI prompt",
+        "Android: terminal key row in action",
+        "Android full: SCP image upload during a remote session",
+        "Android: slash command shortcuts",
+        "Android: hold and drag the spacebar to move the cursor",
+        "Android: adaptive Enter key for Go, Send, Search, Next, and Done",
+        "iOS: remote SSH terminal and companion keyboard in a supported text field",
     ],
     "engagement": [
         "Reply to mobile SSH conversations",
@@ -36,13 +36,14 @@ TOPICS = {
         "Download/purchase milestone update",
         "Share user feedback or support resolution",
         "GitHub activity update",
-        "iOS version in private beta testing — progress update",
+        "iOS App Store status: review build 2 rejected; no revised upload or resubmission",
     ],
     "behind_scenes": [
         "What Joe is working on next",
         "Open source philosophy and $4 pricing",
         "Dev update on upcoming features",
-        "How the iOS version works around Apple's keyboard restrictions",
+        "How iOS keeps remote command execution separate from the device",
+        "Where iOS supports third-party keyboards and where it uses the system keyboard",
     ],
 }
 

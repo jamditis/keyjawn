@@ -3,6 +3,12 @@ import os
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "keyjawn-store.db")
 
+
+def normalize_email(email: str) -> str:
+    """Use one email identity for storage, tokens, and account lookups."""
+    return str(email).strip().lower()
+
+
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -15,7 +21,7 @@ def init_db():
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY,
-            email TEXT UNIQUE NOT NULL,
+            email TEXT COLLATE NOCASE UNIQUE NOT NULL,
             stripe_customer_id TEXT,
             stripe_payment_intent TEXT,
             amount_cents INTEGER NOT NULL DEFAULT 400,
@@ -57,6 +63,17 @@ def init_db():
             released_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
     """)
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS users_email_nocase "
+            "ON users(email COLLATE NOCASE)"
+        )
+    except sqlite3.IntegrityError as error:
+        conn.rollback()
+        conn.close()
+        raise RuntimeError(
+            "users contains case-variant email collisions; resolve them before startup"
+        ) from error
     # Add changelog column if missing (existing DBs)
     try:
         conn.execute("ALTER TABLE releases ADD COLUMN changelog TEXT")
@@ -67,4 +84,5 @@ def init_db():
         conn.execute("ALTER TABLE users ADD COLUMN unsubscribed INTEGER NOT NULL DEFAULT 0")
     except sqlite3.OperationalError:
         pass  # column already exists
+    conn.commit()
     conn.close()
