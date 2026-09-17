@@ -27,14 +27,13 @@ KeyJawn helps people work with terminal-based LLM tools from a phone.
 
 - The public TestFlight invitation is not accepting new testers as of August
   28, 2026. Do not publish the invitation URL as an active download path.
-- Apple rejected App Store review build 2 under guideline 2.5.2.
 - A fresh signed build 9 archive was created and verified from the corrected
   source on August 31, 2026. The exact archive was uploaded, and Apple processed
-  build 9 as valid. Build 9 is selected for version 1.0, manual release is
-  enabled, and the submission is waiting for review. The app is not approved
-  and not publicly released.
-- It is accurate to say that build 9 is waiting for review. Do not state or
-  imply App Store approval, public availability, or a launch date.
+  build 9 as valid. Build 9 is selected for version 1.0.
+- Apple approved version 1.0 on September 17, 2026. App Store Connect reports
+  pending developer release because manual release is enabled.
+- The app is not publicly available. Do not publish an App Store URL or tell
+  people to download it until Apple's public listing is verified.
 
 ## Platform features
 

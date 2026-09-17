@@ -113,12 +113,9 @@ Current product knowledge includes:
   how to interpret them.
 - iOS copied-image upload: the selected host must use SSH key authentication.
   Password authentication remains available for terminal connections.
-- App Store: Apple rejected review build 2 under guideline 2.5.2. A fresh signed
-  build 9 archive was created and verified from the corrected source on August
-  31, 2026. The exact archive was uploaded, and Apple processed build 9 as
-  valid. Build 9 is selected for version 1.0, manual release is enabled, and the
-  submission is waiting for review. The app is not approved and not publicly
-  released.
+- App Store: Apple approved version 1.0 on September 17, 2026. Build 9 is
+  selected and valid. Manual release is enabled, App Store Connect reports
+  pending developer release, and the app is not publicly available yet.
 
 **Writing constraints** baked into every prompt: developer-to-developer voice, no rhetorical questions, no hashtag spam, no exclamation marks, no hype words, max 1 hashtag, max 2 emoji. See `BANNED_WORDS` and `BANNED_OPENERS` in `content.py` — validation runs after generation and will reject non-compliant posts.
 

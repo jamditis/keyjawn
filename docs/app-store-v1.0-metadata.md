@@ -1,16 +1,14 @@
 # App Store v1.0 metadata
 
-> **Status:** Submitted for review. Apple rejected review build 2 under
-> guideline 2.5.2.
-> A fresh signed build 9 archive was created and verified from the corrected
-> source on August 31, 2026. The exact archive was uploaded, and Apple processed
-> build 9 as valid. Build 9 is selected for version 1.0, manual release is
-> enabled, and the submission is waiting for review. The reviewer response and
-> test steps were included in the review notes. The app is not approved and not publicly released.
+> **Status:** Apple approved version 1.0 on September 17, 2026. Build 9 is
+> selected and valid. Manual release is enabled, and App Store Connect reports
+> `PENDING_DEVELOPER_RELEASE`. The app is not publicly available until the
+> developer release occurs and Apple publishes the listing.
 
-Use this file as the exact copy source for the next approved App Store Connect
-update. Replace every bracketed placeholder with a verified value. Do not add
-passwords, private keys, recovery codes, or other credentials to this file.
+Use this file as the record of the approved version 1.0 product copy and review
+material. Keep protected contact and connection values as placeholders here.
+Enter verified values only in App Store Connect. Do not add passwords, private
+keys, recovery codes, or other credentials to this file.
 
 ## Product page copy
 
@@ -102,8 +100,9 @@ Password: [isolated review password; enter only in App Store Connect]
 
 ### Review notes
 
-Use this exact draft only after the approved revised build is uploaded and
-selected. Replace all placeholders first.
+This is the credential-free basis of the review notes submitted with build 9.
+The bracketed connection values remain placeholders because the protected
+values belong only in App Store Connect.
 
 ```text
 KeyJawn is a remote SSH client. It does not execute commands locally on iOS. Terminal input is sent over SSH to a server configured by the user. That server executes the command, and KeyJawn displays the output returned over the network.
@@ -139,19 +138,16 @@ Test steps:
 13. To test the keyboard, enable KeyJawn in Settings > General > Keyboard > Keyboards, then select it in a text field that supports third-party keyboards. Basic typing and built-in shortcuts work without Allow Full Access. User-created shortcuts, shared clipboard history, and copied-image upload require Full Access. The extension inserts text or control sequences; the receiving app decides how to interpret them.
 ```
 
-## Reviewer response draft
+## Reviewer response record
 
 The approved response was included in the App Review notes with the connection
 details and test steps. No separate Resolution Center message was sent because
 the public App Store Connect API does not provide that message surface.
 
-Use this exact draft only after the approved revised build is uploaded and
-selected. Replace `[approved build number]` before sending it.
-
 ```text
 Hello App Review,
 
-We addressed the guideline 2.5.2 concern in build [approved build number].
+We addressed the guideline 2.5.2 concern in build 9.
 
 KeyJawn does not execute commands locally on iOS. Its terminal sends input over SSH to a remote server configured by the user. The remote server executes the command, and KeyJawn displays the output returned over the network. We removed the session-free Preview terminal so this boundary is clear before a host exists.
 

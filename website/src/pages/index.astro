@@ -4,6 +4,7 @@ import FeatureCard from '../components/FeatureCard.astro';
 import TerminalBlock from '../components/TerminalBlock.astro';
 import PhoneMockup from '../components/PhoneMockup.astro';
 import KeyCap from '../components/KeyCap.astro';
+import { IOS_APP_STORE_STATUS } from '../data/distribution';
 ---
 
 <Base
@@ -70,7 +71,7 @@ import KeyCap from '../components/KeyCap.astro';
           <a href="https://buy.stripe.com/14AeVdafC3pi9Yl8nIdnW00" class="btn btn-secondary">Buy Android full ($4)</a>
         </div>
         <p class="fine-print">KeyJawn Lite also has limited Google Play test tracks. Google Play production is not active.</p>
-        <p class="fine-print">* The free and $4 full offers apply to the Android APK. As of August 28, 2026, the public iOS beta invitation is not accepting new testers. A revised App Store submission has not been sent.</p>
+        <p class="fine-print">* The free and $4 full offers apply to the Android APK. {IOS_APP_STORE_STATUS}</p>
         <div class="hero-keys">
           <KeyCap label="Esc" />
           <KeyCap label="Tab" />
@@ -161,7 +162,7 @@ import KeyCap from '../components/KeyCap.astro';
           <TerminalBlock command="adb install keyjawn-full.apk" output="Success" />
         </div>
         <div class="install-info">
-          <p>Android has free and $4 full APKs. The iOS beta includes a keyboard extension and a built-in remote SSH terminal. Basic iOS typing and built-in shortcuts work without Full Access. Full Access is optional for remote image upload, shared settings, user-created shortcuts, or clipboard history.</p>
+          <p>Android has free and $4 full APKs. The iOS app includes a keyboard extension and a built-in remote SSH terminal. Basic iOS typing and built-in shortcuts work without Full Access. Full Access is optional for remote image upload, shared settings, user-created shortcuts, or clipboard history.</p>
           <div class="install-actions">
             <a href="/changelog" class="btn btn-primary">View iOS status</a>
             <a href="https://github.com/jamditis/keyjawn/releases" class="btn btn-secondary">Android APKs</a>
@@ -171,9 +172,9 @@ import KeyCap from '../components/KeyCap.astro';
             No subscriptions. No ads. No tracking. Not in any version, ever. <a href="/pricing">See what's included</a>.
           </p>
           <p class="text-muted" style="font-size: 0.9rem; margin-top: 0.5rem;">
-            As of August 28, 2026, the public iOS beta invitation is not accepting new testers. A revised App Store submission has not been sent.
+            {IOS_APP_STORE_STATUS}
           </p>
-          <p class="fine-print">* The KeyJawn source is open. The $4 purchase is for a prepared Android full APK and does not unlock the iOS beta.</p>
+          <p class="fine-print">* The KeyJawn source is open. The $4 purchase is for a prepared Android full APK and does not include the iOS app.</p>
         </div>
       </div>
     </div>

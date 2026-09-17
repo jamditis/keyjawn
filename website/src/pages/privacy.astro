@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import { IOS_APP_STORE_STATUS } from '../data/distribution';
 ---
 
 <Base
@@ -71,7 +72,7 @@ import Base from '../layouts/Base.astro';
           <h2>Purchases and beta distribution</h2>
           <p>Stripe purchases on this website apply to the Android full APK. The KeyJawn store keeps the email address, Stripe customer reference, purchase record, download record, and support record needed to deliver and support the purchase. Stripe processes payment information. KeyJawn does not receive or store card details.</p>
           <p>KeyJawn Lite has internal and closed Google Play test tracks. Google Play production is not active.</p>
-          <p>The iOS beta has used TestFlight. As of August 28, 2026, the public invitation is not accepting new testers. A revised App Store submission has not been sent. The Android purchase does not unlock the iOS beta.</p>
+          <p>The iOS app used TestFlight before App Store approval. {IOS_APP_STORE_STATUS} The Android purchase does not include the iOS app.</p>
         </section>
 
         <section class="privacy-section">

@@ -53,7 +53,7 @@ final class AppReviewBoundaryTests: XCTestCase {
         )
     }
 
-    func testCurrentReleaseSourcesRecordWaitingForReviewWithoutClaimingApproval() throws {
+    func testCurrentReleaseSourcesRecordApprovalPendingDeveloperRelease() throws {
         let currentStateSources = [
             "CHANGELOG.md",
             "CLAUDE.md",
@@ -71,23 +71,21 @@ final class AppReviewBoundaryTests: XCTestCase {
                 .lowercased()
                 .split(whereSeparator: \Character.isWhitespace)
                 .joined(separator: " ")
+                .replacingOccurrences(of: "_", with: " ")
             XCTAssertTrue(source.contains("build 9"), "\(path) must identify the build")
-            XCTAssertTrue(
-                source.contains("fresh signed build 9 archive"),
-                "\(path) must record the current archive"
-            )
-            XCTAssertTrue(source.contains("uploaded"), "\(path) must record the upload")
-            XCTAssertTrue(source.contains("valid"), "\(path) must record Apple's processing result")
-            XCTAssertTrue(
-                source.contains("selected for version 1.0"),
-                "\(path) must record the selected version"
-            )
             XCTAssertTrue(source.contains("manual release"), "\(path) must record the release mode")
-            XCTAssertTrue(source.contains("waiting for review"), "\(path) must record the review state")
-            XCTAssertTrue(source.contains("not approved"), "\(path) must not claim approval")
+            XCTAssertTrue(source.contains("approved"), "\(path) must record Apple's approval")
             XCTAssertTrue(
-                source.contains("not publicly released"),
-                "\(path) must not claim public release"
+                source.contains("pending developer release"),
+                "\(path) must record the manual release state"
+            )
+            XCTAssertTrue(
+                source.contains("not publicly available"),
+                "\(path) must not claim public availability"
+            )
+            XCTAssertFalse(
+                source.contains("waiting for review") || source.contains("not approved"),
+                "\(path) has the superseded review state"
             )
             XCTAssertFalse(
                 source.contains("build 9 is not selected"),
