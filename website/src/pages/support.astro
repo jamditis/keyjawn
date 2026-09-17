@@ -1,11 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
 import FAQ from '../components/FAQ.astro';
+import { IOS_APP_STORE_STATUS } from '../data/distribution';
 
 const faqItems = [
   {
     question: 'How do I install KeyJawn?',
-    answer: 'Android APKs are available from GitHub releases. KeyJawn Lite also has limited Google Play test tracks, but Google Play production is not active. As of August 28, 2026, the public iOS beta invitation is not accepting new testers. A revised App Store submission has not been sent.',
+    answer: `Android APKs are available from GitHub releases. KeyJawn Lite also has limited Google Play test tracks, but Google Play production is not active. ${IOS_APP_STORE_STATUS}`,
   },
   {
     question: 'Does the iOS app run commands or browse files on my device?',

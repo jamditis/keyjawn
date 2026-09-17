@@ -6,7 +6,7 @@ date: 2026-02-15
 author: Joe Amditis
 ---
 
-> Platform note: This February 2026 post describes KeyJawn for Android. The iOS beta has different limits. It includes a keyboard extension and a built-in remote SSH terminal. Commands in that terminal run on the configured server, not on the phone. As of August 28, 2026, the public beta invitation is not accepting new testers. A revised App Store submission has not been sent.
+> Platform note: This February 2026 post describes KeyJawn for Android. The iOS app has different limits. It includes a keyboard extension and a built-in remote SSH terminal. Commands in that terminal run on the configured server, not on the phone. Apple approved version 1.0 on September 17, 2026. Manual developer release is still pending, so the app is not publicly available yet.
 
 More people use the terminal now than at any point in the last decade, and most of them aren't sysadmins.
 

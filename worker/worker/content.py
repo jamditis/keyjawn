@@ -104,11 +104,11 @@ def build_generation_prompt(req: ContentRequest) -> str:
         "Basic typing works without Allow Full Access. "
         "Full Access is optional and is used only for copied-image upload, shared keyboard "
         "settings, user-created shortcuts, or clipboard history. "
-        "Apple rejected App Store review build 2 under guideline 2.5.2. A fresh signed build 9 archive "
-        "was created and verified from the corrected source on August 31, 2026. The exact archive was "
-        "uploaded, and Apple processed build 9 as valid. Build 9 is selected for version 1.0, "
-        "manual release is enabled, and the submission is waiting for review. The app is not approved "
-        "and not publicly released. Do not claim App Store approval, public availability, or a launch date. "
+        "A fresh signed build 9 archive was created and verified from the corrected source on August 31, "
+        "2026. The exact archive was uploaded, and Apple processed build 9 as valid. Build 9 is selected "
+        "for version 1.0. Apple approved version 1.0 on September 17, 2026, and manual release is enabled. "
+        "App Store Connect reports pending developer release, and the app is not publicly available yet. "
+        "Do not publish an App Store URL or tell people to download the iOS app until the public listing is verified. "
         f"Link: {tracked_url}"
     )
 

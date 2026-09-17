@@ -45,7 +45,7 @@ a distributed release.
 - A fresh signed build 9 archive was created and verified from the corrected
   source on August 31, 2026. The exact archive was uploaded, and Apple processed
   build 9 as valid. Build 9 is selected for version 1.0, manual release is
-  enabled, and the submission is waiting for review. The reviewer response and
-  test steps were included in the review notes. The app is not approved and not
-  publicly released.
+  enabled, and Apple approved the version on September 17, 2026. App Store
+  Connect reports pending developer release. The app is not publicly available
+  until the developer release occurs and Apple publishes the listing.
 - This remediation made no Android distribution change.

@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import KeyCap from '../components/KeyCap.astro';
 import TerminalBlock from '../components/TerminalBlock.astro';
+import { IOS_APP_STORE_STATUS } from '../data/distribution';
 ---
 
 <Base
@@ -65,15 +66,15 @@ import TerminalBlock from '../components/TerminalBlock.astro';
           <p>On some devices, you can switch keyboards by long-pressing the spacebar in any text field, or by tapping the keyboard icon in the navigation bar.</p>
           <p>KeyJawn Lite also has internal and closed Google Play test tracks. Google Play production is not active.</p>
 
-          <h3>iOS beta</h3>
+          <h3>iOS</h3>
           <p>The iOS version includes a keyboard extension and a built-in remote SSH terminal.</p>
-          <p>As of August 28, 2026, the public beta invitation is not accepting new testers. A revised App Store submission has not been sent.</p>
+          <p>{IOS_APP_STORE_STATUS}</p>
           <ol>
             <li>After you install an authorized beta or release, open KeyJawn and tap <strong>+</strong> to add an SSH host (hostname, port, username).</li>
             <li>Set up the SSH public key in <strong>Settings &gt; SSH keys</strong>, or select password authentication for the host.</li>
             <li>Tap the host. Review and save its fingerprint on the first connection. The remote terminal opens after the host is trusted and authentication succeeds.</li>
           </ol>
-          <p>This page does not claim that an App Store release is live.</p>
+          <p>Version 1.0 will become public only after the manual developer release and Apple's listing publication complete.</p>
         </section>
 
         <section class="manual-section" id="ios-boundary">

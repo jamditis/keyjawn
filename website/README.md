@@ -27,7 +27,7 @@ npm audit --omit=dev
 - `/manual` — setup and usage
 - `/support` — FAQ and known limits
 - `/privacy` — Android and iOS privacy details
-- `/pricing` — Android pricing and iOS beta availability
+- `/pricing` — Android pricing and iOS App Store status
 - `/changelog` — platform release status
 - `/about` — project information
 - `/thanks` — Android purchase confirmation

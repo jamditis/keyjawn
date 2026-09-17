@@ -4,10 +4,10 @@
 
 KeyJawn helps people work with remote terminals from a phone. Android and iOS have different features and distribution paths.
 
-## iOS beta
+## iOS App Store status
 
-- The public TestFlight invitation is not accepting new testers as of August 28, 2026.
-- A revised App Store submission has not been sent.
+- Apple approved version 1.0 on September 17, 2026.
+- Manual developer release is still pending, so the app is not publicly available yet.
 - The app includes a built-in remote SSH terminal. Commands run on the configured server, not on the phone.
 - The keyboard extension enters text and control sequences into the active app. The receiving app decides how to interpret them.
 - Basic keyboard input does not need Full Access.

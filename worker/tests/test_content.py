@@ -46,7 +46,7 @@ def test_build_prompt_names_ios_upload_and_input_boundaries():
     assert "Never describe iOS extension controls as hardware key events" in prompt
 
 
-def test_build_prompt_records_waiting_for_review_without_claiming_approval():
+def test_build_prompt_records_approval_pending_developer_release():
     req = ContentRequest(
         pillar="release",
         platform="twitter",
@@ -61,9 +61,11 @@ def test_build_prompt_records_waiting_for_review_without_claiming_approval():
     assert "valid" in prompt
     assert "selected for version 1.0" in prompt
     assert "manual release" in prompt
-    assert "waiting for review" in prompt
-    assert "not approved" in prompt
-    assert "not publicly released" in prompt
+    assert "approved version 1.0" in prompt
+    assert "pending developer release" in prompt
+    assert "not publicly available" in prompt
+    assert "waiting for review" not in prompt
+    assert "not approved" not in prompt
     assert "build 9 is not selected" not in prompt
     assert "not uploaded" not in prompt
     assert "did not archive" not in prompt

@@ -31,7 +31,7 @@ After installing:
 2. Enable **KeyJawn**
 3. Set KeyJawn as your default keyboard
 
-### iOS beta
+### iOS
 
 The iOS app connects to remote SSH servers. Commands run on the configured server,
 and the app displays the returned output. It does not run a local shell or browse
@@ -60,13 +60,10 @@ iOS uses the system keyboard for passcodes and secure text fields, and for
 fields that use the `phonePad` or `namePhonePad` keyboard type. Apps can also
 block third-party keyboards.
 
-The public TestFlight invitation is not accepting new testers as of August 28,
-2026. Apple rejected App Store review build 2 under guideline 2.5.2. A fresh
-signed build 9 archive was created and verified from the corrected source on
-August 31, 2026. The exact archive was uploaded, and Apple processed build 9 as
-valid. Build 9 is selected for version 1.0, manual release is enabled, and the
-submission is waiting for review. The app is not approved and not publicly
-released.
+Apple approved version 1.0 on September 17, 2026. Build 9 is selected, valid,
+and configured for manual release. App Store Connect reports pending developer
+release. The app is not publicly available until the developer release occurs
+and Apple publishes the listing.
 
 To use the keyboard extension in other apps after installing:
 
@@ -176,6 +173,7 @@ approval.
 ## Links
 
 - [Website](https://keyjawn.amditis.tech)
+- [iOS release status](https://keyjawn.amditis.tech/changelog)
 - [Privacy policy](https://keyjawn.amditis.tech/privacy)
 - [User manual](https://keyjawn.amditis.tech/manual)
 - [App Review evidence](docs/ios-app-review.md)

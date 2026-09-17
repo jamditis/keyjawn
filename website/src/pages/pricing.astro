@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import PricingCard from '../components/PricingCard.astro';
+import { IOS_APP_STORE_STATUS } from '../data/distribution';
 ---
 
 <Base
@@ -72,9 +73,9 @@ import PricingCard from '../components/PricingCard.astro';
   <section class="section" id="ios">
     <div class="container">
       <div class="why-section">
-        <h2>iOS beta</h2>
-        <p>The iOS beta includes the keyboard extension and built-in remote SSH terminal. As of August 28, 2026, the public invitation is not accepting new testers. A revised App Store submission has not been sent.</p>
-        <p>The Android $4 purchase does not unlock or purchase the iOS beta.</p>
+        <h2>iOS App Store status</h2>
+        <p>The iOS app includes the keyboard extension and built-in remote SSH terminal. {IOS_APP_STORE_STATUS}</p>
+        <p>The Android $4 purchase does not include the iOS app.</p>
         <a href="/changelog" class="btn btn-primary">View iOS status</a>
       </div>
     </div>

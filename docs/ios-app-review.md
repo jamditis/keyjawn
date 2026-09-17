@@ -1,8 +1,9 @@
 # iOS App Review evidence
 
-This file records the code boundary for the guideline 2.5.2 remediation. It is
-evidence for maintainers and a source for the next review note. It does not
-authorize a build-number change, archive, upload, reply, or resubmission.
+This file records the guideline 2.5.2 remediation, the approved build, and the
+remaining public-release boundary. It is evidence for maintainers. It does not
+authorize a build-number change, archive, upload, reply, resubmission, or App
+Store release.
 
 ## Current review state
 
@@ -13,10 +14,10 @@ authorize a build-number change, archive, upload, reply, or resubmission.
 - The checked-in source identifies as build 9. A fresh signed build 9 archive
   was created and verified from the corrected source on August 31, 2026. The
   exact archive was uploaded, and Apple processed build 9 as valid. Build 9 is
-  selected for version 1.0, manual release is enabled, and review submission
-  `83b2805c-650c-4bf6-91ff-0c6339f36324` is waiting for review. The reviewer
-  response and test steps were included in the review notes. The app is not
-  approved and not publicly released.
+  selected for version 1.0, and manual release is enabled. Apple approved the
+  version on September 17, 2026. App Store Connect reports
+  `PENDING_DEVELOPER_RELEASE`. The app is not publicly available until the
+  developer release occurs and Apple publishes the listing.
 - Before upload, the live App Store Connect API listed builds 1, 2, and 8. The
   user approved unused build number 9, and both targets were updated together.
 
@@ -198,32 +199,22 @@ Do not infer a developer Audio Data collection claim from Apple-only processing,
 and do not omit Audio Data if the developer or an integrated third party stores
 readable audio beyond the live request.
 
-## Draft App Store copy
+## Approved App Store copy
 
 The exact product-page copy, review notes, reviewer response, test steps, and
 credential-free placeholders are in
 [`app-store-v1.0-metadata.md`](app-store-v1.0-metadata.md).
 
-That file is a draft, not a record of an App Store Connect change. Do not use its
-reviewer response until an approved revised build is uploaded and selected. Put
-review credentials only in protected App Store Connect fields.
+That file records the approved version 1.0 copy and review material. Put review
+credentials only in protected App Store Connect fields.
 
-## Release gates
+## Public release gates
 
-Before any resubmission:
-
-- Finish the unit, UI, analysis, formatting, metadata, entitlement, architecture,
-  size, and independent-review checks in `tasks/todo.md`.
-- Use an isolated SSH account with a restricted writable directory. Verify the
-  password login, fresh-install public-key authorization, switch to SSH key
-  authentication, voice permission and transcription flow, copied-image upload,
-  and cleanup steps without storing credentials in this repository.
-- If the review endpoint uses a TLS-terminated TCP relay, enable the per-host
-  TLS tunnel option and test from a physical device outside any private VPN path.
-- Select an unused build number and change both targets together only after user
-  approval.
-- Get separate user approval for each archive, upload, App Review reply, metadata
-  change, submission cancellation, and resubmission action.
+- Get explicit user approval before releasing the approved version in App Store
+  Connect.
+- After release, verify App Store Connect no longer reports
+  `PENDING_DEVELOPER_RELEASE` and verify the public Apple listing before claiming
+  availability or publishing an App Store URL.
 - Website publication is separate from App Store work. A push to `main` that
   changes `website/**` triggers `.github/workflows/deploy-site.yml` and publishes
   the site. Get explicit approval before that push.

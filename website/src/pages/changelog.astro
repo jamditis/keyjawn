@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import { IOS_APP_STORE_STATUS } from '../data/distribution';
 ---
 
 <Base
@@ -17,7 +18,7 @@ import Base from '../layouts/Base.astro';
     <div class="container changelog">
       <section class="platform-status" aria-labelledby="ios-status">
         <h2 id="ios-status">iOS status</h2>
-        <p>As of August 28, 2026, the public TestFlight invitation is not accepting new testers. A revised App Store submission has not been sent.</p>
+        <p>{IOS_APP_STORE_STATUS}</p>
       </section>
 
       <h2 class="platform-heading">Android releases</h2>

@@ -16,7 +16,7 @@ Add this block to each release plan or handoff:
 - iOS source build: [build number]
 - iOS archive: [not created or verified archive path and time]
 - TestFlight upload: [not uploaded, processing, or verified available]
-- App Store submission: [not submitted, in review, rejected with guideline, or available]
+- App Store submission: [not submitted, in review, rejected with guideline, approved pending developer release, or available]
 - External actions approved by: [name and exact approved actions]
 ```
 
@@ -101,15 +101,15 @@ draft.
 - Required approvals: [list each external action separately]
 ```
 
-## Current iOS remediation state
+## Current iOS release state
 
-- Apple rejected review build 2 under guideline 2.5.2.
 - Source build 9 exists.
 - A fresh signed build 9 archive was created and verified from the corrected
   source on August 31, 2026. The exact archive was uploaded, and Apple processed
   build 9 as valid. Build 9 is selected for version 1.0, manual release is
-  enabled, and the submission is waiting for review. The app is not approved
-  and not publicly released.
+  enabled, and Apple approved the version on September 17, 2026. App Store
+  Connect reports pending developer release. The app is not publicly available
+  until the developer release occurs and Apple publishes the listing.
 
 ## Current Android distribution state
 

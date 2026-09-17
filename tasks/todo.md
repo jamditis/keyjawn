@@ -923,3 +923,9 @@ review surface:
   August 31, 2026 and read-back reports `WAITING_FOR_REVIEW`. The old submission
   was reused; no cancellation or replacement submission was required. The app
   is not approved and not publicly released.
+- [x] Apple approved version 1.0 on September 17, 2026. App Store Connect
+  read-back reports `PENDING_DEVELOPER_RELEASE`, and manual release remains
+  enabled. Apple's public lookup returned no listing at the time of this update.
+- [ ] With action-time approval, release version 1.0 in App Store Connect. Then
+  verify the public listing before publishing an App Store URL or availability
+  claim.

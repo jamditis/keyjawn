@@ -10,7 +10,7 @@ terminal with a companion keyboard and copied-image SFTP upload.
 
 - **Android**: `InputMethodService`-based keyboard extension. Two flavors: lite
   (free APK and limited Google Play testing) and full ($4, Stripe/website).
-- **iOS**: Standalone SwiftUI app with a remote SSH terminal (SwiftTerm + SwiftNIO SSH via Citadel) and a companion `UIInputViewController` keyboard extension. Apple rejected review build 2 under guideline 2.5.2. A fresh signed build 9 archive was created and verified from the corrected source on August 31, 2026. The exact archive was uploaded, and Apple processed build 9 as valid. Build 9 is selected for version 1.0, manual release is enabled, and the submission is waiting for review. The app is not approved and not publicly released.
+- **iOS**: Standalone SwiftUI app with a remote SSH terminal (SwiftTerm + SwiftNIO SSH via Citadel) and a companion `UIInputViewController` keyboard extension. A fresh signed build 9 archive was created and verified from the corrected source on August 31, 2026. Apple processed the upload as valid and approved version 1.0 on September 17, 2026. Manual release is enabled, App Store Connect reports pending developer release, and the app is not publicly available yet.
 
 ## Build commands
 
@@ -166,9 +166,9 @@ duplicate upload.
 - A fresh signed build 9 archive was created and verified from the corrected
   source on August 31, 2026. The exact archive was uploaded, and Apple processed
   build 9 as valid. Build 9 is selected for version 1.0, manual release is
-  enabled, and review submission `83b2805c-650c-4bf6-91ff-0c6339f36324` is
-  waiting for review. The reviewer response and test steps were included in the
-  review notes. The app is not approved and not publicly released.
+  enabled. Apple approved version 1.0 on September 17, 2026. App Store Connect
+  reports `PENDING_DEVELOPER_RELEASE`. The app is not publicly available until
+  the developer release occurs and Apple publishes the listing.
 - The remote-execution, sandbox, and test evidence are in
   `docs/ios-app-review.md`. The metadata template, submitted review-note basis,
   and response copy are in `docs/app-store-v1.0-metadata.md`.
@@ -181,6 +181,9 @@ duplicate upload.
 - Do not run `ios/scripts/build.sh`, archive, upload, send a reviewer reply, change
   App Store Connect metadata, cancel a submission, or resubmit without separate
   user approval at action time.
+- Do not release the approved App Store version without explicit user approval
+  at action time. After release, verify Apple's public listing before publishing
+  an App Store URL or availability claim.
 - Website publication is a separate external action. A push to `main` that changes
   `website/**` triggers `.github/workflows/deploy-site.yml` and publishes the site.
   Get explicit approval before that push.

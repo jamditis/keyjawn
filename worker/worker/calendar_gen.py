@@ -36,7 +36,7 @@ TOPICS = {
         "Download/purchase milestone update",
         "Share user feedback or support resolution",
         "GitHub activity update",
-        "iOS App Store status: review build 2 rejected; no revised upload or resubmission",
+        "iOS App Store status: approved; manual developer release pending",
     ],
     "behind_scenes": [
         "What Joe is working on next",
